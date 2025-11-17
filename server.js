@@ -338,6 +338,28 @@ app.get('/', (req, res) => {
   res.send(htmlContent);
 });
 
+// Debug endpoint: Clear shop session
+app.get('/debug/clear-session', async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) {
+      return res.status(400).send('Missing shop parameter');
+    }
+    
+    const client = await pool.connect();
+    try {
+      const result = await client.query('DELETE FROM shops WHERE shop = $1 RETURNING *', [shop]);
+      console.log('Deleted session:', result.rows);
+      res.json({ message: 'Session cleared', shop, deleted: result.rowCount > 0 });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error clearing session:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Variant Badges app running on port ${PORT}`);
   console.log(`Visit http://localhost:${PORT} to test locally`);
