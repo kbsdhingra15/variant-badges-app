@@ -247,9 +247,8 @@ app.get("/", (req, res) => {
           const host = '${host}';
 
           // Initialize App Bridge
-          var AppBridge = window['app-bridge'];
-          var createApp = AppBridge.default;
-          var app = createApp({
+          const createApp = window['app-bridge'].createApp || window['app-bridge'].default?.createApp || window['app-bridge'];
+          const app = createApp({
             apiKey: '${process.env.SHOPIFY_API_KEY}',
             host: host,
           });
