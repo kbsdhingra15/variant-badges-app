@@ -58,9 +58,13 @@ app.get('/health', (req, res) => {
 app.get('/auth', async (req, res) => {
   const { shop } = req.query;
   
+  console.log('OAuth start requested for shop:', shop);
+  
   if (!shop) {
     return res.status(400).send('Missing shop parameter');
   }
+  
+  console.log('Starting OAuth flow...');
 
   const authRoute = await shopify.auth.begin({
     shop: shopify.utils.sanitizeShop(shop, true),
