@@ -314,38 +314,12 @@ app.get('/', (req, res) => {
         <script>
           const shop = '${shop}';
           const host = '${host}';
-          let sessionToken = null;
 
-          async function initApp() {
-            try {
-              if (window['app-bridge']) {
-                const AppBridge = window['app-bridge'];
-                const createApp = AppBridge.createApp || AppBridge.default?.createApp || AppBridge;
-                
-                if (typeof createApp === 'function') {
-                  const app = createApp({
-                    apiKey: '${process.env.SHOPIFY_API_KEY}',
-                    host: host,
-                  });
-                  
-                  if (app.idToken) {
-                    sessionToken = await app.idToken();
-                    console.log('Session token obtained');
-                  }
-                }
-              }
-            } catch (error) {
-              console.log('App Bridge not available or error:', error);
-            }
-            
-            loadProducts();
-          }
-
+          console.log('App loaded, shop:', shop);
+          
           function loadProducts() {
-            let url = '/api/products?shop=' + encodeURIComponent(shop);
-            if (sessionToken) {
-              url += '&sessionToken=' + encodeURIComponent(sessionToken);
-            }
+            console.log('Loading products...');
+            const url = '/api/products?shop=' + encodeURIComponent(shop);
             
             fetch(url)
               .then(res => {
@@ -413,7 +387,8 @@ app.get('/', (req, res) => {
             return div.innerHTML;
           }
           
-          initApp();
+          console.log('Starting app...');
+          loadProducts();
         </script>
       </body>
     </html>
