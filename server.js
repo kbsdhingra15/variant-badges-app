@@ -314,12 +314,14 @@ app.get('/', (req, res) => {
         <script>
           const shop = '${shop}';
           const host = '${host}';
+          const appHost = '${process.env.HOST}';
 
           console.log('App loaded, shop:', shop);
+          console.log('App host:', appHost);
           
           function loadProducts() {
             console.log('Loading products...');
-            const url = '${process.env.HOST}/api/products?shop=' + encodeURIComponent(shop);
+            const url = appHost + '/api/products?shop=' + encodeURIComponent(shop);
             console.log('Fetching from URL:', url);
             
             fetch(url)
