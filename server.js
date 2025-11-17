@@ -142,19 +142,40 @@ async function getShopSession(shop) {
   }
 }
 
-// API: Get products
+// API: Get products (with session token support)
 app.get('/api/products', async (req, res) => {
   try {
-    const { shop } = req.query;
+    const { shop, sessionToken } = req.query;
     
     console.log('API request for shop:', shop);
+    console.log('Session token provided:', !!sessionToken);
     
     if (!shop) {
       return res.status(400).json({ error: 'Missing shop parameter' });
     }
 
-    const session = await getShopSession(shop);
-    console.log('Session found:', session ? 'Yes' : 'No');
+    // Try to get session from database first
+    let session = await getShopSession(shop);
+    console.log('Session found in database:', session ? 'Yes' : 'No');
+    
+    // If session token is provided and we have no session or it's invalid, try session token exchange
+    if (sessionToken && !session) {
+      console.log('Attempting session token exchange...');
+      try {
+        const decodedSession = await shopify.session.decodeSessionToken(sessionToken);
+        console.log('Decoded session token for shop:', decodedSession.dest);
+        
+        // Use the existing session token as temporary auth
+        session = {
+          shop: decodedSession.dest.replace('https://', '').replace('/admin', ''),
+          accessToken: sessionToken,
+          isSessionToken: true
+        };
+        console.log('Using session token for API calls');
+      } catch (error) {
+        console.error('Session token decode error:', error);
+      }
+    }
     
     if (!session) {
       // Let's check what shops are in the database
@@ -165,7 +186,11 @@ app.get('/api/products', async (req, res) => {
       } finally {
         client.release();
       }
-      return res.status(401).json({ error: 'Shop not authenticated', requestedShop: shop });
+      return res.status(401).json({ 
+        error: 'Shop not authenticated', 
+        requestedShop: shop,
+        hint: 'Please reinstall the app or visit the auth URL'
+      });
     }
 
     const restClient = new shopify.clients.Rest({ session });
@@ -216,6 +241,7 @@ app.get('/', (req, res) => {
     <html>
       <head>
         <title>Variant Badges - Phase 1</title>
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -265,99 +291,125 @@ app.get('/', (req, res) => {
 
         <script>
           const shop = '${shop}';
+          const host = '${host}';
+          let sessionToken = null;
 
-          fetch('/api/products?shop=' + encodeURIComponent(shop))
-            .then(res => {
-              if (!res.ok) {
-                throw new Error('HTTP ' + res.status + ': ' + res.statusText);
-              }
-              return res.json();
-            })
-            .then(data => {
-              const container = document.getElementById('products');
-              
-              if (!data.products || data.products.length === 0) {
-                container.innerHTML = '<div class="product-card">No products found in your store. Add some products to test!</div>';
-                return;
-              }
-
-              let html = '';
-              data.products.forEach(product => {
-                html += '<div class="product-card">';
-                html += '<div class="product-title">' + escapeHtml(product.title) + '</div>';
+          // Initialize App Bridge to get session token
+          async function initApp() {
+            try {
+              if (window['app-bridge']) {
+                const AppBridge = window['app-bridge'];
+                const createApp = AppBridge.createApp || AppBridge.default?.createApp || AppBridge;
                 
-                if (product.variants && product.variants.length > 0) {
-                  product.variants.forEach(variant => {
-                    html += '<div class="variant-row">';
-                    
-                    const image = variant.image_id ? 
-                      (product.images && product.images.find(img => img.id === variant.image_id)) : 
-                      (product.images && product.images[0]);
-                    
-                    if (image && image.src) {
-                      html += '<img class="variant-image" src="' + escapeHtml(image.src) + '" />';
-                    } else {
-                      html += '<div class="variant-image" style="background:#e1e3e5"></div>';
-                    }
-                    
-                    html += '<div class="variant-info">';
-                    html += '<div><strong>' + escapeHtml(variant.title) + '</strong></div>';
-                    html += '<div class="variant-option">SKU: ' + escapeHtml(variant.sku || 'N/A') + '</div>';
-                    html += '<div class="variant-option">Price: $' + escapeHtml(variant.price) + '</div>';
-                    
-                    if (variant.option1) html += '<div class="variant-option">Option 1: ' + escapeHtml(variant.option1) + '</div>';
-                    if (variant.option2) html += '<div class="variant-option">Option 2: ' + escapeHtml(variant.option2) + '</div>';
-                    if (variant.option3) html += '<div class="variant-option">Option 3: ' + escapeHtml(variant.option3) + '</div>';
-                    
-                    html += '</div>';
-                    html += '</div>';
+                if (typeof createApp === 'function') {
+                  const app = createApp({
+                    apiKey: '${process.env.SHOPIFY_API_KEY}',
+                    host: host,
                   });
+                  
+                  // Get session token
+                  if (app.idToken) {
+                    sessionToken = await app.idToken();
+                    console.log('Session token obtained');
+                  }
                 }
+              }
+            } catch (error) {
+              console.log('App Bridge not available or error:', error);
+            }
+            
+            // Load products regardless of whether we got session token
+            loadProducts();
+          }
+
+          function loadProducts() {
+            let url = '/api/products?shop=' + encodeURIComponent(shop);
+            if (sessionToken) {
+              url += '&sessionToken=' + encodeURIComponent(sessionToken);
+            }
+            
+            fetch(url)
+              .then(res => {
+                if (!res.ok) {
+                  throw new Error('HTTP ' + res.status + ': ' + res.statusText);
+                }
+                return res.json();
+              })
+              .then(data => {
+                const container = document.getElementById('products');
                 
-                html += '</div>';
+                if (!data.products || data.products.length === 0) {
+                  container.innerHTML = '<div class="product-card">No products found in your store. Add some products to test!</div>';
+                  return;
+                }
+
+                let html = '';
+                data.products.forEach(product => {
+                  html += '<div class="product-card">';
+                  html += '<div class="product-title">' + escapeHtml(product.title) + '</div>';
+                  
+                  if (product.variants && product.variants.length > 0) {
+                    product.variants.forEach(variant => {
+                      html += '<div class="variant-row">';
+                      
+                      const image = variant.image_id ? 
+                        (product.images && product.images.find(img => img.id === variant.image_id)) : 
+                        (product.images && product.images[0]);
+                      
+                      if (image && image.src) {
+                        html += '<img class="variant-image" src="' + escapeHtml(image.src) + '" />';
+                      } else {
+                        html += '<div class="variant-image" style="background:#e1e3e5"></div>';
+                      }
+                      
+                      html += '<div class="variant-info">';
+                      html += '<div><strong>' + escapeHtml(variant.title) + '</strong></div>';
+                      html += '<div class="variant-option">SKU: ' + escapeHtml(variant.sku || 'N/A') + '</div>';
+                      html += '<div class="variant-option">Price: 
+  
+  res.send(htmlContent);
+});
+
+app.listen(PORT, () => {
+  console.log(`Variant Badges app running on port ${PORT}`);
+  console.log(`Visit http://localhost:${PORT} to test locally`);
+}); + escapeHtml(variant.price) + '</div>';
+                      
+                      if (variant.option1) html += '<div class="variant-option">Option 1: ' + escapeHtml(variant.option1) + '</div>';
+                      if (variant.option2) html += '<div class="variant-option">Option 2: ' + escapeHtml(variant.option2) + '</div>';
+                      if (variant.option3) html += '<div class="variant-option">Option 3: ' + escapeHtml(variant.option3) + '</div>';
+                      
+                      html += '</div>';
+                      html += '</div>';
+                    });
+                  }
+                  
+                  html += '</div>';
+                });
+                
+                container.innerHTML = html;
+              })
+              .catch(err => {
+                console.error('Error:', err);
+                document.getElementById('products').innerHTML = 
+                  '<div class="error"><strong>Error loading products:</strong><br>' + escapeHtml(err.message) + '<br><br>Check the browser console for more details.</div>';
               });
-              
-              container.innerHTML = html;
-            })
-            .catch(err => {
-              console.error('Error:', err);
-              document.getElementById('products').innerHTML = 
-                '<div class="error"><strong>Error loading products:</strong><br>' + escapeHtml(err.message) + '<br><br>Check the browser console for more details.</div>';
-            });
+          }
           
           function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
           }
+          
+          // Start the app
+          initApp();
         </script>
       </body>
     </html>
   `;
   
   res.send(htmlContent);
-});
-
-// Debug endpoint: Clear shop session
-app.get('/debug/clear-session', async (req, res) => {
-  try {
-    const { shop } = req.query;
-    if (!shop) {
-      return res.status(400).send('Missing shop parameter');
-    }
-    
-    const client = await pool.connect();
-    try {
-      const result = await client.query('DELETE FROM shops WHERE shop = $1 RETURNING *', [shop]);
-      console.log('Deleted session:', result.rows);
-      res.json({ message: 'Session cleared', shop, deleted: result.rowCount > 0 });
-    } finally {
-      client.release();
-    }
-  } catch (error) {
-    console.error('Error clearing session:', error);
-    res.status(500).json({ error: error.message });
-  }
 });
 
 app.listen(PORT, () => {
