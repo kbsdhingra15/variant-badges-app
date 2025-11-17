@@ -158,7 +158,7 @@ app.get('/api/products', async (req, res) => {
     let session = await getShopSession(shop);
     console.log('Session found in database:', session ? 'Yes' : 'No');
     
-    // If session token is provided and we have no session or it's invalid, try session token exchange
+    // If session token is provided and we have no session, try session token exchange
     if (sessionToken && !session) {
       console.log('Attempting session token exchange...');
       try {
@@ -205,6 +205,28 @@ app.get('/api/products', async (req, res) => {
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Failed to fetch products', details: error.message });
+  }
+});
+
+// Debug endpoint: Clear shop session
+app.get('/debug/clear-session', async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) {
+      return res.status(400).send('Missing shop parameter');
+    }
+    
+    const client = await pool.connect();
+    try {
+      const result = await client.query('DELETE FROM shops WHERE shop = $1 RETURNING *', [shop]);
+      console.log('Deleted session:', result.rows);
+      res.json({ message: 'Session cleared', shop, deleted: result.rowCount > 0 });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error('Error clearing session:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -294,7 +316,6 @@ app.get('/', (req, res) => {
           const host = '${host}';
           let sessionToken = null;
 
-          // Initialize App Bridge to get session token
           async function initApp() {
             try {
               if (window['app-bridge']) {
@@ -307,7 +328,6 @@ app.get('/', (req, res) => {
                     host: host,
                   });
                   
-                  // Get session token
                   if (app.idToken) {
                     sessionToken = await app.idToken();
                     console.log('Session token obtained');
@@ -318,7 +338,6 @@ app.get('/', (req, res) => {
               console.log('App Bridge not available or error:', error);
             }
             
-            // Load products regardless of whether we got session token
             loadProducts();
           }
 
@@ -365,15 +384,7 @@ app.get('/', (req, res) => {
                       html += '<div class="variant-info">';
                       html += '<div><strong>' + escapeHtml(variant.title) + '</strong></div>';
                       html += '<div class="variant-option">SKU: ' + escapeHtml(variant.sku || 'N/A') + '</div>';
-                      html += '<div class="variant-option">Price: 
-  
-  res.send(htmlContent);
-});
-
-app.listen(PORT, () => {
-  console.log(`Variant Badges app running on port ${PORT}`);
-  console.log(`Visit http://localhost:${PORT} to test locally`);
-}); + escapeHtml(variant.price) + '</div>';
+                      html += '<div class="variant-option">Price: $' + escapeHtml(variant.price) + '</div>';
                       
                       if (variant.option1) html += '<div class="variant-option">Option 1: ' + escapeHtml(variant.option1) + '</div>';
                       if (variant.option2) html += '<div class="variant-option">Option 2: ' + escapeHtml(variant.option2) + '</div>';
@@ -402,7 +413,6 @@ app.listen(PORT, () => {
             return div.innerHTML;
           }
           
-          // Start the app
           initApp();
         </script>
       </body>
