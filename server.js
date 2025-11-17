@@ -56,25 +56,35 @@ app.get('/health', (req, res) => {
 
 // OAuth begin
 app.get('/auth', async (req, res) => {
-  const { shop } = req.query;
-  
-  console.log('OAuth start requested for shop:', shop);
-  
-  if (!shop) {
-    return res.status(400).send('Missing shop parameter');
+  try {
+    const { shop } = req.query;
+    
+    console.log('OAuth start requested for shop:', shop);
+    
+    if (!shop) {
+      return res.status(400).send('Missing shop parameter');
+    }
+    
+    console.log('Starting OAuth flow...');
+    
+    const sanitizedShop = shopify.utils.sanitizeShop(shop, true);
+    console.log('Sanitized shop:', sanitizedShop);
+    
+    await shopify.auth.begin({
+      shop: sanitizedShop,
+      callbackPath: '/auth/callback',
+      isOnline: false,
+      rawRequest: req,
+      rawResponse: res,
+    });
+    
+    console.log('OAuth redirect sent by Shopify library');
+  } catch (error) {
+    console.error('OAuth start error:', error);
+    if (!res.headersSent) {
+      res.status(500).send('OAuth failed: ' + error.message);
+    }
   }
-  
-  console.log('Starting OAuth flow...');
-
-  const authRoute = await shopify.auth.begin({
-    shop: shopify.utils.sanitizeShop(shop, true),
-    callbackPath: '/auth/callback',
-    isOnline: false,
-    rawRequest: req,
-    rawResponse: res,
-  });
-
-  res.redirect(authRoute);
 });
 
 // OAuth callback
@@ -92,17 +102,17 @@ app.get('/auth/callback', async (req, res) => {
     console.log('Access token received:', session.accessToken ? 'Yes' : 'No');
     
     // Store session in database
-const client = await pool.connect();
-try {
-  console.log('Attempting to save session for:', session.shop);
-  console.log('Access token exists:', !!session.accessToken);
-  console.log('Access token length:', session.accessToken?.length);
-  
-  const result = await client.query(
-    'INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2 RETURNING *',
-    [session.shop, session.accessToken]
-  );
-  console.log('Session saved successfully. Token starts with:', session.accessToken?.substring(0, 10));
+    const client = await pool.connect();
+    try {
+      console.log('Attempting to save session for:', session.shop);
+      console.log('Access token exists:', !!session.accessToken);
+      console.log('Access token length:', session.accessToken?.length);
+      
+      const result = await client.query(
+        'INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2 RETURNING *',
+        [session.shop, session.accessToken]
+      );
+      console.log('Session saved successfully. Token starts with:', session.accessToken?.substring(0, 10));
     } finally {
       client.release();
     }
