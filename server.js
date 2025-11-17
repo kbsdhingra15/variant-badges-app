@@ -319,16 +319,19 @@ app.get('/', (req, res) => {
           
           function loadProducts() {
             console.log('Loading products...');
-            const url = '/api/products?shop=' + encodeURIComponent(shop);
+            const url = '${process.env.HOST}/api/products?shop=' + encodeURIComponent(shop);
+            console.log('Fetching from URL:', url);
             
             fetch(url)
               .then(res => {
+                console.log('Got response, status:', res.status);
                 if (!res.ok) {
                   throw new Error('HTTP ' + res.status + ': ' + res.statusText);
                 }
                 return res.json();
               })
               .then(data => {
+                console.log('Got data:', data);
                 const container = document.getElementById('products');
                 
                 if (!data.products || data.products.length === 0) {
@@ -375,7 +378,8 @@ app.get('/', (req, res) => {
                 container.innerHTML = html;
               })
               .catch(err => {
-                console.error('Error:', err);
+                console.error('Fetch error:', err);
+                console.error('Error stack:', err.stack);
                 document.getElementById('products').innerHTML = 
                   '<div class="error"><strong>Error loading products:</strong><br>' + escapeHtml(err.message) + '<br><br>Check the browser console for more details.</div>';
               });
