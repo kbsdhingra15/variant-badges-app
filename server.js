@@ -1,10 +1,10 @@
-require('dotenv').config();
-const express = require('express');
-const { shopifyApi, LATEST_API_VERSION } = require('@shopify/shopify-api');
-require('@shopify/shopify-api/adapters/node');
-const { Pool } = require('pg');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
+require("dotenv").config();
+const express = require("express");
+const { shopifyApi, LATEST_API_VERSION } = require("@shopify/shopify-api");
+require("@shopify/shopify-api/adapters/node");
+const { Pool } = require("pg");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,7 +12,10 @@ const PORT = process.env.PORT || 3000;
 // Database setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
 // Initialize database
@@ -27,7 +30,7 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Database initialized');
+    console.log("Database initialized");
   } finally {
     client.release();
   }
@@ -39,8 +42,8 @@ initDB();
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
-  scopes: process.env.SCOPES.split(','),
-  hostName: process.env.HOST.replace(/https?:\/\//, ''),
+  scopes: process.env.SCOPES.split(","),
+  hostName: process.env.HOST.replace(/https?:\/\//, ""),
   apiVersion: LATEST_API_VERSION,
   isEmbeddedApp: true,
 });
@@ -50,21 +53,21 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Variant Badges app is running' });
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", message: "Variant Badges app is running" });
 });
 
 // OAuth begin
-app.get('/auth', async (req, res) => {
+app.get("/auth", async (req, res) => {
   const { shop } = req.query;
-  
+
   if (!shop) {
-    return res.status(400).send('Missing shop parameter');
+    return res.status(400).send("Missing shop parameter");
   }
 
   const authRoute = await shopify.auth.begin({
     shop: shopify.utils.sanitizeShop(shop, true),
-    callbackPath: '/auth/callback',
+    callbackPath: "/auth/callback",
     isOnline: false,
     rawRequest: req,
     rawResponse: res,
@@ -74,7 +77,7 @@ app.get('/auth', async (req, res) => {
 });
 
 // OAuth callback
-app.get('/auth/callback', async (req, res) => {
+app.get("/auth/callback", async (req, res) => {
   try {
     const callback = await shopify.auth.callback({
       rawRequest: req,
@@ -82,12 +85,12 @@ app.get('/auth/callback', async (req, res) => {
     });
 
     const { session } = callback;
-    
+
     // Store session in database
     const client = await pool.connect();
     try {
       await client.query(
-        'INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2',
+        "INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2",
         [session.shop, session.accessToken]
       );
     } finally {
@@ -98,8 +101,8 @@ app.get('/auth/callback', async (req, res) => {
     const host = req.query.host;
     res.redirect(`/?shop=${session.shop}&host=${host}`);
   } catch (error) {
-    console.error('Auth callback error:', error);
-    res.status(500).send('Authentication failed');
+    console.error("Auth callback error:", error);
+    res.status(500).send("Authentication failed");
   }
 });
 
@@ -107,7 +110,10 @@ app.get('/auth/callback', async (req, res) => {
 async function getShopSession(shop) {
   const client = await pool.connect();
   try {
-    const result = await client.query('SELECT access_token FROM shops WHERE shop = $1', [shop]);
+    const result = await client.query(
+      "SELECT access_token FROM shops WHERE shop = $1",
+      [shop]
+    );
     if (result.rows.length === 0) return null;
     return {
       shop,
@@ -119,38 +125,38 @@ async function getShopSession(shop) {
 }
 
 // API: Get products
-app.get('/api/products', async (req, res) => {
+app.get("/api/products", async (req, res) => {
   try {
     const { shop } = req.query;
-    
+
     if (!shop) {
-      return res.status(400).json({ error: 'Missing shop parameter' });
+      return res.status(400).json({ error: "Missing shop parameter" });
     }
 
     const session = await getShopSession(shop);
     if (!session) {
-      return res.status(401).json({ error: 'Shop not authenticated' });
+      return res.status(401).json({ error: "Shop not authenticated" });
     }
 
     const client = new shopify.clients.Rest({ session });
-    
+
     // Fetch products with variants
     const products = await client.get({
-      path: 'products',
+      path: "products",
       query: { limit: 50 },
     });
 
     res.json({ products: products.body.products });
   } catch (error) {
-    console.error('Error fetching products:', error);
-    res.status(500).json({ error: 'Failed to fetch products' });
+    console.error("Error fetching products:", error);
+    res.status(500).json({ error: "Failed to fetch products" });
   }
 });
 
 // Serve frontend
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   const { shop, host } = req.query;
-  
+
   if (!shop) {
     return res.send(`
       <!DOCTYPE html>
@@ -175,7 +181,7 @@ app.get('/', (req, res) => {
     `);
   }
 
-  res.send(`
+  const htmlContent = `
     <!DOCTYPE html>
     <html>
       <head>
@@ -207,15 +213,6 @@ app.get('/', (req, res) => {
           .variant-image { width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e1e3e5; }
           .variant-info { flex: 1; }
           .variant-option { color: #6d7175; font-size: 14px; }
-          .badge { 
-            display: inline-block; 
-            padding: 4px 12px; 
-            background: #e3f2fd; 
-            color: #1976d2; 
-            border-radius: 12px; 
-            font-size: 12px; 
-            font-weight: 500;
-          }
           .loading { text-align: center; padding: 50px; }
           .success { color: #008060; background: #e3f5ef; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
           .error { color: #d72c0d; background: #fef3f2; padding: 15px; border-radius: 4px; margin-bottom: 20px; }
@@ -239,8 +236,7 @@ app.get('/', (req, res) => {
         <script>
           const shop = '${shop}';
 
-          // Fetch products
-          fetch('/api/products?shop=' + shop)
+          fetch('/api/products?shop=' + encodeURIComponent(shop))
             .then(res => {
               if (!res.ok) {
                 throw new Error('HTTP ' + res.status + ': ' + res.statusText);
@@ -258,37 +254,30 @@ app.get('/', (req, res) => {
               let html = '';
               data.products.forEach(product => {
                 html += '<div class="product-card">';
-                html += '<div class="product-title">' + product.title + '</div>';
+                html += '<div class="product-title">' + escapeHtml(product.title) + '</div>';
                 
                 if (product.variants && product.variants.length > 0) {
                   product.variants.forEach(variant => {
                     html += '<div class="variant-row">';
                     
                     const image = variant.image_id ? 
-                      product.images.find(img => img.id === variant.image_id)?.src : 
-                      (product.images && product.images[0] ? product.images[0].src : '');
+                      (product.images && product.images.find(img => img.id === variant.image_id)) : 
+                      (product.images && product.images[0]);
                     
-                    if (image) {
-                      html += '<img class="variant-image" src="' + image + '" />';
+                    if (image && image.src) {
+                      html += '<img class="variant-image" src="' + escapeHtml(image.src) + '" />';
                     } else {
                       html += '<div class="variant-image" style="background:#e1e3e5"></div>';
                     }
                     
                     html += '<div class="variant-info">';
-                    html += '<div><strong>' + variant.title + '</strong></div>';
-                    html += '<div class="variant-option">SKU: ' + (variant.sku || 'N/A') + '</div>';
-                    html += '<div class="variant-option">Price: 
-});
-
-app.listen(PORT, () => {
-  console.log(`Variant Badges app running on port ${PORT}`);
-  console.log(`Visit http://localhost:${PORT} to test locally`);
-}); + variant.price + '</div>';
+                    html += '<div><strong>' + escapeHtml(variant.title) + '</strong></div>';
+                    html += '<div class="variant-option">SKU: ' + escapeHtml(variant.sku || 'N/A') + '</div>';
+                    html += '<div class="variant-option">Price: $' + escapeHtml(variant.price) + '</div>';
                     
-                    // Show variant options
-                    if (variant.option1) html += '<div class="variant-option">Option 1: ' + variant.option1 + '</div>';
-                    if (variant.option2) html += '<div class="variant-option">Option 2: ' + variant.option2 + '</div>';
-                    if (variant.option3) html += '<div class="variant-option">Option 3: ' + variant.option3 + '</div>';
+                    if (variant.option1) html += '<div class="variant-option">Option 1: ' + escapeHtml(variant.option1) + '</div>';
+                    if (variant.option2) html += '<div class="variant-option">Option 2: ' + escapeHtml(variant.option2) + '</div>';
+                    if (variant.option3) html += '<div class="variant-option">Option 3: ' + escapeHtml(variant.option3) + '</div>';
                     
                     html += '</div>';
                     html += '</div>';
@@ -303,12 +292,20 @@ app.listen(PORT, () => {
             .catch(err => {
               console.error('Error:', err);
               document.getElementById('products').innerHTML = 
-                '<div class="error"><strong>Error loading products:</strong><br>' + err.message + '<br><br>Check the browser console for more details.</div>';
+                '<div class="error"><strong>Error loading products:</strong><br>' + escapeHtml(err.message) + '<br><br>Check the browser console for more details.</div>';
             });
+          
+          function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+          }
         </script>
       </body>
     </html>
-  `);
+  `;
+
+  res.send(htmlContent);
 });
 
 app.listen(PORT, () => {
