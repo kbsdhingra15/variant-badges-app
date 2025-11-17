@@ -129,19 +129,33 @@ app.get("/api/products", async (req, res) => {
   try {
     const { shop } = req.query;
 
+    console.log("API request for shop:", shop);
+
     if (!shop) {
       return res.status(400).json({ error: "Missing shop parameter" });
     }
 
     const session = await getShopSession(shop);
+    console.log("Session found:", session ? "Yes" : "No");
+
     if (!session) {
-      return res.status(401).json({ error: "Shop not authenticated" });
+      // Let's check what shops are in the database
+      const client = await pool.connect();
+      try {
+        const result = await client.query("SELECT shop FROM shops");
+        console.log("Shops in database:", result.rows);
+      } finally {
+        client.release();
+      }
+      return res
+        .status(401)
+        .json({ error: "Shop not authenticated", requestedShop: shop });
     }
 
-    const client = new shopify.clients.Rest({ session });
+    const restClient = new shopify.clients.Rest({ session });
 
     // Fetch products with variants
-    const products = await client.get({
+    const products = await restClient.get({
       path: "products",
       query: { limit: 50 },
     });
@@ -149,7 +163,9 @@ app.get("/api/products", async (req, res) => {
     res.json({ products: products.body.products });
   } catch (error) {
     console.error("Error fetching products:", error);
-    res.status(500).json({ error: "Failed to fetch products" });
+    res
+      .status(500)
+      .json({ error: "Failed to fetch products", details: error.message });
   }
 });
 
