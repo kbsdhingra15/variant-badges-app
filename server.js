@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const { shopifyApi, LATEST_API_VERSION } = require("@shopify/shopify-api");
+require("@shopify/shopify-api/adapters/node");
 const { Pool } = require("pg");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
