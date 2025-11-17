@@ -1,10 +1,10 @@
-require('dotenv').config();
-const express = require('express');
-const { shopifyApi, LATEST_API_VERSION } = require('@shopify/shopify-api');
-require('@shopify/shopify-api/adapters/node');
-const { Pool } = require('pg');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
+require("dotenv").config();
+const express = require("express");
+const { shopifyApi, LATEST_API_VERSION } = require("@shopify/shopify-api");
+require("@shopify/shopify-api/adapters/node");
+const { Pool } = require("pg");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,7 +12,10 @@ const PORT = process.env.PORT || 3000;
 // Database setup
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
 });
 
 // Initialize database
@@ -27,7 +30,7 @@ async function initDB() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    console.log('Database initialized');
+    console.log("Database initialized");
   } finally {
     client.release();
   }
@@ -39,8 +42,8 @@ initDB();
 const shopify = shopifyApi({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
-  scopes: process.env.SCOPES.split(','),
-  hostName: process.env.HOST.replace(/https?:\/\//, ''),
+  scopes: process.env.SCOPES.split(","),
+  hostName: process.env.HOST.replace(/https?:\/\//, ""),
   apiVersion: LATEST_API_VERSION,
   isEmbeddedApp: true,
 });
@@ -50,80 +53,83 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Variant Badges app is running' });
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", message: "Variant Badges app is running" });
 });
 
 // OAuth begin
-app.get('/auth', async (req, res) => {
+app.get("/auth", async (req, res) => {
   try {
     const { shop } = req.query;
-    
-    console.log('OAuth start requested for shop:', shop);
-    
+
+    console.log("OAuth start requested for shop:", shop);
+
     if (!shop) {
-      return res.status(400).send('Missing shop parameter');
+      return res.status(400).send("Missing shop parameter");
     }
-    
-    console.log('Starting OAuth flow...');
-    
+
+    console.log("Starting OAuth flow...");
+
     const sanitizedShop = shopify.utils.sanitizeShop(shop, true);
-    console.log('Sanitized shop:', sanitizedShop);
-    
+    console.log("Sanitized shop:", sanitizedShop);
+
     await shopify.auth.begin({
       shop: sanitizedShop,
-      callbackPath: '/auth/callback',
+      callbackPath: "/auth/callback",
       isOnline: false,
       rawRequest: req,
       rawResponse: res,
     });
-    
-    console.log('OAuth redirect sent by Shopify library');
+
+    console.log("OAuth redirect sent by Shopify library");
   } catch (error) {
-    console.error('OAuth start error:', error);
+    console.error("OAuth start error:", error);
     if (!res.headersSent) {
-      res.status(500).send('OAuth failed: ' + error.message);
+      res.status(500).send("OAuth failed: " + error.message);
     }
   }
 });
 
 // OAuth callback
-app.get('/auth/callback', async (req, res) => {
+app.get("/auth/callback", async (req, res) => {
   try {
-    console.log('OAuth callback received');
-    
+    console.log("OAuth callback received");
+
     const callback = await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
     });
 
     const { session } = callback;
-    console.log('Session created for shop:', session.shop);
-    console.log('Access token received:', session.accessToken ? 'Yes' : 'No');
-    
+    console.log("Session created for shop:", session.shop);
+    console.log("Access token received:", session.accessToken ? "Yes" : "No");
+
     // Store session in database
     const client = await pool.connect();
     try {
-      console.log('Attempting to save session for:', session.shop);
-      console.log('Access token exists:', !!session.accessToken);
-      console.log('Access token length:', session.accessToken?.length);
-      
+      console.log("Attempting to save session for:", session.shop);
+      console.log("Access token exists:", !!session.accessToken);
+      console.log("Access token length:", session.accessToken?.length);
+
       const result = await client.query(
-        'INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2 RETURNING *',
+        "INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2 RETURNING *",
         [session.shop, session.accessToken]
       );
-      console.log('Session saved successfully. Token starts with:', session.accessToken?.substring(0, 10));
+      console.log(
+        "Session saved successfully. Token starts with:",
+        session.accessToken?.substring(0, 10)
+      );
     } finally {
       client.release();
     }
 
     // Redirect to app
     const host = req.query.host;
-    console.log('Redirecting to app with shop:', session.shop);
+    console.log("Redirecting to app with shop:", session.shop);
     res.redirect(`/?shop=${session.shop}&host=${host}`);
   } catch (error) {
-    console.error('Auth callback error:', error);
-    res.status(500).send('Authentication failed: ' + error.message);
+    console.error("Auth callback error:", error);
+    res.status(500).send("Authentication failed: " + error.message);
   }
 });
 
@@ -131,7 +137,10 @@ app.get('/auth/callback', async (req, res) => {
 async function getShopSession(shop) {
   const client = await pool.connect();
   try {
-    const result = await client.query('SELECT access_token FROM shops WHERE shop = $1', [shop]);
+    const result = await client.query(
+      "SELECT access_token FROM shops WHERE shop = $1",
+      [shop]
+    );
     if (result.rows.length === 0) return null;
     return {
       shop,
@@ -143,97 +152,116 @@ async function getShopSession(shop) {
 }
 
 // API: Get products (with session token support)
-app.get('/api/products', async (req, res) => {
+app.get("/api/products", async (req, res) => {
   try {
     const { shop, sessionToken } = req.query;
-    
-    console.log('API request for shop:', shop);
-    console.log('Session token provided:', !!sessionToken);
-    
+
+    console.log("API request for shop:", shop);
+    console.log("Session token provided:", !!sessionToken);
+
     if (!shop) {
-      return res.status(400).json({ error: 'Missing shop parameter' });
+      return res.status(400).json({ error: "Missing shop parameter" });
     }
 
     // Try to get session from database first
     let session = await getShopSession(shop);
-    console.log('Session found in database:', session ? 'Yes' : 'No');
-    
+    console.log("Session found in database:", session ? "Yes" : "No");
+    if (session) {
+      console.log(
+        "Token from DB starts with:",
+        session.accessToken?.substring(0, 15)
+      );
+      console.log("Token from DB length:", session.accessToken?.length);
+    }
     // If session token is provided and we have no session, try session token exchange
     if (sessionToken && !session) {
-      console.log('Attempting session token exchange...');
+      console.log("Attempting session token exchange...");
       try {
-        const decodedSession = await shopify.session.decodeSessionToken(sessionToken);
-        console.log('Decoded session token for shop:', decodedSession.dest);
-        
+        const decodedSession = await shopify.session.decodeSessionToken(
+          sessionToken
+        );
+        console.log("Decoded session token for shop:", decodedSession.dest);
+
         // Use the existing session token as temporary auth
         session = {
-          shop: decodedSession.dest.replace('https://', '').replace('/admin', ''),
+          shop: decodedSession.dest
+            .replace("https://", "")
+            .replace("/admin", ""),
           accessToken: sessionToken,
-          isSessionToken: true
+          isSessionToken: true,
         };
-        console.log('Using session token for API calls');
+        console.log("Using session token for API calls");
       } catch (error) {
-        console.error('Session token decode error:', error);
+        console.error("Session token decode error:", error);
       }
     }
-    
+
     if (!session) {
       // Let's check what shops are in the database
       const client = await pool.connect();
       try {
-        const result = await client.query('SELECT shop FROM shops');
-        console.log('Shops in database:', result.rows);
+        const result = await client.query("SELECT shop FROM shops");
+        console.log("Shops in database:", result.rows);
       } finally {
         client.release();
       }
-      return res.status(401).json({ 
-        error: 'Shop not authenticated', 
+      return res.status(401).json({
+        error: "Shop not authenticated",
         requestedShop: shop,
-        hint: 'Please reinstall the app or visit the auth URL'
+        hint: "Please reinstall the app or visit the auth URL",
       });
     }
 
     const restClient = new shopify.clients.Rest({ session });
-    
+
     // Fetch products with variants
     const products = await restClient.get({
-      path: 'products',
+      path: "products",
       query: { limit: 50 },
     });
 
     res.json({ products: products.body.products });
   } catch (error) {
-    console.error('Error fetching products:', error);
-    res.status(500).json({ error: 'Failed to fetch products', details: error.message });
+    console.error("Error fetching products:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to fetch products", details: error.message });
   }
 });
 
 // Debug endpoint: Clear shop session
-app.get('/debug/clear-session', async (req, res) => {
+app.get("/debug/clear-session", async (req, res) => {
   try {
     const { shop } = req.query;
     if (!shop) {
-      return res.status(400).send('Missing shop parameter');
+      return res.status(400).send("Missing shop parameter");
     }
-    
+
     const client = await pool.connect();
     try {
-      const result = await client.query('DELETE FROM shops WHERE shop = $1 RETURNING *', [shop]);
-      console.log('Deleted session:', result.rows);
-      res.json({ message: 'Session cleared', shop, deleted: result.rowCount > 0 });
+      const result = await client.query(
+        "DELETE FROM shops WHERE shop = $1 RETURNING *",
+        [shop]
+      );
+      console.log("Deleted session:", result.rows);
+      res.json({
+        message: "Session cleared",
+        shop,
+        deleted: result.rowCount > 0,
+      });
     } finally {
       client.release();
     }
   } catch (error) {
-    console.error('Error clearing session:', error);
+    console.error("Error clearing session:", error);
     res.status(500).json({ error: error.message });
   }
 });
 
 // Serve frontend
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   const { shop, host } = req.query;
-  
+
   if (!shop) {
     return res.send(`
       <!DOCTYPE html>
@@ -399,7 +427,7 @@ app.get('/', (req, res) => {
       </body>
     </html>
   `;
-  
+
   res.send(htmlContent);
 });
 
