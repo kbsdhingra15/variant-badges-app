@@ -92,13 +92,17 @@ app.get('/auth/callback', async (req, res) => {
     console.log('Access token received:', session.accessToken ? 'Yes' : 'No');
     
     // Store session in database
-    const client = await pool.connect();
-    try {
-      const result = await client.query(
-        'INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2 RETURNING *',
-        [session.shop, session.accessToken]
-      );
-      console.log('Session saved to database:', result.rows[0]);
+const client = await pool.connect();
+try {
+  console.log('Attempting to save session for:', session.shop);
+  console.log('Access token exists:', !!session.accessToken);
+  console.log('Access token length:', session.accessToken?.length);
+  
+  const result = await client.query(
+    'INSERT INTO shops (shop, access_token) VALUES ($1, $2) ON CONFLICT (shop) DO UPDATE SET access_token = $2 RETURNING *',
+    [session.shop, session.accessToken]
+  );
+  console.log('Session saved successfully. Token starts with:', session.accessToken?.substring(0, 10));
     } finally {
       client.release();
     }
