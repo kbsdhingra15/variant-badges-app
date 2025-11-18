@@ -55,7 +55,14 @@ const shopify = shopifyApi({
 // CORS configuration
 app.use(
   cors({
+<<<<<<< HEAD
     origin: ["https://admin.shopify.com", process.env.SHOP_URL].filter(Boolean),
+=======
+    origin: [
+      "https://admin.shopify.com",
+      process.env.SHOP_URL,
+    ].filter(Boolean),
+>>>>>>> eb9037fd528f820906d00db88d3b337b5b86c867
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -397,9 +404,15 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
     // Transform GraphQL response to match REST API format (for compatibility)
     const products = response.data.products.edges.map((edge) => {
       const product = edge.node;
+<<<<<<< HEAD
 
       return {
         id: product.id.split("/").pop(), // Extract numeric ID
+=======
+      
+      return {
+        id: product.id.split('/').pop(), // Extract numeric ID
+>>>>>>> eb9037fd528f820906d00db88d3b337b5b86c867
         title: product.title,
         handle: product.handle,
         body_html: product.descriptionHtml,
@@ -409,13 +422,18 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
         tags: product.tags,
         vendor: product.vendor,
         options: product.options.map((opt) => ({
+<<<<<<< HEAD
           id: opt.id.split("/").pop(),
+=======
+          id: opt.id.split('/').pop(),
+>>>>>>> eb9037fd528f820906d00db88d3b337b5b86c867
           name: opt.name,
           position: opt.position,
           values: opt.values,
         })),
         variants: product.variants.edges.map((vEdge, index) => {
           const variant = vEdge.node;
+<<<<<<< HEAD
 
           // Build option values
           const selectedOptions = variant.selectedOptions || [];
@@ -431,6 +449,17 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
 
           return {
             id: variant.id.split("/").pop(),
+=======
+          
+          // Build option values
+          const selectedOptions = variant.selectedOptions || [];
+          const option1 = selectedOptions.find((o) => o.name === product.options[0]?.name)?.value || null;
+          const option2 = selectedOptions.find((o) => o.name === product.options[1]?.name)?.value || null;
+          const option3 = selectedOptions.find((o) => o.name === product.options[2]?.name)?.value || null;
+          
+          return {
+            id: variant.id.split('/').pop(),
+>>>>>>> eb9037fd528f820906d00db88d3b337b5b86c867
             title: variant.title,
             price: variant.price,
             compare_at_price: variant.compareAtPrice,
@@ -442,7 +471,11 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
             weight_unit: variant.weightUnit,
             requires_shipping: variant.requiresShipping,
             taxable: variant.taxable,
+<<<<<<< HEAD
             image_id: variant.image ? variant.image.id.split("/").pop() : null,
+=======
+            image_id: variant.image ? variant.image.id.split('/').pop() : null,
+>>>>>>> eb9037fd528f820906d00db88d3b337b5b86c867
             option1,
             option2,
             option3,
@@ -451,7 +484,11 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
         images: product.images.edges.map((imgEdge) => {
           const image = imgEdge.node;
           return {
+<<<<<<< HEAD
             id: image.id.split("/").pop(),
+=======
+            id: image.id.split('/').pop(),
+>>>>>>> eb9037fd528f820906d00db88d3b337b5b86c867
             src: image.url,
             alt: image.altText,
             width: image.width,
@@ -466,6 +503,7 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching products:", error.message);
     console.error("   Error stack:", error.stack);
+<<<<<<< HEAD
 
     // Check for GraphQL-specific errors
     if (error.response?.errors) {
@@ -480,6 +518,16 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
       error.response &&
       (error.response.code === 401 || error.response.statusCode === 401)
     ) {
+=======
+    
+    // Check for GraphQL-specific errors
+    if (error.response?.errors) {
+      console.error("   GraphQL errors:", JSON.stringify(error.response.errors, null, 2));
+    }
+
+    // If Shopify returns 401, the token is invalid - delete it from database
+    if (error.response && (error.response.code === 401 || error.response.statusCode === 401)) {
+>>>>>>> eb9037fd528f820906d00db88d3b337b5b86c867
       console.log("🗑️  Token invalid - removing from database");
       const dbClient = await pool.connect();
       try {
