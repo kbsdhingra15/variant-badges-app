@@ -48,7 +48,17 @@ const shopify = shopifyApi({
   isEmbeddedApp: true,
 });
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "https://admin.shopify.com",
+      "https://quickstart-c559582d.myshopify.com",
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 app.use(cookieParser());
 
