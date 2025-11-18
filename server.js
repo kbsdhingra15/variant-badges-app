@@ -48,7 +48,7 @@ const shopify = shopifyApi({
   scopes: process.env.SCOPES.split(","),
   hostName: process.env.HOST.replace(/https?:\/\//, ""),
   apiVersion: LATEST_API_VERSION,
-  isEmbeddedApp: true, // ✅ Changed to true for App Bridge
+  isEmbeddedApp: true, // ✅ Embedded app with App Bridge
   isCustomStoreApp: false,
 });
 
@@ -57,7 +57,7 @@ app.use(
   cors({
     origin: [
       "https://admin.shopify.com",
-      process.env.SHOP_URL, // Add your specific shop URL from .env if needed
+      process.env.SHOP_URL,
     ].filter(Boolean),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -155,7 +155,7 @@ async function validateSessionToken(req, res, next) {
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
-    message: "Variant Badges App is running",
+    message: "Variant Badges App is running (GraphQL API)",
     timestamp: new Date().toISOString(),
   });
 });
@@ -316,32 +316,161 @@ async function getShopSession(shop) {
   }
 }
 
-// 🆕 API: Get products - PROTECTED by session token
+// 🆕 API: Get products - PROTECTED by session token (USING GRAPHQL)
 app.get("/api/products", validateSessionToken, async (req, res) => {
   try {
     const session = req.shopifySession;
     console.log("📦 Fetching products for shop:", session.shop);
     console.log("   Access token available:", !!session.accessToken);
     console.log("   Access token length:", session.accessToken?.length);
+    console.log("   Using GraphQL API ✅");
 
-    const client = new shopify.clients.Rest({ session });
+    const client = new shopify.clients.Graphql({ session });
 
-    // Fetch products with variants
-    console.log("   Making Shopify API call...");
-    const response = await client.get({
-      path: "products",
-      query: { limit: 50 },
+    // GraphQL query for products with variants
+    console.log("   Making Shopify GraphQL API call...");
+    const query = `
+      query getProducts {
+        products(first: 50) {
+          edges {
+            node {
+              id
+              title
+              handle
+              descriptionHtml
+              createdAt
+              updatedAt
+              productType
+              tags
+              vendor
+              options {
+                id
+                name
+                position
+                values
+              }
+              variants(first: 100) {
+                edges {
+                  node {
+                    id
+                    title
+                    price
+                    compareAtPrice
+                    sku
+                    barcode
+                    position
+                    inventoryQuantity
+                    weight
+                    weightUnit
+                    requiresShipping
+                    taxable
+                    image {
+                      id
+                      url
+                      altText
+                      width
+                      height
+                    }
+                    selectedOptions {
+                      name
+                      value
+                    }
+                  }
+                }
+              }
+              images(first: 10) {
+                edges {
+                  node {
+                    id
+                    url
+                    altText
+                    width
+                    height
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await client.request(query);
+
+    // Transform GraphQL response to match REST API format (for compatibility)
+    const products = response.data.products.edges.map((edge) => {
+      const product = edge.node;
+      
+      return {
+        id: product.id.split('/').pop(), // Extract numeric ID
+        title: product.title,
+        handle: product.handle,
+        body_html: product.descriptionHtml,
+        created_at: product.createdAt,
+        updated_at: product.updatedAt,
+        product_type: product.productType,
+        tags: product.tags,
+        vendor: product.vendor,
+        options: product.options.map((opt) => ({
+          id: opt.id.split('/').pop(),
+          name: opt.name,
+          position: opt.position,
+          values: opt.values,
+        })),
+        variants: product.variants.edges.map((vEdge, index) => {
+          const variant = vEdge.node;
+          
+          // Build option values
+          const selectedOptions = variant.selectedOptions || [];
+          const option1 = selectedOptions.find((o) => o.name === product.options[0]?.name)?.value || null;
+          const option2 = selectedOptions.find((o) => o.name === product.options[1]?.name)?.value || null;
+          const option3 = selectedOptions.find((o) => o.name === product.options[2]?.name)?.value || null;
+          
+          return {
+            id: variant.id.split('/').pop(),
+            title: variant.title,
+            price: variant.price,
+            compare_at_price: variant.compareAtPrice,
+            sku: variant.sku || "",
+            barcode: variant.barcode || "",
+            position: variant.position || index + 1,
+            inventory_quantity: variant.inventoryQuantity || 0,
+            weight: variant.weight,
+            weight_unit: variant.weightUnit,
+            requires_shipping: variant.requiresShipping,
+            taxable: variant.taxable,
+            image_id: variant.image ? variant.image.id.split('/').pop() : null,
+            option1,
+            option2,
+            option3,
+          };
+        }),
+        images: product.images.edges.map((imgEdge) => {
+          const image = imgEdge.node;
+          return {
+            id: image.id.split('/').pop(),
+            src: image.url,
+            alt: image.altText,
+            width: image.width,
+            height: image.height,
+          };
+        }),
+      };
     });
 
-    console.log(`✅ Fetched ${response.body.products.length} products`);
-    res.json({ products: response.body.products });
+    console.log(`✅ Fetched ${products.length} products via GraphQL`);
+    res.json({ products });
   } catch (error) {
     console.error("❌ Error fetching products:", error.message);
     console.error("   Error stack:", error.stack);
-    console.error("   Error code:", error.code);
+    
+    // Check for GraphQL-specific errors
+    if (error.response?.errors) {
+      console.error("   GraphQL errors:", JSON.stringify(error.response.errors, null, 2));
+    }
 
     // If Shopify returns 401, the token is invalid - delete it from database
-    if (error.response && error.response.code === 401) {
+    if (error.response && (error.response.code === 401 || error.response.statusCode === 401)) {
       console.log("🗑️  Token invalid - removing from database");
       const dbClient = await pool.connect();
       try {
@@ -366,27 +495,44 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
     res.status(500).json({
       error: "Failed to fetch products",
       details: error.message,
-      code: error.code,
+      graphqlErrors: error.response?.errors,
     });
   }
 });
 
-// 🆕 API: Get product options - for settings page
+// 🆕 API: Get product options - for settings page (USING GRAPHQL)
 app.get("/api/product-options", validateSessionToken, async (req, res) => {
   try {
     const session = req.shopifySession;
     console.log("🎯 Fetching product options for shop:", session.shop);
+    console.log("   Using GraphQL API ✅");
 
-    const client = new shopify.clients.Rest({ session });
+    const client = new shopify.clients.Graphql({ session });
 
-    const response = await client.get({
-      path: "products",
-      query: { limit: 250, fields: "id,title,options" },
-    });
+    // GraphQL query to get all product options
+    const query = `
+      query getProductOptions {
+        products(first: 250) {
+          edges {
+            node {
+              id
+              title
+              options {
+                name
+                values
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await client.request(query);
 
     // Extract all unique option names across all products
     const optionNames = new Set();
-    response.body.products.forEach((product) => {
+    response.data.products.edges.forEach((edge) => {
+      const product = edge.node;
       if (product.options) {
         product.options.forEach((option) => {
           optionNames.add(option.name);
@@ -400,9 +546,11 @@ app.get("/api/product-options", validateSessionToken, async (req, res) => {
     res.json({ options });
   } catch (error) {
     console.error("❌ Error fetching product options:", error);
+    console.error("   GraphQL errors:", error.response?.errors);
     res.status(500).json({
       error: "Failed to fetch product options",
       details: error.message,
+      graphqlErrors: error.response?.errors,
     });
   }
 });
@@ -671,7 +819,7 @@ app.get("/", (req, res) => {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Variant Badges - Phase 1</title>
+        <title>Variant Badges - Phase 1 (GraphQL)</title>
         <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
         <style>
           body { 
@@ -699,6 +847,16 @@ app.get("/", (req, res) => {
           .status-success {
             background: #e3f5ef;
             color: #008060;
+          }
+          .api-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+            background: #e0e3ff;
+            color: #4353ff;
           }
           .product-card { 
             background: white; 
@@ -756,9 +914,10 @@ app.get("/", (req, res) => {
           <div class="header">
             <h1>
               🎨 Variant Badges - Phase 1 Test
+              <span class="api-badge">GraphQL API ✨</span>
               <span class="status-badge status-success" id="status">Connecting...</span>
             </h1>
-            <p style="color: #6d7175;">Testing App Bridge authentication and product data access</p>
+            <p style="color: #6d7175;">Testing App Bridge authentication and product data access using GraphQL API</p>
           </div>
           <div id="products">
             <div class="loading">🔄 Initializing App Bridge...</div>
@@ -771,7 +930,7 @@ app.get("/", (req, res) => {
           const apiKey = '${process.env.SHOPIFY_API_KEY}';
           const appHost = '${process.env.HOST}';
 
-          console.log('🚀 App loading...');
+          console.log('🚀 App loading with GraphQL API...');
           console.log('   Shop:', shop);
           console.log('   Host:', host);
           console.log('   API Key:', apiKey);
@@ -902,7 +1061,7 @@ app.get("/", (req, res) => {
               }
               
               document.getElementById('status').textContent = 'Loading Products...';
-              console.log('📦 Fetching products...');
+              console.log('📦 Fetching products via GraphQL API...');
               
               const url = appHost + '/api/products';
               console.log('   URL:', url);
@@ -932,7 +1091,7 @@ app.get("/", (req, res) => {
               }
 
               const data = await response.json();
-              console.log('✅ Products received:', data.products.length);
+              console.log('✅ Products received via GraphQL:', data.products.length);
               
               document.getElementById('status').textContent = '✅ Connected';
               displayProducts(data.products);
@@ -974,7 +1133,7 @@ app.get("/", (req, res) => {
               return;
             }
 
-            let html = '<div class="success"><strong>🎉 Success!</strong> Connected to your store and loaded products with App Bridge authentication.</div>';
+            let html = '<div class="success"><strong>🎉 Success!</strong> Connected to your store and loaded products using GraphQL API (no more warnings!).</div>';
             
             products.forEach(product => {
               html += '<div class="product-card">';
@@ -1042,5 +1201,6 @@ app.listen(PORT, () => {
   console.log(`📍 Port: ${PORT}`);
   console.log(`🌐 URL: ${process.env.HOST || "http://localhost:" + PORT}`);
   console.log(`🔐 Embedded: true (App Bridge)`);
+  console.log(`✨ API: GraphQL (no more REST warnings!)`);
   console.log("");
 });
