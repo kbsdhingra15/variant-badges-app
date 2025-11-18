@@ -195,6 +195,7 @@ app.get("/auth", async (req, res) => {
 app.get("/auth/callback", async (req, res) => {
   try {
     console.log("🔐 OAuth callback received");
+    console.log("   Query params:", Object.keys(req.query));
 
     const callback = await shopify.auth.callback({
       rawRequest: req,
@@ -203,18 +204,81 @@ app.get("/auth/callback", async (req, res) => {
 
     const { session } = callback;
     console.log("✅ Session created for shop:", session.shop);
+    console.log("   Session ID:", session.id);
+    console.log("   Session state:", session.state);
+    console.log("   Session isOnline:", session.isOnline);
+    console.log(
+      "   Access token received:",
+      session.accessToken ? "Yes" : "No"
+    );
+    console.log("   Access token length:", session.accessToken?.length);
+    console.log(
+      "   Access token starts with:",
+      session.accessToken?.substring(0, 15) + "..."
+    );
+    console.log(
+      "   Access token ends with:",
+      "..." + session.accessToken?.substring(session.accessToken.length - 15)
+    );
 
     // Store session in database
     const client = await pool.connect();
     try {
-      await client.query(
-        `INSERT INTO shops (shop, access_token, updated_at) 
-         VALUES ($1, $2, NOW()) 
-         ON CONFLICT (shop) 
-         DO UPDATE SET access_token = $2, updated_at = NOW()`,
-        [session.shop, session.accessToken]
-      );
+      console.log("💾 Saving to database...");
+      console.log("   Shop:", session.shop);
+      console.log("   Token to save length:", session.accessToken.length);
+
+      // Check if updated_at column exists
+      const schemaCheck = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'shops' AND column_name = 'updated_at'
+      `);
+
+      const hasUpdatedAt = schemaCheck.rows.length > 0;
+      console.log("   Schema has updated_at:", hasUpdatedAt);
+
+      let result;
+      if (hasUpdatedAt) {
+        result = await client.query(
+          `INSERT INTO shops (shop, access_token, updated_at) 
+           VALUES ($1, $2, NOW()) 
+           ON CONFLICT (shop) 
+           DO UPDATE SET access_token = $2, updated_at = NOW()
+           RETURNING shop, LENGTH(access_token) as token_length, created_at, updated_at`,
+          [session.shop, session.accessToken]
+        );
+      } else {
+        result = await client.query(
+          `INSERT INTO shops (shop, access_token) 
+           VALUES ($1, $2) 
+           ON CONFLICT (shop) 
+           DO UPDATE SET access_token = $2
+           RETURNING shop, LENGTH(access_token) as token_length, created_at`,
+          [session.shop, session.accessToken]
+        );
+      }
+
       console.log("✅ Session saved to database");
+      console.log("   Saved shop:", result.rows[0].shop);
+      console.log("   Saved token length:", result.rows[0].token_length);
+      console.log("   Created at:", result.rows[0].created_at);
+
+      // Verify by reading it back
+      const verifyResult = await client.query(
+        "SELECT shop, LENGTH(access_token) as token_length, access_token FROM shops WHERE shop = $1",
+        [session.shop]
+      );
+      console.log("🔍 Verification read:");
+      console.log("   Token length in DB:", verifyResult.rows[0].token_length);
+      console.log(
+        "   Token starts with:",
+        verifyResult.rows[0].access_token.substring(0, 15) + "..."
+      );
+      console.log(
+        "   Tokens match:",
+        verifyResult.rows[0].access_token === session.accessToken ? "Yes" : "No"
+      );
     } finally {
       client.release();
     }
@@ -226,6 +290,7 @@ app.get("/auth/callback", async (req, res) => {
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ Auth callback error:", error);
+    console.error("   Stack:", error.stack);
     res.status(500).send("Authentication failed: " + error.message);
   }
 });
@@ -379,12 +444,30 @@ app.get("/debug/shops", async (req, res) => {
   try {
     const client = await pool.connect();
     try {
-      const result = await client.query(
-        "SELECT shop, created_at, updated_at FROM shops ORDER BY updated_at DESC"
-      );
+      // Check if updated_at column exists
+      const schemaCheck = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'shops' AND column_name = 'updated_at'
+      `);
+
+      const hasUpdatedAt = schemaCheck.rows.length > 0;
+
+      let result;
+      if (hasUpdatedAt) {
+        result = await client.query(
+          "SELECT shop, LENGTH(access_token) as token_length, created_at, updated_at FROM shops ORDER BY created_at DESC"
+        );
+      } else {
+        result = await client.query(
+          "SELECT shop, LENGTH(access_token) as token_length, created_at FROM shops ORDER BY created_at DESC"
+        );
+      }
+
       res.json({
         shops: result.rows,
         count: result.rows.length,
+        schema_version: hasUpdatedAt ? "new" : "old (missing updated_at)",
       });
     } finally {
       client.release();
@@ -438,6 +521,61 @@ app.get("/debug/clear-session", async (req, res) => {
   } catch (error) {
     console.error("❌ Error clearing session:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Debug: Migrate database schema
+app.get("/debug/migrate-schema", async (req, res) => {
+  try {
+    console.log("🔧 Starting database schema migration...");
+
+    const client = await pool.connect();
+    try {
+      // Check if updated_at column exists
+      const schemaCheck = await client.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'shops' AND column_name = 'updated_at'
+      `);
+
+      if (schemaCheck.rows.length > 0) {
+        console.log("✅ Schema already up to date");
+        return res.json({
+          message: "Schema already up to date",
+          updated_at_exists: true,
+        });
+      }
+
+      // Add updated_at column
+      console.log("   Adding updated_at column...");
+      await client.query(`
+        ALTER TABLE shops 
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      `);
+
+      // Update existing rows to have updated_at = created_at
+      console.log("   Setting updated_at for existing rows...");
+      await client.query(`
+        UPDATE shops 
+        SET updated_at = created_at 
+        WHERE updated_at IS NULL
+      `);
+
+      console.log("✅ Schema migration completed");
+
+      res.json({
+        message: "Schema migrated successfully",
+        changes: [
+          "Added updated_at column",
+          "Set updated_at = created_at for existing rows",
+        ],
+      });
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("❌ Schema migration error:", error);
+    res.status(500).json({ error: error.message, stack: error.stack });
   }
 });
 
