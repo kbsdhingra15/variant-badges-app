@@ -382,8 +382,7 @@ app.get("/", (req, res) => {
     <html>
       <head>
         <title>Variant Badges - Phase 1</title>
-        <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
-        <script src="https://unpkg.com/@shopify/app-bridge-utils@3"></script>
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -487,55 +486,106 @@ app.get("/", (req, res) => {
           console.log('   Host:', host);
           console.log('   API Key:', apiKey);
 
-          // Wait for App Bridge libraries to load
           let app;
-          let appBridgeLoaded = false;
+          let currentToken = null;
+          
+          // PRODUCTION-READY APPROACH:
+          // 1. Use id_token from URL for immediate load
+          // 2. Initialize App Bridge for token refresh
+          // 3. Auto-refresh token before it expires
 
-          // Check if libraries are loaded
-          function checkLibraries() {
-            if (typeof AppBridge !== 'undefined' && typeof AppBridgeUtils !== 'undefined') {
-              console.log('✅ App Bridge libraries loaded');
-              appBridgeLoaded = true;
-              initializeApp();
-            } else {
-              console.log('⏳ Waiting for App Bridge libraries...');
-              setTimeout(checkLibraries, 100);
+          // Get initial session token from URL
+          function getSessionTokenFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const idToken = urlParams.get('id_token');
+            
+            if (idToken) {
+              console.log('✅ Initial session token from URL');
+              currentToken = idToken;
+              return idToken;
             }
+            
+            console.log('⚠️  No id_token in URL');
+            return null;
           }
 
-          // Initialize App Bridge
-          function initializeApp() {
+          // Initialize App Bridge (for token refresh)
+          async function initAppBridge() {
             try {
-              app = AppBridge.createApp({
+              // Wait for App Bridge to be available
+              if (typeof window.createApp === 'undefined') {
+                console.log('⏳ Waiting for App Bridge...');
+                setTimeout(initAppBridge, 200);
+                return;
+              }
+
+              app = window.createApp({
                 apiKey: apiKey,
                 host: host,
               });
+              
               console.log('✅ App Bridge initialized');
-              loadProducts();
+              
+              // Set up token refresh (tokens expire after ~1 minute)
+              startTokenRefresh();
+              
             } catch (error) {
-              console.error('❌ App Bridge initialization failed:', error);
-              showError('Failed to initialize App Bridge: ' + error.message);
+              console.log('⚠️  App Bridge init delayed:', error.message);
+              // Retry
+              setTimeout(initAppBridge, 500);
             }
           }
 
-          // Get session token from App Bridge
+          // Get fresh token from App Bridge
           async function getSessionToken() {
             try {
-              console.log('🔐 Getting session token from App Bridge...');
-              const token = await AppBridgeUtils.getSessionToken(app);
-              console.log('✅ Session token received');
+              if (!app) {
+                console.log('ℹ️  Using initial token (App Bridge not ready)');
+                return currentToken;
+              }
+
+              if (typeof window.getSessionToken === 'undefined') {
+                console.log('ℹ️  getSessionToken not available, using current token');
+                return currentToken;
+              }
+
+              const token = await window.getSessionToken(app);
+              currentToken = token;
+              console.log('✅ Refreshed session token');
               return token;
+              
             } catch (error) {
-              console.error('❌ Failed to get session token:', error);
-              throw error;
+              console.log('⚠️  Token refresh failed, using current:', error.message);
+              return currentToken;
             }
           }
 
-          // Load products using session token
+          // Auto-refresh token every 50 seconds (tokens expire after 60s)
+          function startTokenRefresh() {
+            setInterval(async () => {
+              try {
+                await getSessionToken();
+                console.log('🔄 Token auto-refreshed');
+              } catch (error) {
+                console.log('⚠️  Auto-refresh failed:', error.message);
+              }
+            }, 50000); // 50 seconds
+          }
+
+          // Initialize App Bridge in background (non-blocking)
+          setTimeout(initAppBridge, 500);
+
+          // Load products using session token (with auto-refresh support)
           async function loadProducts() {
             try {
               document.getElementById('status').textContent = 'Getting Auth Token...';
-              const sessionToken = await getSessionToken();
+              
+              // Get initial token from URL
+              let sessionToken = getSessionTokenFromURL();
+              
+              if (!sessionToken) {
+                throw new Error('No session token found. Try reinstalling the app.');
+              }
               
               document.getElementById('status').textContent = 'Loading Products...';
               console.log('📦 Fetching products...');
@@ -567,6 +617,29 @@ app.get("/", (req, res) => {
               console.error('❌ Error loading products:', error);
               document.getElementById('status').textContent = '❌ Error';
               showError('Failed to load products: ' + error.message);
+            }
+          }
+
+          // Refresh products (can be called after token refresh)
+          async function refreshProducts() {
+            try {
+              const sessionToken = await getSessionToken();
+              
+              const response = await fetch(appHost + '/api/products', {
+                method: 'GET',
+                headers: {
+                  'Authorization': 'Bearer ' + sessionToken,
+                  'Content-Type': 'application/json',
+                }
+              });
+
+              if (response.ok) {
+                const data = await response.json();
+                displayProducts(data.products);
+                console.log('🔄 Products refreshed');
+              }
+            } catch (error) {
+              console.log('⚠️  Product refresh failed:', error.message);
             }
           }
 
@@ -629,8 +702,8 @@ app.get("/", (req, res) => {
             return div.innerHTML;
           }
 
-          // Start loading products
-          checkLibraries();
+          // Start loading products immediately
+          loadProducts();
         </script>
       </body>
     </html>
