@@ -339,7 +339,29 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
     console.error("❌ Error fetching products:", error.message);
     console.error("   Error stack:", error.stack);
     console.error("   Error code:", error.code);
-    console.error("   Full error:", error);
+
+    // If Shopify returns 401, the token is invalid - delete it from database
+    if (error.response && error.response.code === 401) {
+      console.log("🗑️  Token invalid - removing from database");
+      const dbClient = await pool.connect();
+      try {
+        await dbClient.query("DELETE FROM shops WHERE shop = $1", [
+          req.shopifySession.shop,
+        ]);
+        console.log("✅ Invalid token removed from database");
+      } catch (dbError) {
+        console.error("❌ Error removing invalid token:", dbError);
+      } finally {
+        dbClient.release();
+      }
+
+      return res.status(401).json({
+        error: "Shop not authenticated",
+        needsAuth: true,
+        details:
+          "Access token is invalid or expired. Please reinstall the app.",
+      });
+    }
 
     res.status(500).json({
       error: "Failed to fetch products",
@@ -759,7 +781,7 @@ app.get("/", (req, res) => {
           
           // PRODUCTION-READY APPROACH:
           // 1. Use id_token from URL for immediate load
-          // 2. Initialize App Bridge for token refresh
+          // 2. Initialize App Bridge for token refresh and redirects
           // 3. Auto-refresh token before it expires
 
           // Get initial session token from URL
@@ -777,7 +799,7 @@ app.get("/", (req, res) => {
             return null;
           }
 
-          // Initialize App Bridge (for token refresh)
+          // Initialize App Bridge (for token refresh and redirects)
           async function initAppBridge() {
             try {
               // Wait for App Bridge to be available
@@ -801,6 +823,30 @@ app.get("/", (req, res) => {
               console.log('⚠️  App Bridge init delayed:', error.message);
               // Retry
               setTimeout(initAppBridge, 500);
+            }
+          }
+
+          // Redirect using App Bridge (for embedded apps)
+          function redirectToOAuth() {
+            const oauthUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
+            console.log('   Redirecting to:', oauthUrl);
+            
+            try {
+              // Use App Bridge Redirect if available
+              if (app && window.AppBridge && window.AppBridge.actions) {
+                console.log('   Using App Bridge Redirect API');
+                const Redirect = window.AppBridge.actions.Redirect;
+                const redirect = Redirect.create(app);
+                redirect.dispatch(Redirect.Action.REMOTE, oauthUrl);
+              } else {
+                // Fallback to top-level redirect
+                console.log('   Using fallback redirect (App Bridge not ready)');
+                window.top.location.href = oauthUrl;
+              }
+            } catch (error) {
+              console.error('   Redirect error:', error);
+              // Final fallback
+              window.top.location.href = oauthUrl;
             }
           }
 
@@ -873,6 +919,15 @@ app.get("/", (req, res) => {
 
               if (!response.ok) {
                 const errorData = await response.json();
+                
+                // If shop not authenticated, redirect to OAuth using App Bridge
+                if (errorData.needsAuth || errorData.error === 'Shop not authenticated') {
+                  console.log('🔄 Shop not authenticated - starting OAuth flow with App Bridge...');
+                  document.getElementById('status').textContent = 'Starting OAuth...';
+                  redirectToOAuth();
+                  return;
+                }
+                
                 throw new Error(errorData.error || 'HTTP ' + response.status);
               }
 
