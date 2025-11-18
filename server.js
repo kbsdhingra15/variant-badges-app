@@ -80,30 +80,59 @@ async function validateSessionToken(req, res, next) {
 
     const sessionToken = authHeader.replace("Bearer ", "");
     console.log("🔐 Validating session token...");
+    console.log("   Token length:", sessionToken.length);
+    console.log("   Token starts with:", sessionToken.substring(0, 50) + "...");
 
     // Decode and validate the session token
-    const payload = await shopify.session.decodeSessionToken(sessionToken);
+    let payload;
+    try {
+      payload = await shopify.session.decodeSessionToken(sessionToken);
+      console.log("✅ Session token decoded successfully");
+    } catch (decodeError) {
+      console.error("❌ Token decode error:", decodeError.message);
+      console.error("   Full error:", decodeError);
+      return res.status(401).json({
+        error: "Invalid session token",
+        details: decodeError.message,
+      });
+    }
 
     console.log("✅ Session token validated");
-    console.log(
-      "   Shop:",
-      payload.dest.replace("https://", "").replace("/admin", "")
-    );
+    console.log("   Destination:", payload.dest);
+    console.log("   Audience:", payload.aud);
 
     // Get the shop domain from the token
     const shop = payload.dest.replace("https://", "").replace("/admin", "");
+    console.log("   Extracted shop:", shop);
 
     // Get the access token from database
     const session = await getShopSession(shop);
 
     if (!session) {
       console.log("❌ Shop not authenticated in database:", shop);
+
+      // Check what shops ARE in the database
+      const client = await pool.connect();
+      try {
+        const result = await client.query("SELECT shop FROM shops");
+        console.log(
+          "   Shops in database:",
+          result.rows.map((r) => r.shop)
+        );
+      } finally {
+        client.release();
+      }
+
       return res.status(401).json({
         error: "Shop not authenticated",
         shop,
         needsAuth: true,
+        hint: "Please complete the OAuth installation flow",
       });
     }
+
+    console.log("✅ Shop session found in database");
+    console.log("   Access token length:", session.accessToken.length);
 
     // Attach session to request for use in route handlers
     req.shopifySession = {
@@ -114,8 +143,9 @@ async function validateSessionToken(req, res, next) {
     next();
   } catch (error) {
     console.error("❌ Session token validation error:", error.message);
-    return res.status(401).json({
-      error: "Invalid session token",
+    console.error("   Stack:", error.stack);
+    return res.status(500).json({
+      error: "Token validation failed",
       details: error.message,
     });
   }
@@ -226,10 +256,13 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
   try {
     const session = req.shopifySession;
     console.log("📦 Fetching products for shop:", session.shop);
+    console.log("   Access token available:", !!session.accessToken);
+    console.log("   Access token length:", session.accessToken?.length);
 
     const client = new shopify.clients.Rest({ session });
 
     // Fetch products with variants
+    console.log("   Making Shopify API call...");
     const response = await client.get({
       path: "products",
       query: { limit: 50 },
@@ -238,10 +271,15 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
     console.log(`✅ Fetched ${response.body.products.length} products`);
     res.json({ products: response.body.products });
   } catch (error) {
-    console.error("❌ Error fetching products:", error);
+    console.error("❌ Error fetching products:", error.message);
+    console.error("   Error stack:", error.stack);
+    console.error("   Error code:", error.code);
+    console.error("   Full error:", error);
+
     res.status(500).json({
       error: "Failed to fetch products",
       details: error.message,
+      code: error.code,
     });
   }
 });
@@ -282,6 +320,52 @@ app.get("/api/product-options", validateSessionToken, async (req, res) => {
   }
 });
 
+// Debug: Check shop authentication status (NO auth required - for troubleshooting)
+app.get("/api/check-auth", async (req, res) => {
+  try {
+    const { shop } = req.query;
+
+    if (!shop) {
+      return res.status(400).json({ error: "Missing shop parameter" });
+    }
+
+    console.log("🔍 Checking auth status for:", shop);
+
+    // Check if shop is in database
+    const session = await getShopSession(shop);
+
+    if (session) {
+      console.log("✅ Shop is authenticated");
+      return res.json({
+        authenticated: true,
+        shop: session.shop,
+        hasAccessToken: !!session.accessToken,
+        tokenLength: session.accessToken?.length,
+      });
+    } else {
+      console.log("❌ Shop not authenticated");
+
+      // Show what shops ARE in the database
+      const client = await pool.connect();
+      try {
+        const result = await client.query(
+          "SELECT shop, created_at FROM shops ORDER BY created_at DESC"
+        );
+        return res.json({
+          authenticated: false,
+          shop,
+          shopsInDatabase: result.rows,
+        });
+      } finally {
+        client.release();
+      }
+    }
+  } catch (error) {
+    console.error("❌ Check auth error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Debug: Check shop authentication status
 app.get("/api/auth-status", validateSessionToken, (req, res) => {
   res.json({
@@ -307,6 +391,52 @@ app.get("/debug/shops", async (req, res) => {
     }
   } catch (error) {
     console.error("Error listing shops:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Debug: Clear shop session
+app.get("/debug/clear-session", async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) {
+      return res
+        .status(400)
+        .json({
+          error:
+            "Missing shop parameter. Usage: /debug/clear-session?shop=your-store.myshopify.com",
+        });
+    }
+
+    console.log("🗑️  Clearing session for:", shop);
+
+    const client = await pool.connect();
+    try {
+      const result = await client.query(
+        "DELETE FROM shops WHERE shop = $1 RETURNING *",
+        [shop]
+      );
+
+      if (result.rowCount > 0) {
+        console.log("✅ Session deleted:", result.rows[0].shop);
+        res.json({
+          message: "Session cleared successfully",
+          shop: shop,
+          deleted: true,
+        });
+      } else {
+        console.log("⚠️  Shop not found in database:", shop);
+        res.json({
+          message: "Shop not found in database (already cleared)",
+          shop: shop,
+          deleted: false,
+        });
+      }
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error("❌ Error clearing session:", error);
     res.status(500).json({ error: error.message });
   }
 });
