@@ -382,7 +382,8 @@ app.get("/", (req, res) => {
     <html>
       <head>
         <title>Variant Badges - Phase 1</title>
-        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+        <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+        <script src="https://unpkg.com/@shopify/app-bridge-utils@3"></script>
         <style>
           body { 
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
@@ -486,24 +487,42 @@ app.get("/", (req, res) => {
           console.log('   Host:', host);
           console.log('   API Key:', apiKey);
 
-          // Initialize App Bridge
+          // Wait for App Bridge libraries to load
           let app;
-          try {
-            app = window.createApp({
-              apiKey: apiKey,
-              host: host,
-            });
-            console.log('✅ App Bridge initialized');
-          } catch (error) {
-            console.error('❌ App Bridge initialization failed:', error);
-            showError('Failed to initialize App Bridge: ' + error.message);
+          let appBridgeLoaded = false;
+
+          // Check if libraries are loaded
+          function checkLibraries() {
+            if (typeof AppBridge !== 'undefined' && typeof AppBridgeUtils !== 'undefined') {
+              console.log('✅ App Bridge libraries loaded');
+              appBridgeLoaded = true;
+              initializeApp();
+            } else {
+              console.log('⏳ Waiting for App Bridge libraries...');
+              setTimeout(checkLibraries, 100);
+            }
+          }
+
+          // Initialize App Bridge
+          function initializeApp() {
+            try {
+              app = AppBridge.createApp({
+                apiKey: apiKey,
+                host: host,
+              });
+              console.log('✅ App Bridge initialized');
+              loadProducts();
+            } catch (error) {
+              console.error('❌ App Bridge initialization failed:', error);
+              showError('Failed to initialize App Bridge: ' + error.message);
+            }
           }
 
           // Get session token from App Bridge
           async function getSessionToken() {
             try {
               console.log('🔐 Getting session token from App Bridge...');
-              const token = await window.getSessionToken(app);
+              const token = await AppBridgeUtils.getSessionToken(app);
               console.log('✅ Session token received');
               return token;
             } catch (error) {
@@ -611,7 +630,7 @@ app.get("/", (req, res) => {
           }
 
           // Start loading products
-          loadProducts();
+          checkLibraries();
         </script>
       </body>
     </html>
