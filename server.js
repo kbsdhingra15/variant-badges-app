@@ -1167,30 +1167,23 @@ app.get("/", (req, res) => {
               if (!response.ok) {
                 const errorData = await response.json();
                 
-                // If shop not authenticated, redirect to OAuth using App Bridge
+                // If shop not authenticated, redirect to OAuth IMMEDIATELY
                 if (errorData.needsAuth || errorData.error === 'Shop not authenticated') {
-                  console.log('🔄 Shop not authenticated - need to reinstall');
-                  document.getElementById('status').textContent = 'Need to Reinstall...';
+                  console.log('🔄 Shop not authenticated - redirecting to OAuth immediately');
+                  document.getElementById('status').textContent = 'Redirecting to install...';
                   
-                  // Wait for App Bridge to be ready before redirecting
-                  const waitForAppBridge = setInterval(() => {
-                    if (app) {
-                      clearInterval(waitForAppBridge);
-                      console.log('✅ App Bridge ready, redirecting to OAuth');
-                      redirectToOAuth();
-                    } else {
-                      console.log('⏳ Waiting for App Bridge to initialize...');
-                    }
-                  }, 100);
+                  // Build OAuth URL
+                  const oauthUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
                   
-                  // Timeout after 5 seconds - use fallback redirect
-                  setTimeout(() => {
-                    clearInterval(waitForAppBridge);
-                    if (!app) {
-                      console.log('⚠️  App Bridge timeout, using fallback redirect');
-                      redirectToOAuth();
-                    }
-                  }, 5000);
+                  // For embedded apps in iframe, we need to break out to top level
+                  // This works even before App Bridge is ready
+                  if (window.top !== window.self) {
+                    console.log('   Breaking out of iframe for OAuth');
+                    window.top.location.href = oauthUrl;
+                  } else {
+                    console.log('   Direct OAuth redirect');
+                    window.location.href = oauthUrl;
+                  }
                   
                   return;
                 }
