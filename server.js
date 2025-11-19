@@ -402,10 +402,10 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
       }
     `;
 
-    const response = await client.request(query);
+    const response = await client.query({ data: query });
 
     // Transform GraphQL response to match REST API format (for compatibility)
-    const products = response.data.products.edges.map((edge) => {
+    const products = response.body.data.products.edges.map((edge) => {
       const product = edge.node;
 
       return {
@@ -556,11 +556,11 @@ app.get("/api/product-options", validateSessionToken, async (req, res) => {
       }
     `;
 
-    const response = await client.request(query);
+    const response = await client.query({ data: query });
 
     // Extract all unique option names across all products
     const optionNames = new Set();
-    response.data.products.edges.forEach((edge) => {
+    response.body.data.products.edges.forEach((edge) => {
       const product = edge.node;
       if (product.options) {
         product.options.forEach((option) => {
