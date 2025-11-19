@@ -316,20 +316,11 @@ async function getShopSession(shop) {
 // API: Get products - PROTECTED by session token (USING GRAPHQL)
 app.get("/api/products", validateSessionToken, async (req, res) => {
   try {
-    const sessionData = req.shopifySession;
-    console.log("📦 Fetching products for shop:", sessionData.shop);
-    console.log("   Access token available:", !!sessionData.accessToken);
-    console.log("   Access token length:", sessionData.accessToken?.length);
+    const session = req.shopifySession;
+    console.log("📦 Fetching products for shop:", session.shop);
+    console.log("   Access token available:", !!session.accessToken);
+    console.log("   Access token length:", session.accessToken?.length);
     console.log("   Using GraphQL API ✅");
-
-    // Create proper Shopify Session object for GraphQL client
-    const session = new shopify.session.Session({
-      id: `offline_${sessionData.shop}`,
-      shop: sessionData.shop,
-      state: "authenticated",
-      isOnline: false,
-      accessToken: sessionData.accessToken,
-    });
 
     const client = new shopify.clients.Graphql({ session });
 
@@ -521,18 +512,9 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
 // API: Get product options - for settings page (USING GRAPHQL)
 app.get("/api/product-options", validateSessionToken, async (req, res) => {
   try {
-    const sessionData = req.shopifySession;
-    console.log("🎯 Fetching product options for shop:", sessionData.shop);
+    const session = req.shopifySession;
+    console.log("🎯 Fetching product options for shop:", session.shop);
     console.log("   Using GraphQL API ✅");
-
-    // Create proper Shopify Session object for GraphQL client
-    const session = new shopify.session.Session({
-      id: `offline_${sessionData.shop}`,
-      shop: sessionData.shop,
-      state: "authenticated",
-      isOnline: false,
-      accessToken: sessionData.accessToken,
-    });
 
     const client = new shopify.clients.Graphql({ session });
 
