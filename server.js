@@ -55,7 +55,10 @@ const shopify = shopifyApi({
 // CORS configuration
 app.use(
   cors({
-    origin: ["https://admin.shopify.com", process.env.SHOP_URL].filter(Boolean),
+    origin: [
+      "https://admin.shopify.com",
+      process.env.SHOP_URL,
+    ].filter(Boolean),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -289,11 +292,8 @@ app.get("/auth/callback", async (req, res) => {
         path: "/webhooks/app-uninstalled",
         deliveryMethod: "http",
       });
-
-      if (
-        webhookResult.APP_UNINSTALLED &&
-        webhookResult.APP_UNINSTALLED[0].success
-      ) {
+      
+      if (webhookResult.APP_UNINSTALLED && webhookResult.APP_UNINSTALLED[0].success) {
         console.log("✅ APP_UNINSTALLED webhook registered successfully");
       } else {
         console.log("⚠️  Webhook registration failed:", webhookResult);
@@ -303,11 +303,21 @@ app.get("/auth/callback", async (req, res) => {
       // Don't fail OAuth if webhook registration fails
     }
 
-    // Redirect to app with embedded parameter
+    // Redirect to app embedded in Shopify admin
     const host = req.query.host;
-    const redirectUrl = `/?shop=${session.shop}&host=${host}&embedded=1`;
-    console.log("   Redirecting to:", redirectUrl);
-    res.redirect(redirectUrl);
+    const shopDomain = session.shop;
+    
+    if (host) {
+      // Use host parameter to build proper embedded app URL
+      const redirectUrl = `https://${shopDomain}/admin/apps/${process.env.SHOPIFY_API_KEY}?host=${host}`;
+      console.log("   Redirecting to Shopify admin with embedded app:", redirectUrl);
+      res.redirect(redirectUrl);
+    } else {
+      // Fallback: redirect to basic app URL (will require manual open)
+      const redirectUrl = `/?shop=${session.shop}&embedded=1`;
+      console.log("   Redirecting to app (no host param):", redirectUrl);
+      res.redirect(redirectUrl);
+    }
   } catch (error) {
     console.error("❌ Auth callback error:", error);
     console.error("   Stack:", error.stack);
@@ -337,45 +347,41 @@ async function getShopSession(shop) {
 }
 
 // Webhook: APP_UNINSTALLED - Auto-cleanup when merchant uninstalls
-app.post(
-  "/webhooks/app-uninstalled",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      console.log("📡 APP_UNINSTALLED webhook received");
-
-      // Verify webhook authenticity
-      const hmac = req.headers["x-shopify-hmac-sha256"];
-      const shop = req.headers["x-shopify-shop-domain"];
-
-      console.log("   Shop:", shop);
-
-      // Delete shop from database
-      if (shop) {
-        const client = await pool.connect();
-        try {
-          const result = await client.query(
-            "DELETE FROM shops WHERE shop = $1 RETURNING shop",
-            [shop]
-          );
-
-          if (result.rowCount > 0) {
-            console.log("✅ Shop session auto-deleted:", shop);
-          } else {
-            console.log("⚠️  Shop not found in database (already deleted)");
-          }
-        } finally {
-          client.release();
+app.post("/webhooks/app-uninstalled", express.raw({ type: "application/json" }), async (req, res) => {
+  try {
+    console.log("📡 APP_UNINSTALLED webhook received");
+    
+    // Verify webhook authenticity
+    const hmac = req.headers["x-shopify-hmac-sha256"];
+    const shop = req.headers["x-shopify-shop-domain"];
+    
+    console.log("   Shop:", shop);
+    
+    // Delete shop from database
+    if (shop) {
+      const client = await pool.connect();
+      try {
+        const result = await client.query(
+          "DELETE FROM shops WHERE shop = $1 RETURNING shop",
+          [shop]
+        );
+        
+        if (result.rowCount > 0) {
+          console.log("✅ Shop session auto-deleted:", shop);
+        } else {
+          console.log("⚠️  Shop not found in database (already deleted)");
         }
+      } finally {
+        client.release();
       }
-
-      res.status(200).send("OK");
-    } catch (error) {
-      console.error("❌ Webhook error:", error);
-      res.status(500).send("Error");
     }
+    
+    res.status(200).send("OK");
+  } catch (error) {
+    console.error("❌ Webhook error:", error);
+    res.status(500).send("Error");
   }
-);
+});
 
 // API: Get products - PROTECTED by session token (USING GRAPHQL)
 app.get("/api/products", validateSessionToken, async (req, res) => {
@@ -468,9 +474,9 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
     // Transform GraphQL response to match REST API format (for compatibility)
     const products = response.body.data.products.edges.map((edge) => {
       const product = edge.node;
-
+      
       return {
-        id: product.id.split("/").pop(),
+        id: product.id.split('/').pop(),
         title: product.title,
         handle: product.handle,
         body_html: product.descriptionHtml,
@@ -480,28 +486,22 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
         tags: product.tags,
         vendor: product.vendor,
         options: product.options.map((opt) => ({
-          id: opt.id.split("/").pop(),
+          id: opt.id.split('/').pop(),
           name: opt.name,
           position: opt.position,
           values: opt.values,
         })),
         variants: product.variants.edges.map((vEdge, index) => {
           const variant = vEdge.node;
-
+          
           // Build option values
           const selectedOptions = variant.selectedOptions || [];
-          const option1 =
-            selectedOptions.find((o) => o.name === product.options[0]?.name)
-              ?.value || null;
-          const option2 =
-            selectedOptions.find((o) => o.name === product.options[1]?.name)
-              ?.value || null;
-          const option3 =
-            selectedOptions.find((o) => o.name === product.options[2]?.name)
-              ?.value || null;
-
+          const option1 = selectedOptions.find((o) => o.name === product.options[0]?.name)?.value || null;
+          const option2 = selectedOptions.find((o) => o.name === product.options[1]?.name)?.value || null;
+          const option3 = selectedOptions.find((o) => o.name === product.options[2]?.name)?.value || null;
+          
           return {
-            id: variant.id.split("/").pop(),
+            id: variant.id.split('/').pop(),
             title: variant.title,
             price: variant.price,
             compare_at_price: variant.compareAtPrice,
@@ -510,7 +510,7 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
             position: variant.position || index + 1,
             inventory_quantity: variant.inventoryQuantity || 0,
             taxable: variant.taxable,
-            image_id: variant.image ? variant.image.id.split("/").pop() : null,
+            image_id: variant.image ? variant.image.id.split('/').pop() : null,
             option1,
             option2,
             option3,
@@ -519,7 +519,7 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
         images: product.images.edges.map((imgEdge) => {
           const image = imgEdge.node;
           return {
-            id: image.id.split("/").pop(),
+            id: image.id.split('/').pop(),
             src: image.url,
             alt: image.altText,
             width: image.width,
@@ -534,20 +534,14 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
   } catch (error) {
     console.error("❌ Error fetching products:", error.message);
     console.error("   Error stack:", error.stack);
-
+    
     // Check for GraphQL-specific errors
     if (error.response?.errors) {
-      console.error(
-        "   GraphQL errors:",
-        JSON.stringify(error.response.errors, null, 2)
-      );
+      console.error("   GraphQL errors:", JSON.stringify(error.response.errors, null, 2));
     }
 
     // If Shopify returns 401, the token is invalid - delete it from database
-    if (
-      error.response &&
-      (error.response.code === 401 || error.response.statusCode === 401)
-    ) {
+    if (error.response && (error.response.code === 401 || error.response.statusCode === 401)) {
       console.log("🗑️  Token invalid - removing from database");
       const dbClient = await pool.connect();
       try {
@@ -740,10 +734,12 @@ app.get("/debug/clear-session", async (req, res) => {
   try {
     const { shop } = req.query;
     if (!shop) {
-      return res.status(400).json({
-        error:
-          "Missing shop parameter. Usage: /debug/clear-session?shop=your-store.myshopify.com",
-      });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Missing shop parameter. Usage: /debug/clear-session?shop=your-store.myshopify.com",
+        });
     }
 
     console.log("🗑️  Clearing session for:", shop);
