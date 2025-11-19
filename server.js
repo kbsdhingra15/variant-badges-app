@@ -367,9 +367,6 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
                     barcode
                     position
                     inventoryQuantity
-                    weight
-                    weightUnit
-                    requiresShipping
                     taxable
                     image {
                       id
@@ -448,9 +445,6 @@ app.get("/api/products", validateSessionToken, async (req, res) => {
             barcode: variant.barcode || "",
             position: variant.position || index + 1,
             inventory_quantity: variant.inventoryQuantity || 0,
-            weight: variant.weight,
-            weight_unit: variant.weightUnit,
-            requires_shipping: variant.requiresShipping,
             taxable: variant.taxable,
             image_id: variant.image ? variant.image.id.split("/").pop() : null,
             option1,
