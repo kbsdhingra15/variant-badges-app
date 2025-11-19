@@ -1167,28 +1167,62 @@ app.get("/", (req, res) => {
               if (!response.ok) {
                 const errorData = await response.json();
                 
-                // If shop not authenticated, redirect to OAuth IMMEDIATELY
+                // If shop not authenticated, need to do OAuth
                 if (errorData.needsAuth || errorData.error === 'Shop not authenticated') {
-                  console.log('🔄 Shop not authenticated - redirecting to OAuth immediately');
-                  document.getElementById('status').textContent = 'Redirecting to install...';
+                  console.log('🔄 Shop not authenticated - need OAuth');
+                  document.getElementById('status').textContent = 'Installing...';
                   
-                  // Build OAuth URL
                   const oauthUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
                   
-                  // For embedded apps in iframe, we need to break out to top level
-                  // This works even before App Bridge is ready
-                  if (window.top !== window.self) {
-                    console.log('   Breaking out of iframe for OAuth');
-                    window.top.location.href = oauthUrl;
-                  } else {
-                    console.log('   Direct OAuth redirect');
-                    window.location.href = oauthUrl;
-                  }
+                  // Strategy: Wait briefly for App Bridge, then show clickable link
+                  let appBridgeAttempts = 0;
+                  const maxAttempts = 20; // 2 seconds max
+                  
+                  const tryRedirect = setInterval(() => {
+                    appBridgeAttempts++;
+                    
+                    // If App Bridge is ready, use it!
+                    if (app && window.AppBridge && window.AppBridge.actions) {
+                      clearInterval(tryRedirect);
+                      console.log('✅ App Bridge ready - using Redirect API');
+                      
+                      try {
+                        const Redirect = window.AppBridge.actions.Redirect;
+                        const redirect = Redirect.create(app);
+                        redirect.dispatch(Redirect.Action.REMOTE, oauthUrl);
+                        return;
+                      } catch (error) {
+                        console.error('❌ App Bridge redirect failed:', error);
+                        showInstallButton(oauthUrl);
+                      }
+                    }
+                    
+                    // Timeout - show clickable button
+                    if (appBridgeAttempts >= maxAttempts) {
+                      clearInterval(tryRedirect);
+                      console.log('⚠️  App Bridge timeout - showing install button');
+                      showInstallButton(oauthUrl);
+                    }
+                  }, 100);
                   
                   return;
                 }
                 
                 throw new Error(errorData.error || 'HTTP ' + response.status);
+              }
+              
+              // Helper function to show install button
+              function showInstallButton(oauthUrl) {
+                document.getElementById('products').innerHTML = 
+                  '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
+                  '<h2 style="margin-bottom: 20px;">📦 App Installation Required</h2>' +
+                  '<p style="color: #6d7175; margin-bottom: 30px;">Click the button below to complete installation:</p>' +
+                  '<a href="' + escapeHtml(oauthUrl) + '" target="_top" style="' +
+                  'display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
+                  'text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 16px;">' +
+                  'Complete Installation</a>' +
+                  '</div>';
+                document.getElementById('status').textContent = 'Action Required';
               }
 
               const data = await response.json();
