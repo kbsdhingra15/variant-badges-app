@@ -167,7 +167,7 @@ app.get("/api/check-auth", async (req, res) => {
 // ==============
 
 // Main app page (embedded in Shopify admin)
-app.get("/app", (req, res) => {
+app.get("/app", async (req, res) => {
   try {
     const { shop, host } = req.query;
 
@@ -176,6 +176,16 @@ app.get("/app", (req, res) => {
     }
 
     console.log("🎨 Serving app page for:", shop);
+
+    // Check if shop is authenticated (OAuth completed)
+    const session = await getShopSession(shop);
+
+    if (!session) {
+      console.log("⚠️  Shop not authenticated, redirecting to OAuth...");
+      return res.redirect(`/auth?shop=${shop}`);
+    }
+
+    console.log("✅ Shop is authenticated, serving app page");
 
     // Read the HTML template
     const htmlPath = path.join(__dirname, "views", "app.html");
