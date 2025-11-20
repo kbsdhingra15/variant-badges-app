@@ -22,7 +22,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Initialize database on startup
-initDB().catch(error => {
+initDB().catch((error) => {
   console.error("❌ Failed to initialize database:", error);
   process.exit(1);
 });
@@ -41,10 +41,7 @@ const shopify = shopifyApi({
 // CORS configuration
 app.use(
   cors({
-    origin: [
-      "https://admin.shopify.com",
-      process.env.SHOP_URL,
-    ].filter(Boolean),
+    origin: ["https://admin.shopify.com", process.env.SHOP_URL].filter(Boolean),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -107,7 +104,10 @@ app.get("/auth/callback", async (req, res) => {
 
     console.log("✅ OAuth successful!");
     console.log("   Shop:", callback.session.shop);
-    console.log("   Access Token:", callback.session.accessToken.substring(0, 20) + "...");
+    console.log(
+      "   Access Token:",
+      callback.session.accessToken.substring(0, 20) + "..."
+    );
 
     // Save to database
     await saveShopSession(callback.session.shop, callback.session.accessToken);
@@ -253,8 +253,16 @@ app.get("/install", (req, res) => {
   `);
 });
 
-// Root route
+// Root route - smart redirect
 app.get("/", (req, res) => {
+  const { shop, host } = req.query;
+
+  // If accessed from Shopify admin (has shop/host params), go to app
+  if (shop && host) {
+    return res.redirect(`/app?shop=${shop}&host=${host}`);
+  }
+
+  // Otherwise, show install page
   res.redirect("/install");
 });
 
