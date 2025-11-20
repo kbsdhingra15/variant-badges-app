@@ -244,8 +244,22 @@
         }, 50000); // 50 seconds
       }
 
-      // Initialize App Bridge immediately
-      initAppBridge();
+      // Initialize App Bridge - keep trying until it loads
+      let initAttempts = 0;
+      function tryInitAppBridge() {
+        if (initAttempts > 50) {
+          console.error("❌ App Bridge script failed to load after 5 seconds");
+          return;
+        }
+
+        if (initAppBridge()) {
+          console.log("✅ App Bridge ready after", initAttempts, "attempts");
+        } else {
+          initAttempts++;
+          setTimeout(tryInitAppBridge, 100);
+        }
+      }
+      tryInitAppBridge();
 
       // Load products
       async function loadProducts() {
@@ -255,13 +269,15 @@
 
           // Wait for App Bridge to be ready
           let attempts = 0;
-          while (!app && attempts < 30) {
+          while (!app && attempts < 50) {
             await new Promise((resolve) => setTimeout(resolve, 100));
             attempts++;
           }
 
           if (!app) {
-            throw new Error("App Bridge failed to initialize");
+            throw new Error(
+              "App Bridge failed to initialize after 5 seconds. Please refresh the page and try again."
+            );
           }
 
           // Get session token from App Bridge
