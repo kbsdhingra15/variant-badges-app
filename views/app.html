@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges App</title>
-    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
     <style>
       * {
         margin: 0;
@@ -175,6 +175,7 @@
       const shop = urlParams.get("shop");
       const host = urlParams.get("host");
       const appHost = "{{APP_HOST}}"; // Will be replaced by server
+      const apiKey = "{{SHOPIFY_API_KEY}}"; // Will be replaced by server
 
       let app = null;
 
@@ -182,33 +183,54 @@
       console.log("   Shop:", shop);
       console.log("   Host:", host);
       console.log("   App Host:", appHost);
+      console.log(
+        "   API Key:",
+        apiKey ? apiKey.substring(0, 10) + "..." : "NOT SET"
+      );
 
-      // Get session token from URL fragment (App Bridge provides this)
-      function getSessionTokenFromURL() {
-        const hash = window.location.hash;
-        if (hash && hash.includes("id_token=")) {
-          const token = hash.split("id_token=")[1].split("&")[0];
-          console.log("✅ Found session token in URL fragment");
-          return token;
-        }
-        console.log("⚠️  No session token in URL fragment");
-        return null;
+      // Wait for App Bridge library to load
+      function waitForAppBridge() {
+        return new Promise((resolve, reject) => {
+          let attempts = 0;
+          const maxAttempts = 50; // 5 seconds
+
+          const checkInterval = setInterval(() => {
+            attempts++;
+
+            // Check if AppBridge is available
+            if (window.shopify && window.shopify.environment) {
+              clearInterval(checkInterval);
+              console.log("✅ App Bridge library loaded");
+              resolve();
+            } else if (attempts >= maxAttempts) {
+              clearInterval(checkInterval);
+              console.error("❌ App Bridge library failed to load");
+              reject(new Error("App Bridge library not available"));
+            }
+          }, 100);
+        });
       }
 
       // Initialize App Bridge
-      function initAppBridge() {
+      async function initAppBridge() {
         try {
-          if (typeof createApp === "undefined") {
-            console.log("⚠️  App Bridge not loaded yet, waiting...");
-            return false;
+          await waitForAppBridge();
+
+          if (!apiKey || apiKey.includes("{{")) {
+            throw new Error("API Key not configured properly");
           }
 
-          app = createApp({
-            apiKey: "{{SHOPIFY_API_KEY}}", // Will be replaced by server
-            host: host,
-          });
+          // Use the global shopify object to get session token
+          app = {
+            getSessionToken: async function () {
+              if (window.shopify && window.shopify.idToken) {
+                return await window.shopify.idToken();
+              }
+              throw new Error("Session token method not available");
+            },
+          };
 
-          console.log("✅ App Bridge initialized");
+          console.log("✅ App Bridge initialized successfully");
           return true;
         } catch (error) {
           console.error("❌ App Bridge initialization failed:", error);
@@ -216,14 +238,14 @@
         }
       }
 
-      // Get session token from App Bridge
+      // Get session token
       async function getSessionToken() {
         if (!app) {
           throw new Error("App Bridge not initialized");
         }
 
         try {
-          const token = await app.idToken();
+          const token = await app.getSessionToken();
           console.log("✅ Got session token from App Bridge");
           return token;
         } catch (error) {
@@ -232,62 +254,26 @@
         }
       }
 
-      // Auto-refresh tokens
-      function startTokenRefresh() {
-        setInterval(async () => {
-          try {
-            await getSessionToken();
-            console.log("🔄 Token auto-refreshed");
-          } catch (error) {
-            console.log("⚠️  Auto-refresh failed:", error.message);
-          }
-        }, 50000); // 50 seconds
-      }
-
-      // Initialize App Bridge - keep trying until it loads
-      let initAttempts = 0;
-      function tryInitAppBridge() {
-        if (initAttempts > 50) {
-          console.error("❌ App Bridge script failed to load after 5 seconds");
-          return;
-        }
-
-        if (initAppBridge()) {
-          console.log("✅ App Bridge ready after", initAttempts, "attempts");
-        } else {
-          initAttempts++;
-          setTimeout(tryInitAppBridge, 100);
-        }
-      }
-      tryInitAppBridge();
-
       // Load products
       async function loadProducts() {
         try {
+          document.getElementById("status").textContent = "Initializing...";
+
+          // Initialize App Bridge
+          const success = await initAppBridge();
+          if (!success) {
+            throw new Error("Failed to initialize App Bridge");
+          }
+
           document.getElementById("status").textContent =
             "Getting Auth Token...";
 
-          // Wait for App Bridge to be ready
-          let attempts = 0;
-          while (!app && attempts < 50) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            attempts++;
-          }
-
-          if (!app) {
-            throw new Error(
-              "App Bridge failed to initialize after 5 seconds. Please refresh the page and try again."
-            );
-          }
-
-          // Get session token from App Bridge
+          // Get session token
           console.log("🔐 Getting session token from App Bridge...");
           const sessionToken = await getSessionToken();
 
           if (!sessionToken) {
-            throw new Error(
-              "No session token found. Try reinstalling the app."
-            );
+            throw new Error("No session token received");
           }
 
           console.log("✅ Got session token, length:", sessionToken.length);
@@ -321,7 +307,6 @@
               const oauthUrl =
                 appHost + "/auth?shop=" + encodeURIComponent(shop);
 
-              // Show install button
               document.getElementById("products").innerHTML =
                 '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
                 '<h2 style="margin-bottom: 20px;">📦 App Installation Required</h2>' +
