@@ -112,16 +112,20 @@ app.get("/auth/callback", async (req, res) => {
     // Save to database
     await saveShopSession(callback.session.shop, callback.session.accessToken);
 
-    // Redirect to the app with fresh install flag
-    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?installed=1`;
+    console.log("✅ Token saved, waiting 1 second before redirect...");
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    // Redirect with fresh install flag
+    const timestamp = Date.now();
+    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?fresh=1&t=${timestamp}`;
     console.log("🔄 Redirecting to:", redirectUrl);
+
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ OAuth callback error:", error);
     res.status(500).send("OAuth failed: " + error.message);
   }
 });
-
 // API Routes (with authentication)
 // ================================
 
