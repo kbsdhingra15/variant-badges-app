@@ -1,395 +1,458 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Variant Badges App</title>
-  <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f4f6f8;
-      color: #202223;
-      padding: 20px;
-    }
-    .header {
-      background: white;
-      padding: 20px 30px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .header h1 { font-size: 24px; font-weight: 600; }
-    .status-badge {
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 14px;
-      font-weight: 500;
-    }
-    .status-badge.connected { background: #d1f0e5; color: #008060; }
-    .status-badge.loading { background: #fff4cc; color: #916a00; }
-    .status-badge.error { background: #ffc2c2; color: #bf0711; }
-    .products-container {
-      background: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    .product-card {
-      border: 1px solid #e1e3e5;
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-    .product-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: 15px;
-      color: #202223;
-    }
-    .variant-row {
-      display: flex;
-      align-items: center;
-      padding: 12px;
-      border: 1px solid #e1e3e5;
-      border-radius: 4px;
-      margin-bottom: 10px;
-      background: #fafbfb;
-    }
-    .variant-image {
-      width: 60px;
-      height: 60px;
-      object-fit: cover;
-      border-radius: 4px;
-      margin-right: 15px;
-      background: #e1e3e5;
-    }
-    .variant-info { flex: 1; }
-    .variant-info strong {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 15px;
-    }
-    .variant-option {
-      font-size: 13px;
-      color: #6d7175;
-      margin-top: 2px;
-    }
-    .success {
-      background: #d1f0e5;
-      color: #008060;
-      padding: 15px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-      border-left: 4px solid #008060;
-    }
-    .error {
-      background: #ffc2c2;
-      color: #bf0711;
-      padding: 15px;
-      border-radius: 4px;
-      margin-bottom: 20px;
-      border-left: 4px solid #bf0711;
-    }
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #6d7175;
-    }
-    .empty-state h2 {
-      font-size: 20px;
-      margin-bottom: 10px;
-      color: #202223;
-    }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>🎨 Variant Badges</h1>
-    <span class="status-badge loading" id="status">Loading...</span>
-  </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Variant Badges App</title>
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #f4f6f8;
+        color: #202223;
+        padding: 20px;
+      }
+      .header {
+        background: white;
+        padding: 20px 30px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .header h1 {
+        font-size: 24px;
+        font-weight: 600;
+      }
+      .status-badge {
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .status-badge.connected {
+        background: #d1f0e5;
+        color: #008060;
+      }
+      .status-badge.loading {
+        background: #fff4cc;
+        color: #916a00;
+      }
+      .status-badge.error {
+        background: #ffc2c2;
+        color: #bf0711;
+      }
+      .products-container {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .product-card {
+        border: 1px solid #e1e3e5;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+      }
+      .product-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+        color: #202223;
+      }
+      .variant-row {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        border: 1px solid #e1e3e5;
+        border-radius: 4px;
+        margin-bottom: 10px;
+        background: #fafbfb;
+      }
+      .variant-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-right: 15px;
+        background: #e1e3e5;
+      }
+      .variant-info {
+        flex: 1;
+      }
+      .variant-info strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 15px;
+      }
+      .variant-option {
+        font-size: 13px;
+        color: #6d7175;
+        margin-top: 2px;
+      }
+      .success {
+        background: #d1f0e5;
+        color: #008060;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        border-left: 4px solid #008060;
+      }
+      .error {
+        background: #ffc2c2;
+        color: #bf0711;
+        padding: 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        border-left: 4px solid #bf0711;
+      }
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6d7175;
+      }
+      .empty-state h2 {
+        font-size: 20px;
+        margin-bottom: 10px;
+        color: #202223;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>🎨 Variant Badges</h1>
+      <span class="status-badge loading" id="status">Loading...</span>
+    </div>
 
-  <div class="products-container">
-    <div id="products">
-      <div class="empty-state">
-        <h2>Loading your products...</h2>
-        <p>Please wait while we connect to your store</p>
+    <div class="products-container">
+      <div id="products">
+        <div class="empty-state">
+          <h2>Loading your products...</h2>
+          <p>Please wait while we connect to your store</p>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const shop = urlParams.get("shop");
-    const host = urlParams.get("host");
-    const appHost = "{{APP_HOST}}";
-    const apiKey = "{{SHOPIFY_API_KEY}}";
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const shop = urlParams.get("shop");
+      const host = urlParams.get("host");
+      const appHost = "{{APP_HOST}}";
+      const apiKey = "{{SHOPIFY_API_KEY}}";
 
-    let app = null;
-    let currentToken = null;
+      let app = null;
+      let currentToken = null;
 
-    console.log("🎨 Variant Badges App Loading...");
-    console.log("   Shop:", shop);
-    console.log("   Host:", host);
+      console.log("🎨 Variant Badges App Loading...");
+      console.log("   Shop:", shop);
+      console.log("   Host:", host);
 
-    // Initialize App Bridge
-    async function initAppBridge() {
-      return new Promise((resolve) => {
-        let attempts = 0;
-        const checkInterval = setInterval(() => {
-          if (window.shopify && window.shopify.environment) {
-            clearInterval(checkInterval);
-            app = window.shopify;
-            console.log("✅ App Bridge initialized");
-            resolve(true);
-          } else if (attempts++ > 30) {
-            clearInterval(checkInterval);
-            console.log("⚠️ App Bridge timeout, using URL token");
-            resolve(false);
-          }
-        }, 100);
-      });
-    }
-
-  // Get session token - tries App Bridge first, falls back to URL
-async function getSessionToken() {
-  // First, try URL token (fastest and most reliable)
-  const urlToken = urlParams.get("id_token");
-  if (urlToken) {
-    console.log("✅ Using token from URL (fast path)");
-    currentToken = urlToken;
-    return urlToken;
-  }
-
-  // Try App Bridge with timeout
-  if (app && app.idToken) {
-    try {
-      console.log("Trying App Bridge idToken() with 2s timeout...");
-      const token = await Promise.race([
-        app.idToken(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("App Bridge timeout")), 2000)
-        )
-      ]);
-      
-      if (token) {
-        console.log("✅ Got token from App Bridge");
-        currentToken = token;
-        return token;
-      }
-    } catch (err) {
-      console.log("⚠️ App Bridge failed:", err.message);
-    }
-  }
-
-  throw new Error("No session token available");
-}
-    // Make authenticated API call with automatic retry
-    async function apiCall(url, options = {}) {
-      const token = await getSessionToken();
-      
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Authorization': 'Bearer ' + token,
-          'Content-Type': 'application/json',
-          ...options.headers
-        }
-      });
-
-      // If token expired (401), try to refresh and retry once
-      if (response.status === 401) {
-        console.log("🔄 Token expired, refreshing...");
-        
-        // Force new token
-        currentToken = null;
-        if (app && app.idToken) {
-          try {
-            const newToken = await app.idToken();
-            currentToken = newToken;
-            
-            // Retry with new token
-            return fetch(url, {
-              ...options,
-              headers: {
-                'Authorization': 'Bearer ' + currentToken,
-                'Content-Type': 'application/json',
-                ...options.headers
-              }
-            });
-          } catch (err) {
-            console.error("❌ Token refresh failed:", err);
-          }
-        }
-      }
-
-      return response;
-    }
-
-// Load products
-async function loadProducts() {
-  try {
-    document.getElementById("status").textContent = "Initializing...";
-    console.log("Step 1: Starting loadProducts");
-    
-    // Initialize App Bridge (but don't block if it fails)
-    await initAppBridge();
-    console.log("Step 2: App Bridge done");
-    
-    document.getElementById("status").textContent = "Loading Products...";
-    console.log("Step 3: About to fetch products");
-    console.log("   URL:", appHost + "/api/products");
-
-    // Get token first
-    console.log("Step 4: Getting token...");
-    const token = await getSessionToken();
-    console.log("Step 5: Got token, length:", token.length);
-
-    // Make the actual fetch
-    console.log("Step 6: Making fetch call...");
-    const response = await fetch(appHost + "/api/products", {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    console.log("Step 7: Got response, status:", response.status);
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.log("Step 8: Error data:", errorData);
-      
-      if (errorData.needsAuth) {
-  console.log("🔄 Need OAuth - redirecting...");
-  document.getElementById("status").textContent = "Redirecting to install...";
-  
-  const authUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
-  console.log("   Redirect URL:", authUrl);
-  
-  // Use App Bridge Redirect for embedded apps
-  if (app && app.dispatch) {
-    app.dispatch(window.shopify.Redirect.Action.REMOTE, authUrl);
-  } else {
-    // Fallback: show install button
-    document.getElementById("products").innerHTML =
-      '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
-      '<h2>🔄 Reinstall Required</h2>' +
-      '<p style="margin: 20px 0;">Your access token has expired.</p>' +
-      '<a href="' + authUrl + '" target="_top" ' +
-      'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
-      'text-decoration: none; border-radius: 4px; font-weight: 600;">Reinstall App</a>' +
-      '</div>';
-  }
-  return;
-}
-      throw new Error(errorData.error || "HTTP " + response.status);
-    }
-
-    const data = await response.json();
-    console.log("Step 9: Products loaded:", data.products.length);
-
-    document.getElementById("status").textContent = "✅ Connected";
-    document.getElementById("status").className = "status-badge connected";
-    displayProducts(data.products);
-
-    console.log("Step 10: All done!");
-    
-  } catch (error) {
-    console.error("❌ Error at some step:", error);
-    console.error("   Stack:", error.stack);
-    document.getElementById("status").textContent = "❌ Error";
-    document.getElementById("status").className = "status-badge error";
-    showError(error.message);
-  }
-}  
-
-    // Auto-refresh token in background
-    function startTokenRefresh() {
-      setInterval(async () => {
-        if (app && app.idToken) {
-          try {
-            currentToken = await app.idToken();
-            console.log("🔄 Token auto-refreshed");
-          } catch (err) {
-            console.log("⚠️ Auto-refresh failed (will retry)");
-          }
-        }
-      }, 50000); // Every 50 seconds
-    }
-
-    // Display products
-    function displayProducts(products) {
-      const container = document.getElementById("products");
-
-      if (!products || products.length === 0) {
-        container.innerHTML =
-          '<div class="empty-state">' +
-          "<h2>No Products Found</h2>" +
-          "<p>Add products to your store to get started!</p>" +
-          "</div>";
-        return;
-      }
-
-      let html = '<div class="success"><strong>🎉 Success!</strong> Loaded ' + products.length + ' products via GraphQL</div>';
-
-      products.forEach((product) => {
-        html += '<div class="product-card">';
-        html += '<div class="product-title">' + escapeHtml(product.title) + "</div>";
-
-        if (product.variants && product.variants.length > 0) {
-          product.variants.forEach((variant) => {
-            html += '<div class="variant-row">';
-
-            const image = variant.image_id
-              ? product.images && product.images.find((img) => img.id === variant.image_id)
-              : product.images && product.images[0];
-
-            if (image && image.src) {
-              html += '<img class="variant-image" src="' + escapeHtml(image.src) + '" />';
-            } else {
-              html += '<div class="variant-image"></div>';
+      // Initialize App Bridge
+      async function initAppBridge() {
+        return new Promise((resolve) => {
+          let attempts = 0;
+          const checkInterval = setInterval(() => {
+            if (window.shopify && window.shopify.environment) {
+              clearInterval(checkInterval);
+              app = window.shopify;
+              console.log("✅ App Bridge initialized");
+              resolve(true);
+            } else if (attempts++ > 30) {
+              clearInterval(checkInterval);
+              console.log("⚠️ App Bridge timeout, using URL token");
+              resolve(false);
             }
+          }, 100);
+        });
+      }
 
-            html += '<div class="variant-info">';
-            html += "<strong>" + escapeHtml(variant.title) + "</strong>";
-            html += '<div class="variant-option">Price: $' + escapeHtml(variant.price) + "</div>";
-
-            if (variant.option1)
-              html += '<div class="variant-option">Option 1: ' + escapeHtml(variant.option1) + "</div>";
-            if (variant.option2)
-              html += '<div class="variant-option">Option 2: ' + escapeHtml(variant.option2) + "</div>";
-            if (variant.option3)
-              html += '<div class="variant-option">Option 3: ' + escapeHtml(variant.option3) + "</div>";
-
-            html += "</div></div>";
-          });
+      // Get session token - tries App Bridge first, falls back to URL
+      async function getSessionToken() {
+        // First, try URL token (fastest and most reliable)
+        const urlToken = urlParams.get("id_token");
+        if (urlToken) {
+          console.log("✅ Using token from URL (fast path)");
+          currentToken = urlToken;
+          return urlToken;
         }
-        html += "</div>";
-      });
 
-      container.innerHTML = html;
-    }
+        // Try App Bridge with timeout
+        if (app && app.idToken) {
+          try {
+            console.log("Trying App Bridge idToken() with 2s timeout...");
+            const token = await Promise.race([
+              app.idToken(),
+              new Promise((_, reject) =>
+                setTimeout(() => reject(new Error("App Bridge timeout")), 2000)
+              ),
+            ]);
 
-    function showError(message) {
-      document.getElementById("products").innerHTML =
-        '<div class="error"><strong>❌ Error:</strong><br>' + escapeHtml(message) + "</div>";
-    }
+            if (token) {
+              console.log("✅ Got token from App Bridge");
+              currentToken = token;
+              return token;
+            }
+          } catch (err) {
+            console.log("⚠️ App Bridge failed:", err.message);
+          }
+        }
 
-    function escapeHtml(text) {
-      if (!text) return "";
-      const div = document.createElement("div");
-      div.textContent = text.toString();
-      return div.innerHTML;
-    }
+        throw new Error("No session token available");
+      }
+      // Make authenticated API call with automatic retry
+      async function apiCall(url, options = {}) {
+        const token = await getSessionToken();
 
-    // Start loading
-    loadProducts();
-  </script>
-</body>
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/json",
+            ...options.headers,
+          },
+        });
+
+        // If token expired (401), try to refresh and retry once
+        if (response.status === 401) {
+          console.log("🔄 Token expired, refreshing...");
+
+          // Force new token
+          currentToken = null;
+          if (app && app.idToken) {
+            try {
+              const newToken = await app.idToken();
+              currentToken = newToken;
+
+              // Retry with new token
+              return fetch(url, {
+                ...options,
+                headers: {
+                  Authorization: "Bearer " + currentToken,
+                  "Content-Type": "application/json",
+                  ...options.headers,
+                },
+              });
+            } catch (err) {
+              console.error("❌ Token refresh failed:", err);
+            }
+          }
+        }
+
+        return response;
+      }
+
+      // Load products
+      async function loadProducts() {
+        try {
+          document.getElementById("status").textContent = "Initializing...";
+          console.log("Step 1: Starting loadProducts");
+
+          // Initialize App Bridge (but don't block if it fails)
+          await initAppBridge();
+          console.log("Step 2: App Bridge done");
+
+          document.getElementById("status").textContent = "Loading Products...";
+          console.log("Step 3: About to fetch products");
+          console.log("   URL:", appHost + "/api/products");
+
+          // Get token first
+          console.log("Step 4: Getting token...");
+          const token = await getSessionToken();
+          console.log("Step 5: Got token, length:", token.length);
+
+          // Make the actual fetch
+          console.log("Step 6: Making fetch call...");
+          const response = await fetch(appHost + "/api/products", {
+            method: "GET",
+            headers: {
+              Authorization: "Bearer " + token,
+              "Content-Type": "application/json",
+            },
+          });
+
+          console.log("Step 7: Got response, status:", response.status);
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.log("Step 8: Error data:", errorData);
+
+            if (errorData.needsAuth) {
+              console.log("🔄 Need OAuth - redirecting...");
+              document.getElementById("status").textContent =
+                "Redirecting to install...";
+
+              const authUrl =
+                appHost + "/auth?shop=" + encodeURIComponent(shop);
+              console.log("   Redirect URL:", authUrl);
+
+              // Use App Bridge Redirect for embedded apps
+              if (app && app.dispatch) {
+                app.dispatch(window.shopify.Redirect.Action.REMOTE, authUrl);
+              } else {
+                // Fallback: show install button
+                document.getElementById("products").innerHTML =
+                  '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
+                  "<h2>🔄 Reinstall Required</h2>" +
+                  '<p style="margin: 20px 0;">Your access token has expired.</p>' +
+                  '<a href="' +
+                  authUrl +
+                  '" target="_top" ' +
+                  'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
+                  'text-decoration: none; border-radius: 4px; font-weight: 600;">Reinstall App</a>' +
+                  "</div>";
+              }
+              return;
+            }
+            throw new Error(errorData.error || "HTTP " + response.status);
+          }
+
+          const data = await response.json();
+          console.log("Step 9: Products loaded:", data.products.length);
+
+          document.getElementById("status").textContent = "✅ Connected";
+          document.getElementById("status").className =
+            "status-badge connected";
+          displayProducts(data.products);
+
+          console.log("Step 10: All done!");
+        } catch (error) {
+          console.error("❌ Error at some step:", error);
+          console.error("   Stack:", error.stack);
+          document.getElementById("status").textContent = "❌ Error";
+          document.getElementById("status").className = "status-badge error";
+          showError(error.message);
+        }
+      }
+
+      // Auto-refresh token in background
+      function startTokenRefresh() {
+        setInterval(async () => {
+          if (app && app.idToken) {
+            try {
+              currentToken = await app.idToken();
+              console.log("🔄 Token auto-refreshed");
+            } catch (err) {
+              console.log("⚠️ Auto-refresh failed (will retry)");
+            }
+          }
+        }, 50000); // Every 50 seconds
+      }
+
+      // Display products
+      function displayProducts(products) {
+        const container = document.getElementById("products");
+
+        if (!products || products.length === 0) {
+          container.innerHTML =
+            '<div class="empty-state">' +
+            "<h2>No Products Found</h2>" +
+            "<p>Add products to your store to get started!</p>" +
+            "</div>";
+          return;
+        }
+
+        let html =
+          '<div class="success"><strong>🎉 Success!</strong> Loaded ' +
+          products.length +
+          " products via GraphQL</div>";
+
+        products.forEach((product) => {
+          html += '<div class="product-card">';
+          html +=
+            '<div class="product-title">' +
+            escapeHtml(product.title) +
+            "</div>";
+
+          if (product.variants && product.variants.length > 0) {
+            product.variants.forEach((variant) => {
+              html += '<div class="variant-row">';
+
+              const image = variant.image_id
+                ? product.images &&
+                  product.images.find((img) => img.id === variant.image_id)
+                : product.images && product.images[0];
+
+              if (image && image.src) {
+                html +=
+                  '<img class="variant-image" src="' +
+                  escapeHtml(image.src) +
+                  '" />';
+              } else {
+                html += '<div class="variant-image"></div>';
+              }
+
+              html += '<div class="variant-info">';
+              html += "<strong>" + escapeHtml(variant.title) + "</strong>";
+              html +=
+                '<div class="variant-option">Price: $' +
+                escapeHtml(variant.price) +
+                "</div>";
+
+              if (variant.option1)
+                html +=
+                  '<div class="variant-option">Option 1: ' +
+                  escapeHtml(variant.option1) +
+                  "</div>";
+              if (variant.option2)
+                html +=
+                  '<div class="variant-option">Option 2: ' +
+                  escapeHtml(variant.option2) +
+                  "</div>";
+              if (variant.option3)
+                html +=
+                  '<div class="variant-option">Option 3: ' +
+                  escapeHtml(variant.option3) +
+                  "</div>";
+
+              html += "</div></div>";
+            });
+          }
+          html += "</div>";
+        });
+
+        container.innerHTML = html;
+      }
+
+      function showError(message) {
+        document.getElementById("products").innerHTML =
+          '<div class="error"><strong>❌ Error:</strong><br>' +
+          escapeHtml(message) +
+          "</div>";
+      }
+
+      function escapeHtml(text) {
+        if (!text) return "";
+        const div = document.createElement("div");
+        div.textContent = text.toString();
+        return div.innerHTML;
+      }
+
+      // Start loading (with delay if just installed)
+      async function startApp() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const justInstalled = urlParams.get("installed");
+
+        if (justInstalled) {
+          console.log(
+            "🎉 Fresh install detected - waiting 2 seconds for OAuth to complete..."
+          );
+          document.getElementById("status").textContent =
+            "Completing installation...";
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+
+        loadProducts();
+      }
+
+      startApp();
+    </script>
+  </body>
 </html>

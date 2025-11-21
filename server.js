@@ -112,11 +112,8 @@ app.get("/auth/callback", async (req, res) => {
     // Save to database
     await saveShopSession(callback.session.shop, callback.session.accessToken);
 
-    // Small delay to ensure database write is fully propagated
-    await new Promise((resolve) => setTimeout(resolve, 50000));
-
-    // Redirect to the app (embedded in Shopify admin)
-    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges`;
+    // Redirect to the app with fresh install flag
+    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?installed=1`;
     console.log("🔄 Redirecting to:", redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
