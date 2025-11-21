@@ -57,7 +57,7 @@ router.get("/products", async (req, res) => {
 
     // Make GraphQL request to Shopify
     const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
-    
+
     const response = await fetch(graphqlUrl, {
       method: "POST",
       headers: {
@@ -80,7 +80,15 @@ router.get("/products", async (req, res) => {
         details: errorText,
       });
     }
-
+    // ADD THIS CHECK:
+    if (response.status === 401) {
+      console.log("❌ Shopify returned 401 - access token invalid");
+      return res.status(401).json({
+        error: "Shop not authenticated",
+        needsAuth: true,
+        hint: "Access token expired or revoked",
+      });
+    }
     const result = await response.json();
 
     if (result.errors) {
@@ -94,7 +102,7 @@ router.get("/products", async (req, res) => {
     // Transform GraphQL response to match frontend expectations
     const products = result.data.products.edges.map((edge) => {
       const product = edge.node;
-      
+
       return {
         id: product.id.replace("gid://shopify/Product/", ""),
         title: product.title,
@@ -107,12 +115,12 @@ router.get("/products", async (req, res) => {
         })),
         variants: product.variants.edges.map((vEdge, index) => {
           const variant = vEdge.node;
-          
+
           // Map selectedOptions to option1, option2, option3 format
           const option1 = variant.selectedOptions[0]?.value || null;
           const option2 = variant.selectedOptions[1]?.value || null;
           const option3 = variant.selectedOptions[2]?.value || null;
-          
+
           return {
             id: variant.id.replace("gid://shopify/ProductVariant/", ""),
             title: variant.title,
@@ -158,7 +166,7 @@ router.get("/products/:id", async (req, res) => {
   try {
     const { shop, accessToken } = req.shopifySession;
     const productId = req.params.id;
-    
+
     console.log("📦 Fetching product:", productId);
 
     const SINGLE_PRODUCT_QUERY = `
@@ -196,7 +204,7 @@ router.get("/products/:id", async (req, res) => {
     `;
 
     const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
-    
+
     const response = await fetch(graphqlUrl, {
       method: "POST",
       headers: {
@@ -214,7 +222,9 @@ router.get("/products/:id", async (req, res) => {
     const result = await response.json();
 
     if (result.errors) {
-      return res.status(500).json({ error: "GraphQL errors", details: result.errors });
+      return res
+        .status(500)
+        .json({ error: "GraphQL errors", details: result.errors });
     }
 
     if (!result.data.product) {
@@ -224,7 +234,9 @@ router.get("/products/:id", async (req, res) => {
     res.json({ product: result.data.product });
   } catch (error) {
     console.error("❌ Error fetching product:", error);
-    res.status(500).json({ error: "Internal server error", details: error.message });
+    res
+      .status(500)
+      .json({ error: "Internal server error", details: error.message });
   }
 });
 
