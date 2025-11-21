@@ -230,7 +230,7 @@ async function getSessionToken() {
       return response;
     }
 
-  // Load products
+// Load products
 async function loadProducts() {
   try {
     document.getElementById("status").textContent = "Initializing...";
@@ -266,17 +266,18 @@ async function loadProducts() {
       console.log("Step 8: Error data:", errorData);
       
       if (errorData.needsAuth) {
-  console.log("🔄 Need OAuth - redirecting...");
-  document.getElementById("status").textContent = "Redirecting to install...";
-  
-  // Use App Bridge Redirect for embedded apps
-  const authUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
-  console.log("   Redirect URL:", authUrl);
-  
-  // Redirect using top-level navigation (breaks out of iframe)
-  window.top.location.href = authUrl;
-  return;
-}
+        console.log("🔄 Need OAuth - redirecting...");
+        document.getElementById("status").textContent = "Redirecting to install...";
+        
+        // Use top-level redirect to break out of iframe
+        const authUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
+        console.log("   Redirect URL:", authUrl);
+        window.top.location.href = authUrl;
+        return;
+      }
+
+      throw new Error(errorData.error || "HTTP " + response.status);
+    }
 
     const data = await response.json();
     console.log("Step 9: Products loaded:", data.products.length);
@@ -294,7 +295,8 @@ async function loadProducts() {
     document.getElementById("status").className = "status-badge error";
     showError(error.message);
   }
-}
+}  
+
     // Auto-refresh token in background
     function startTokenRefresh() {
       setInterval(async () => {
