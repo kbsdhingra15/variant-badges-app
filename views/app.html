@@ -155,33 +155,39 @@
       });
     }
 
-    // Get session token - tries App Bridge first, falls back to URL
-    async function getSessionToken() {
-      // Try App Bridge first
-      if (app && app.idToken) {
-        try {
-          const token = await app.idToken();
-          if (token) {
-            console.log("✅ Got token from App Bridge");
-            currentToken = token;
-            return token;
-          }
-        } catch (err) {
-          console.log("⚠️ App Bridge token failed:", err.message);
-        }
-      }
+  // Get session token - tries App Bridge first, falls back to URL
+async function getSessionToken() {
+  // First, try URL token (fastest and most reliable)
+  const urlToken = urlParams.get("id_token");
+  if (urlToken) {
+    console.log("✅ Using token from URL (fast path)");
+    currentToken = urlToken;
+    return urlToken;
+  }
 
-      // Fallback: Get from URL
-      const urlToken = urlParams.get("id_token");
-      if (urlToken) {
-        console.log("✅ Using token from URL");
-        currentToken = urlToken;
-        return urlToken;
+  // Try App Bridge with timeout
+  if (app && app.idToken) {
+    try {
+      console.log("Trying App Bridge idToken() with 2s timeout...");
+      const token = await Promise.race([
+        app.idToken(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("App Bridge timeout")), 2000)
+        )
+      ]);
+      
+      if (token) {
+        console.log("✅ Got token from App Bridge");
+        currentToken = token;
+        return token;
       }
-
-      throw new Error("No session token available");
+    } catch (err) {
+      console.log("⚠️ App Bridge failed:", err.message);
     }
+  }
 
+  throw new Error("No session token available");
+}
     // Make authenticated API call with automatic retry
     async function apiCall(url, options = {}) {
       const token = await getSessionToken();
