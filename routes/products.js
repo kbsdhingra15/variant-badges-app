@@ -72,6 +72,17 @@ router.get("/products", async (req, res) => {
       }),
     });
 
+    // Check for 401 FIRST - access token invalid/expired
+    if (response.status === 401) {
+      console.log("❌ Shopify returned 401 - access token invalid for:", shop);
+      return res.status(401).json({
+        error: "Shop not authenticated",
+        needsAuth: true,
+        hint: "Access token expired or revoked. Please reinstall the app.",
+      });
+    }
+
+    // Then check other error statuses
     if (!response.ok) {
       const errorText = await response.text();
       console.error("❌ GraphQL request failed:", response.status, errorText);
@@ -80,15 +91,7 @@ router.get("/products", async (req, res) => {
         details: errorText,
       });
     }
-    // ADD THIS CHECK:
-    if (response.status === 401) {
-      console.log("❌ Shopify returned 401 - access token invalid");
-      return res.status(401).json({
-        error: "Shop not authenticated",
-        needsAuth: true,
-        hint: "Access token expired or revoked",
-      });
-    }
+
     const result = await response.json();
 
     if (result.errors) {
