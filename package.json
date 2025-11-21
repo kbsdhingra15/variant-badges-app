@@ -1,6 +1,6 @@
 {
   "name": "variant-badges-app",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Shopify app to add HOT, NEW, and SALE badges to product variants",
   "main": "server.js",
   "scripts": {
