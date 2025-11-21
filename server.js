@@ -112,10 +112,12 @@ app.get("/auth/callback", async (req, res) => {
     // Save to database
     await saveShopSession(callback.session.shop, callback.session.accessToken);
 
+    // Small delay to ensure database write is fully propagated
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     // Redirect to the app (embedded in Shopify admin)
     const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges`;
     console.log("🔄 Redirecting to:", redirectUrl);
-
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ OAuth callback error:", error);
