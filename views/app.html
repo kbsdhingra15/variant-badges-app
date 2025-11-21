@@ -224,59 +224,75 @@
       return response;
     }
 
-    // Load products
-    async function loadProducts() {
-      try {
-        document.getElementById("status").textContent = "Initializing...";
-        
-        // Initialize App Bridge (but don't block if it fails)
-        await initAppBridge();
-        
-        document.getElementById("status").textContent = "Loading Products...";
-        console.log("📦 Fetching products...");
+  // Load products
+async function loadProducts() {
+  try {
+    document.getElementById("status").textContent = "Initializing...";
+    console.log("Step 1: Starting loadProducts");
+    
+    // Initialize App Bridge (but don't block if it fails)
+    await initAppBridge();
+    console.log("Step 2: App Bridge done");
+    
+    document.getElementById("status").textContent = "Loading Products...";
+    console.log("Step 3: About to fetch products");
+    console.log("   URL:", appHost + "/api/products");
 
-        const response = await apiCall(appHost + "/api/products");
+    // Get token first
+    console.log("Step 4: Getting token...");
+    const token = await getSessionToken();
+    console.log("Step 5: Got token, length:", token.length);
 
-        console.log("   Response status:", response.status);
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          
-          if (errorData.needsAuth) {
-            console.log("🔄 Need OAuth");
-            document.getElementById("products").innerHTML =
-              '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
-              '<h2>📦 Installation Required</h2>' +
-              '<p style="margin: 20px 0;">Complete app installation:</p>' +
-              '<a href="' + appHost + '/auth?shop=' + encodeURIComponent(shop) + '" ' +
-              'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
-              'text-decoration: none; border-radius: 4px; font-weight: 600;">Install App</a>' +
-              '</div>';
-            document.getElementById("status").textContent = "Action Required";
-            return;
-          }
-
-          throw new Error(errorData.error || "HTTP " + response.status);
-        }
-
-        const data = await response.json();
-        console.log("✅ Products loaded:", data.products.length);
-
-        document.getElementById("status").textContent = "✅ Connected";
-        document.getElementById("status").className = "status-badge connected";
-        displayProducts(data.products);
-
-        // Auto-refresh token every 50 seconds
-        startTokenRefresh();
-        
-      } catch (error) {
-        console.error("❌ Error:", error);
-        document.getElementById("status").textContent = "❌ Error";
-        document.getElementById("status").className = "status-badge error";
-        showError(error.message);
+    // Make the actual fetch
+    console.log("Step 6: Making fetch call...");
+    const response = await fetch(appHost + "/api/products", {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
       }
+    });
+
+    console.log("Step 7: Got response, status:", response.status);
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.log("Step 8: Error data:", errorData);
+      
+      if (errorData.needsAuth) {
+        console.log("🔄 Need OAuth");
+        document.getElementById("products").innerHTML =
+          '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
+          '<h2>📦 Installation Required</h2>' +
+          '<p style="margin: 20px 0;">Complete app installation:</p>' +
+          '<a href="' + appHost + '/auth?shop=' + encodeURIComponent(shop) + '" ' +
+          'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
+          'text-decoration: none; border-radius: 4px; font-weight: 600;">Install App</a>' +
+          '</div>';
+        document.getElementById("status").textContent = "Action Required";
+        return;
+      }
+
+      throw new Error(errorData.error || "HTTP " + response.status);
     }
 
+    const data = await response.json();
+    console.log("Step 9: Products loaded:", data.products.length);
+
+    document.getElementById("status").textContent = "✅ Connected";
+    document.getElementById("status").className = "status-badge connected";
+    displayProducts(data.products);
+
+    console.log("Step 10: All done!");
+    
+  } catch (error) {
+    console.error("❌ Error at some step:", error);
+    console.error("   Stack:", error.stack);
+    document.getElementById("status").textContent = "❌ Error";
+    document.getElementById("status").className = "status-badge error";
+    showError(error.message);
+  }
+}
     // Auto-refresh token in background
     function startTokenRefresh() {
       setInterval(async () => {
