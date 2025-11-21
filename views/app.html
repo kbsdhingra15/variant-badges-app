@@ -266,16 +266,28 @@ async function loadProducts() {
       console.log("Step 8: Error data:", errorData);
       
       if (errorData.needsAuth) {
-        console.log("🔄 Need OAuth - redirecting...");
-        document.getElementById("status").textContent = "Redirecting to install...";
-        
-        // Use top-level redirect to break out of iframe
-        const authUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
-        console.log("   Redirect URL:", authUrl);
-        window.top.location.href = authUrl;
-        return;
-      }
-
+  console.log("🔄 Need OAuth - redirecting...");
+  document.getElementById("status").textContent = "Redirecting to install...";
+  
+  const authUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
+  console.log("   Redirect URL:", authUrl);
+  
+  // Use App Bridge Redirect for embedded apps
+  if (app && app.dispatch) {
+    app.dispatch(window.shopify.Redirect.Action.REMOTE, authUrl);
+  } else {
+    // Fallback: show install button
+    document.getElementById("products").innerHTML =
+      '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
+      '<h2>🔄 Reinstall Required</h2>' +
+      '<p style="margin: 20px 0;">Your access token has expired.</p>' +
+      '<a href="' + authUrl + '" target="_top" ' +
+      'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
+      'text-decoration: none; border-radius: 4px; font-weight: 600;">Reinstall App</a>' +
+      '</div>';
+  }
+  return;
+}
       throw new Error(errorData.error || "HTTP " + response.status);
     }
 
