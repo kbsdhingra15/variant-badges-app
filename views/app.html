@@ -266,21 +266,17 @@ async function loadProducts() {
       console.log("Step 8: Error data:", errorData);
       
       if (errorData.needsAuth) {
-        console.log("🔄 Need OAuth");
-        document.getElementById("products").innerHTML =
-          '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
-          '<h2>📦 Installation Required</h2>' +
-          '<p style="margin: 20px 0;">Complete app installation:</p>' +
-          '<a href="' + appHost + '/auth?shop=' + encodeURIComponent(shop) + '" ' +
-          'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
-          'text-decoration: none; border-radius: 4px; font-weight: 600;">Install App</a>' +
-          '</div>';
-        document.getElementById("status").textContent = "Action Required";
-        return;
-      }
-
-      throw new Error(errorData.error || "HTTP " + response.status);
-    }
+  console.log("🔄 Need OAuth - redirecting...");
+  document.getElementById("status").textContent = "Redirecting to install...";
+  
+  // Use App Bridge Redirect for embedded apps
+  const authUrl = appHost + '/auth?shop=' + encodeURIComponent(shop);
+  console.log("   Redirect URL:", authUrl);
+  
+  // Redirect using top-level navigation (breaks out of iframe)
+  window.top.location.href = authUrl;
+  return;
+}
 
     const data = await response.json();
     console.log("Step 9: Products loaded:", data.products.length);
