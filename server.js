@@ -113,7 +113,7 @@ app.get("/auth/callback", async (req, res) => {
     await saveShopSession(callback.session.shop, callback.session.accessToken);
 
     // Redirect to the app (embedded in Shopify admin)
-    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges-app`;
+    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges`;
     console.log("🔄 Redirecting to:", redirectUrl);
 
     res.redirect(redirectUrl);
