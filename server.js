@@ -1,35 +1,10 @@
 require("dotenv").config();
 const express = require("express");
 const cookieParser = require("cookie-parser");
-const { shopifyApp } = require("@shopify/shopify-app-express");
-const {
-  PostgreSQLSessionStorage,
-} = require("@shopify/shopify-app-session-storage-postgresql");
+const fetch = require("node-fetch");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// Shopify App configuration
-const shopify = shopifyApp({
-  api: {
-    apiKey: process.env.SHOPIFY_API_KEY,
-    apiSecretKey: process.env.SHOPIFY_API_SECRET,
-    scopes: process.env.SHOPIFY_SCOPES?.split(",") || [
-      "read_products",
-      "write_products",
-    ],
-    hostName: process.env.SHOPIFY_APP_URL?.replace(/https?:\/\//, "") || "",
-    apiVersion: "2024-10",
-  },
-  auth: {
-    path: "/auth",
-    callbackPath: "/auth/callback",
-  },
-  webhooks: {
-    path: "/webhooks",
-  },
-  sessionStorage: new PostgreSQLSessionStorage(process.env.DATABASE_URL),
-});
 
 // Import database functions
 const { initDB, saveShopSession, getShopSession } = require("./database/db");
@@ -70,16 +45,19 @@ app.get("/auth", async (req, res) => {
       return res.status(400).send("Missing shop parameter");
     }
 
-    const sanitizedShop = shopify.utils.sanitizeShop(shop, true);
-    console.log("   Sanitized shop:", sanitizedShop);
+    const scopes = "read_products,write_products";
+    const redirectUri = `${process.env.SHOPIFY_APP_URL}/auth/callback`;
+    const nonce = require("crypto").randomBytes(16).toString("hex");
 
-    await shopify.auth.begin({
-      shop: sanitizedShop,
-      callbackPath: "/auth/callback",
-      isOnline: false,
-      rawRequest: req,
-      rawResponse: res,
-    });
+    const authUrl =
+      `https://${shop}/admin/oauth/authorize?` +
+      `client_id=${process.env.SHOPIFY_API_KEY}&` +
+      `scope=${scopes}&` +
+      `redirect_uri=${redirectUri}&` +
+      `state=${nonce}`;
+
+    console.log("   Redirecting to Shopify OAuth:", authUrl);
+    res.redirect(authUrl);
   } catch (error) {
     console.error("❌ OAuth begin error:", error);
     res.status(500).send("OAuth initialization failed: " + error.message);
@@ -89,30 +67,47 @@ app.get("/auth", async (req, res) => {
 // OAuth callback - after merchant approves
 app.get("/auth/callback", async (req, res) => {
   try {
-    console.log("🔐 OAuth callback received");
-    console.log("   Query params:", Object.keys(req.query));
+    const { shop, code } = req.query;
+    console.log("🔐 OAuth callback received for shop:", shop);
 
-    const callback = await shopify.auth.callback({
-      rawRequest: req,
-      rawResponse: res,
+    if (!shop || !code) {
+      return res.status(400).send("Missing shop or code parameter");
+    }
+
+    // Exchange code for access token
+    const tokenUrl = `https://${shop}/admin/oauth/access_token`;
+    const tokenResponse = await fetch(tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: process.env.SHOPIFY_API_KEY,
+        client_secret: process.env.SHOPIFY_API_SECRET,
+        code: code,
+      }),
     });
 
+    const tokenData = await tokenResponse.json();
+
+    if (!tokenData.access_token) {
+      throw new Error("Failed to get access token");
+    }
+
     console.log("✅ OAuth successful!");
-    console.log("   Shop:", callback.session.shop);
+    console.log("   Shop:", shop);
     console.log(
       "   Access Token:",
-      callback.session.accessToken.substring(0, 20) + "..."
+      tokenData.access_token.substring(0, 20) + "..."
     );
 
     // Save to database
-    await saveShopSession(callback.session.shop, callback.session.accessToken);
+    await saveShopSession(shop, tokenData.access_token);
 
     console.log("✅ Token saved, waiting 1 second before redirect...");
     await new Promise((resolve) => setTimeout(resolve, 1000));
 
     // Redirect with fresh install flag
     const timestamp = Date.now();
-    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?fresh=1&t=${timestamp}`;
+    const redirectUrl = `https://${shop}/admin/apps/variant-badges?fresh=1&t=${timestamp}`;
     console.log("🔄 Redirecting to:", redirectUrl);
 
     res.redirect(redirectUrl);
@@ -126,9 +121,9 @@ app.get("/auth/callback", async (req, res) => {
 // ================================
 
 // Mount API routers with authentication middleware
-app.use("/api", validateSessionToken(shopify), productsRouter);
-app.use("/api", validateSessionToken(shopify), badgesRouter);
-app.use("/api", validateSessionToken(shopify), settingsRouter);
+app.use("/api", validateSessionToken, productsRouter);
+app.use("/api", validateSessionToken, badgesRouter);
+app.use("/api", validateSessionToken, settingsRouter);
 
 // App Page Route
 // ==============
