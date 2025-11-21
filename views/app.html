@@ -174,7 +174,7 @@
         });
       }
 
-      // Get session token - tries App Bridge first, falls back to URL
+      // Get session token - tries URL first, then App Bridge
       async function getSessionToken() {
         // First, try URL token (fastest and most reliable)
         const urlToken = urlParams.get("id_token");
@@ -207,55 +207,36 @@
 
         throw new Error("No session token available");
       }
-      // Make authenticated API call with automatic retry
-      async function apiCall(url, options = {}) {
-        const token = await getSessionToken();
-
-        const response = await fetch(url, {
-          ...options,
-          headers: {
-            Authorization: "Bearer " + token,
-            "Content-Type": "application/json",
-            ...options.headers,
-          },
-        });
-
-        // If token expired (401), try to refresh and retry once
-        if (response.status === 401) {
-          console.log("🔄 Token expired, refreshing...");
-
-          // Force new token
-          currentToken = null;
-          if (app && app.idToken) {
-            try {
-              const newToken = await app.idToken();
-              currentToken = newToken;
-
-              // Retry with new token
-              return fetch(url, {
-                ...options,
-                headers: {
-                  Authorization: "Bearer " + currentToken,
-                  "Content-Type": "application/json",
-                  ...options.headers,
-                },
-              });
-            } catch (err) {
-              console.error("❌ Token refresh failed:", err);
-            }
-          }
-        }
-
-        return response;
-      }
 
       // Load products
       async function loadProducts() {
+        // Check for fresh install - wait for OAuth to complete
+        const freshInstall = urlParams.get("fresh");
+        if (freshInstall) {
+          console.log(
+            "🎉 Fresh install detected - waiting 4 seconds for token propagation..."
+          );
+          document.getElementById("status").textContent =
+            "Completing installation...";
+          document.getElementById("status").className = "status-badge loading";
+          await new Promise((resolve) => setTimeout(resolve, 4000));
+
+          // Clean URL
+          const cleanUrl =
+            window.location.pathname +
+            "?" +
+            urlParams
+              .toString()
+              .replace(/[&]?fresh=1/, "")
+              .replace(/[&]?t=\d+/, "")
+              .replace(/^\?$/, "");
+          window.history.replaceState({}, "", cleanUrl);
+        }
+
         try {
           document.getElementById("status").textContent = "Initializing...";
           console.log("Step 1: Starting loadProducts");
 
-          // Initialize App Bridge (but don't block if it fails)
           await initAppBridge();
           console.log("Step 2: App Bridge done");
 
@@ -263,12 +244,10 @@
           console.log("Step 3: About to fetch products");
           console.log("   URL:", appHost + "/api/products");
 
-          // Get token first
           console.log("Step 4: Getting token...");
           const token = await getSessionToken();
           console.log("Step 5: Got token, length:", token.length);
 
-          // Make the actual fetch
           console.log("Step 6: Making fetch call...");
           const response = await fetch(appHost + "/api/products", {
             method: "GET",
@@ -285,32 +264,27 @@
             console.log("Step 8: Error data:", errorData);
 
             if (errorData.needsAuth) {
-              console.log("🔄 Need OAuth - redirecting...");
+              console.log("🔄 Need OAuth - showing reinstall button");
               document.getElementById("status").textContent =
-                "Redirecting to install...";
+                "Reinstall Required";
+              document.getElementById("status").className =
+                "status-badge error";
 
               const authUrl =
                 appHost + "/auth?shop=" + encodeURIComponent(shop);
-              console.log("   Redirect URL:", authUrl);
-
-              // Use App Bridge Redirect for embedded apps
-              if (app && app.dispatch) {
-                app.dispatch(window.shopify.Redirect.Action.REMOTE, authUrl);
-              } else {
-                // Fallback: show install button
-                document.getElementById("products").innerHTML =
-                  '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
-                  "<h2>🔄 Reinstall Required</h2>" +
-                  '<p style="margin: 20px 0;">Your access token has expired.</p>' +
-                  '<a href="' +
-                  authUrl +
-                  '" target="_top" ' +
-                  'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
-                  'text-decoration: none; border-radius: 4px; font-weight: 600;">Reinstall App</a>' +
-                  "</div>";
-              }
+              document.getElementById("products").innerHTML =
+                '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
+                "<h2>🔄 Reinstall Required</h2>" +
+                '<p style="margin: 20px 0;">Your access token has expired.</p>' +
+                '<a href="' +
+                authUrl +
+                '" target="_top" ' +
+                'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
+                'text-decoration: none; border-radius: 4px; font-weight: 600;">Reinstall App</a>' +
+                "</div>";
               return;
             }
+
             throw new Error(errorData.error || "HTTP " + response.status);
           }
 
@@ -330,20 +304,6 @@
           document.getElementById("status").className = "status-badge error";
           showError(error.message);
         }
-      }
-
-      // Auto-refresh token in background
-      function startTokenRefresh() {
-        setInterval(async () => {
-          if (app && app.idToken) {
-            try {
-              currentToken = await app.idToken();
-              console.log("🔄 Token auto-refreshed");
-            } catch (err) {
-              console.log("⚠️ Auto-refresh failed (will retry)");
-            }
-          }
-        }, 50000); // Every 50 seconds
       }
 
       // Display products
@@ -435,24 +395,8 @@
         return div.innerHTML;
       }
 
-      // Start loading (with delay if just installed)
-      async function startApp() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const justInstalled = urlParams.get("installed");
-
-        if (justInstalled) {
-          console.log(
-            "🎉 Fresh install detected - waiting 2 seconds for OAuth to complete..."
-          );
-          document.getElementById("status").textContent =
-            "Completing installation...";
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-        }
-
-        loadProducts();
-      }
-
-      startApp();
+      // Start loading
+      loadProducts();
     </script>
   </body>
 </html>
