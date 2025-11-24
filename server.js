@@ -31,12 +31,14 @@ const shopify = shopifyApi({
   isCustomStoreApp: false,
 });
 
-app.use(cors({
-  origin: ["https://admin.shopify.com", process.env.SHOP_URL].filter(Boolean),
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-}));
+app.use(
+  cors({
+    origin: ["https://admin.shopify.com", process.env.SHOP_URL].filter(Boolean),
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
 app.use(express.json());
 app.use(cookieParser());
@@ -80,9 +82,9 @@ app.get("/auth/callback", async (req, res) => {
     console.log("[SUCCESS] OAuth for:", callback.session.shop);
     await saveShopSession(callback.session.shop, callback.session.accessToken);
     console.log("[SUCCESS] Token saved");
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 1000));
     const timestamp = Date.now();
-const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?fresh=1&t=${timestamp}`;
+    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?fresh=1&t=${timestamp}`;
     console.log("[Redirect]", redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
@@ -103,7 +105,7 @@ app.get("/app", async (req, res) => {
     const session = await getShopSession(shop);
     if (!session) {
       console.log("[WARNING] Not authenticated");
-      return res.redirect(/auth?shop=);
+      return res.redirect(`/auth?shop=${shop}`);
     }
     console.log("[SUCCESS] Serving app");
     const htmlPath = path.join(__dirname, "views", "app.html");
@@ -119,12 +121,24 @@ app.get("/app", async (req, res) => {
 
 app.get("/", (req, res) => {
   const { shop, host } = req.query;
-  if (shop && host) return res.redirect(/app?shop=&host=System.Management.Automation.Internal.Host.InternalHost);
+  if (shop && host) return res.redirect(`/app?shop=${shop}&host=${host}`);
   res.redirect("/install");
 });
 
 app.get("/install", (req, res) => {
-  res.send(<!DOCTYPE html><html><head><title>Install Variant Badges</title></head><body><h1>Variant Badges</h1><form action="/auth"><input name="shop" placeholder="store.myshopify.com" required><button>Install</button></form></body></html>);
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>Install Variant Badges</title></head>
+      <body>
+        <h1>Variant Badges</h1>
+        <form action="/auth">
+          <input name="shop" placeholder="store.myshopify.com" required>
+          <button>Install</button>
+        </form>
+      </body>
+    </html>
+  `);
 });
 
 app.listen(PORT, () => {
