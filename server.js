@@ -82,7 +82,7 @@ app.get("/auth/callback", async (req, res) => {
     console.log("[SUCCESS] Token saved");
     await new Promise(r => setTimeout(r, 1000));
     const timestamp = Date.now();
-    const redirectUrl = https:///admin/apps/variant-badges?fresh=1&t=;
+const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?fresh=1&t=${timestamp}`;
     console.log("[Redirect]", redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
