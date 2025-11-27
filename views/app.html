@@ -128,7 +128,7 @@
   </head>
   <body>
     <div class="header">
-      <h1>ðŸŽ¨ Variant Badges</h1>
+      <h1>Variant Badges</h1>
       <span class="status-badge loading" id="status">Loading...</span>
     </div>
 
@@ -151,7 +151,7 @@
       let app = null;
       let currentToken = null;
 
-      console.log("ðŸŽ¨ Variant Badges App Loading...");
+      console.log("Variant Badges App Loading...");
       console.log("   Shop:", shop);
       console.log("   Host:", host);
 
@@ -222,7 +222,7 @@
 
         // If token expired (401), try to refresh and retry once
         if (response.status === 401) {
-          console.log("ðŸ”„ Token expired, refreshing...");
+          console.log("Token expired, refreshing...");
 
           // Force new token
           currentToken = null;
@@ -294,7 +294,7 @@
             console.log("Step 8: Error data:", errorData);
 
             if (errorData.needsAuth) {
-              console.log("ðŸ”„ Need OAuth - redirecting...");
+              console.log("Need OAuth - redirecting...");
               document.getElementById("status").textContent =
                 "Redirecting to install...";
 
@@ -309,7 +309,7 @@
                 // Fallback: show install button
                 document.getElementById("products").innerHTML =
                   '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
-                  "<h2>ðŸ”„ Reinstall Required</h2>" +
+                  "<h2>Reinstall Required</h2>" +
                   '<p style="margin: 20px 0;">Your access token has expired.</p>' +
                   '<a href="' +
                   authUrl +
@@ -347,7 +347,7 @@
           if (app && app.idToken) {
             try {
               currentToken = await app.idToken();
-              console.log("ðŸ”„ Token auto-refreshed");
+              console.log("Token auto-refreshed");
             } catch (err) {
               console.log("âš ï¸ Auto-refresh failed (will retry)");
             }
@@ -369,7 +369,7 @@
         }
 
         let html =
-          '<div class="success"><strong>ðŸŽ‰ Success!</strong> Loaded ' +
+          '<div class="success"><strong>Success!</strong> Loaded ' +
           products.length +
           " products via GraphQL</div>";
 
