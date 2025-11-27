@@ -16,13 +16,97 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
         background: #f6f6f7;
+      }
+
+      .app-container {
+        display: flex;
+        height: 100vh;
+      }
+
+      /* Hamburger Menu (hidden on desktop) */
+      .hamburger {
+        display: none;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        background: white;
+        border: 1px solid #e1e3e5;
+        border-radius: 8px;
+        padding: 10px 12px;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+
+      .hamburger-icon {
+        width: 24px;
+        height: 20px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .hamburger-icon span {
+        display: block;
+        height: 3px;
+        width: 100%;
+        background: #202223;
+        border-radius: 2px;
+        transition: all 0.3s;
+      }
+
+      /* Sidebar */
+      .sidebar {
+        width: 250px;
+        background: white;
+        border-right: 1px solid #e1e3e5;
+        padding: 20px 0;
+        transition: transform 0.3s ease;
+      }
+
+      .app-title {
+        padding: 0 20px 20px;
+        font-size: 20px;
+        font-weight: 600;
+        color: #202223;
+        border-bottom: 1px solid #e1e3e5;
+      }
+
+      .nav-menu {
+        list-style: none;
+        margin-top: 10px;
+      }
+
+      .nav-item {
+        padding: 12px 20px;
+        cursor: pointer;
+        color: #6d7175;
+        font-size: 14px;
+        transition: all 0.2s;
+      }
+
+      .nav-item:hover {
+        background: #f6f6f7;
+        color: #202223;
+      }
+
+      .nav-item.active {
+        background: #f1f2f3;
+        color: #008060;
+        font-weight: 500;
+        border-left: 3px solid #008060;
+      }
+
+      /* Main Content */
+      .main-content {
+        flex: 1;
         padding: 40px;
+        overflow-y: auto;
       }
 
       .page {
         display: none;
-        max-width: 1200px;
-        margin: 0 auto;
       }
 
       .page.active {
@@ -41,86 +125,157 @@
         color: #6d7175;
         margin-bottom: 30px;
       }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        .hamburger {
+          display: block;
+        }
+
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          height: 100vh;
+          z-index: 999;
+          transform: translateX(-100%);
+          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar.open {
+          transform: translateX(0);
+        }
+
+        .main-content {
+          padding: 80px 20px 20px;
+          width: 100%;
+        }
+
+        .page-title {
+          font-size: 20px;
+        }
+
+        .page-subtitle {
+          font-size: 13px;
+        }
+
+        /* Overlay when sidebar is open */
+        .sidebar-overlay {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 998;
+        }
+
+        .sidebar-overlay.active {
+          display: block;
+        }
+      }
     </style>
   </head>
   <body>
-    <!-- Main Page -->
-    <div class="page active" id="main-page">
-      <h1 class="page-title">Variant Badges</h1>
-      <p class="page-subtitle">Assign HOT and NEW badges to product variants</p>
-      <p>Main page content will go here...</p>
+    <!-- Hamburger Menu (Mobile Only) -->
+    <div class="hamburger" id="hamburger">
+      <div class="hamburger-icon">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
     </div>
 
-    <!-- Plans Page -->
-    <div class="page" id="plans-page">
-      <h1 class="page-title">Plans</h1>
-      <p class="page-subtitle">
-        Choose the plan that works best for your business
-      </p>
-      <p>Plans content will go here...</p>
-    </div>
+    <!-- Sidebar Overlay (Mobile Only) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <!-- Settings Page -->
-    <div class="page" id="settings-page">
-      <h1 class="page-title">Settings</h1>
-      <p class="page-subtitle">Configure your badge display preferences</p>
-      <p>Settings content will go here...</p>
-    </div>
+    <div class="app-container">
+      <!-- Sidebar Navigation -->
+      <div class="sidebar" id="sidebar">
+        <div class="app-title">Variant Badges</div>
+        <ul class="nav-menu">
+          <li class="nav-item active" data-page="main">🏷️ Variant Badges</li>
+          <li class="nav-item" data-page="plans">💳 Plans</li>
+          <li class="nav-item" data-page="settings">⚙️ Settings</li>
+          <li class="nav-item" data-page="help">❓ Help</li>
+        </ul>
+      </div>
 
-    <!-- Help Page -->
-    <div class="page" id="help-page">
-      <h1 class="page-title">Help</h1>
-      <p class="page-subtitle">Find answers to common questions</p>
-      <p>Help content will go here...</p>
+      <!-- Main Content Area -->
+      <div class="main-content">
+        <!-- Main Page -->
+        <div class="page active" id="main-page">
+          <h1 class="page-title">Variant Badges</h1>
+          <p class="page-subtitle">
+            Assign HOT and NEW badges to product variants
+          </p>
+          <p>Main page content will go here...</p>
+        </div>
+
+        <!-- Plans Page -->
+        <div class="page" id="plans-page">
+          <h1 class="page-title">Plans</h1>
+          <p class="page-subtitle">
+            Choose the plan that works best for your business
+          </p>
+          <p>Plans content will go here...</p>
+        </div>
+
+        <!-- Settings Page -->
+        <div class="page" id="settings-page">
+          <h1 class="page-title">Settings</h1>
+          <p class="page-subtitle">Configure your badge display preferences</p>
+          <p>Settings content will go here...</p>
+        </div>
+
+        <!-- Help Page -->
+        <div class="page" id="help-page">
+          <h1 class="page-title">Help</h1>
+          <p class="page-subtitle">Find answers to common questions</p>
+          <p>Help content will go here...</p>
+        </div>
+      </div>
     </div>
 
     <script>
-      const shopifyConfig = {
-        apiKey: "{{SHOPIFY_API_KEY}}",
-        host: new URLSearchParams(window.location.search).get("host"),
-      };
+      // Mobile menu toggle
+      const hamburger = document.getElementById("hamburger");
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("sidebar-overlay");
 
-      // Initialize App Bridge
-      const AppBridge = window["app-bridge"];
-      const createApp = AppBridge.default;
-      const { NavigationMenu } = AppBridge.actions;
-
-      const app = createApp(shopifyConfig);
-
-      // Create navigation menu in Shopify's left sidebar
-      const navigationMenu = NavigationMenu.create(app, {
-        items: [
-          {
-            label: "Variant Badges",
-            destination: "/app?page=main",
-          },
-          {
-            label: "Plans",
-            destination: "/app?page=plans",
-          },
-          {
-            label: "Settings",
-            destination: "/app?page=settings",
-          },
-          {
-            label: "Help",
-            destination: "/app?page=help",
-          },
-        ],
+      hamburger.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+        overlay.classList.toggle("active");
       });
 
-      // Handle page routing based on URL parameter
-      const urlParams = new URLSearchParams(window.location.search);
-      const currentPage = urlParams.get("page") || "main";
+      overlay.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        overlay.classList.remove("active");
+      });
 
-      // Show the correct page
-      document
-        .querySelectorAll(".page")
-        .forEach((p) => p.classList.remove("active"));
-      const pageToShow = document.getElementById(currentPage + "-page");
-      if (pageToShow) {
-        pageToShow.classList.add("active");
-      }
+      // Page navigation
+      const navItems = document.querySelectorAll(".nav-item");
+      const pages = document.querySelectorAll(".page");
+
+      navItems.forEach((item) => {
+        item.addEventListener("click", () => {
+          // Remove active class from all
+          navItems.forEach((i) => i.classList.remove("active"));
+          pages.forEach((p) => p.classList.remove("active"));
+
+          // Add active to clicked
+          item.classList.add("active");
+
+          // Show corresponding page
+          const pageId = item.getAttribute("data-page") + "-page";
+          document.getElementById(pageId).classList.add("active");
+
+          // Close sidebar on mobile after selection
+          sidebar.classList.remove("open");
+          overlay.classList.remove("active");
+        });
+      });
     </script>
   </body>
 </html>
