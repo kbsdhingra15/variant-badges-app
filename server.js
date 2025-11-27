@@ -112,32 +112,11 @@ app.get("/app", async (req, res) => {
 
     const session = await getShopSession(shop);
     if (!session) {
-      console.log("[WARNING] No session found, redirecting to OAuth...");
+      console.log("[WARNING] Not authenticated");
       return res.redirect(`/auth?shop=${shop}`);
     }
 
-    // CRITICAL: Verify token is actually valid by making a test API call
-    try {
-      const testResponse = await fetch(
-        `https://${shop}/admin/api/2024-10/shop.json`,
-        {
-          headers: {
-            "X-Shopify-Access-Token": session.accessToken,
-          },
-        }
-      );
-
-      if (!testResponse.ok) {
-        console.log("[WARNING] Access token invalid, forcing re-auth...");
-        return res.redirect(`/auth?shop=${shop}`);
-      }
-
-      console.log("[SUCCESS] Token verified, serving app");
-    } catch (error) {
-      console.log("[WARNING] Token verification failed, forcing re-auth...");
-      return res.redirect(`/auth?shop=${shop}`);
-    }
-
+    console.log("[SUCCESS] Serving app");
     const htmlPath = path.join(__dirname, "views", "app.html");
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html.replace(/{{APP_HOST}}/g, process.env.HOST);
