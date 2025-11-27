@@ -163,11 +163,11 @@
             if (window.shopify && window.shopify.environment) {
               clearInterval(checkInterval);
               app = window.shopify;
-              console.log("âœ… App Bridge initialized");
+              console.log("App Bridge initialized");
               resolve(true);
             } else if (attempts++ > 30) {
               clearInterval(checkInterval);
-              console.log("âš ï¸ App Bridge timeout, using URL token");
+              console.log("App Bridge timeout, using URL token");
               resolve(false);
             }
           }, 100);
@@ -179,7 +179,7 @@
         // First, try URL token (fastest and most reliable)
         const urlToken = urlParams.get("id_token");
         if (urlToken) {
-          console.log("âœ… Using token from URL (fast path)");
+          console.log("Using token from URL (fast path)");
           currentToken = urlToken;
           return urlToken;
         }
@@ -196,12 +196,12 @@
             ]);
 
             if (token) {
-              console.log("âœ… Got token from App Bridge");
+              console.log("Got token from App Bridge");
               currentToken = token;
               return token;
             }
           } catch (err) {
-            console.log("âš ï¸ App Bridge failed:", err.message);
+            console.log("App Bridge failed:", err.message);
           }
         }
 
@@ -241,7 +241,7 @@
                 },
               });
             } catch (err) {
-              console.error("âŒ Token refresh failed:", err);
+              console.error("Token refresh failed:", err);
             }
           }
         }
@@ -326,16 +326,16 @@
           const data = await response.json();
           console.log("Step 9: Products loaded:", data.products.length);
 
-          document.getElementById("status").textContent = "âœ… Connected";
+          document.getElementById("status").textContent = "Connected";
           document.getElementById("status").className =
             "status-badge connected";
           displayProducts(data.products);
 
           console.log("Step 10: All done!");
         } catch (error) {
-          console.error("âŒ Error at some step:", error);
+          console.error("Error at some step:", error);
           console.error("   Stack:", error.stack);
-          document.getElementById("status").textContent = "âŒ Error";
+          document.getElementById("status").textContent = "Error";
           document.getElementById("status").className = "status-badge error";
           showError(error.message);
         }
@@ -349,7 +349,7 @@
               currentToken = await app.idToken();
               console.log("Token auto-refreshed");
             } catch (err) {
-              console.log("âš ï¸ Auto-refresh failed (will retry)");
+              console.log("Auto-refresh failed (will retry)");
             }
           }
         }, 50000); // Every 50 seconds
@@ -432,7 +432,7 @@
 
       function showError(message) {
         document.getElementById("products").innerHTML =
-          '<div class="error"><strong>âŒ Error:</strong><br>' +
+          '<div class="error"><strong> Error:</strong><br>' +
           escapeHtml(message) +
           "</div>";
       }
