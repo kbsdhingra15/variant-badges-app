@@ -104,16 +104,26 @@ app.get("/app", async (req, res) => {
 
     const session = await getShopSession(shop);
     if (!session) {
-      console.log(
-        "[WARNING] No session, triggering OAuth via client-side redirect"
-      );
-      // Client-side redirect preserves cookies
+      console.log("[WARNING] No session, triggering OAuth via App Bridge");
+      // Use App Bridge to redirect (works in embedded apps)
       return res.send(`
+        <!DOCTYPE html>
         <html>
+          <head>
+            <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+          </head>
           <body>
             <h3>Initializing app...</h3>
             <script>
-              window.top.location.href = '${process.env.HOST}/auth?shop=${shop}';
+              const app = window.shopify.createApp({
+                apiKey: "${process.env.SHOPIFY_API_KEY}",
+                host: new URLSearchParams(window.location.search).get('host')
+              });
+              
+              app.dispatch(window.shopify.Redirect.Action.REMOTE, {
+                url: '${process.env.HOST}/auth?shop=${shop}',
+                newContext: false
+              });
             </script>
           </body>
         </html>
@@ -127,8 +137,6 @@ app.get("/app", async (req, res) => {
       "Cache-Control",
       "no-store, no-cache, must-revalidate, private"
     );
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
 
     const htmlPath = path.join(__dirname, "views", "app.html");
     let html = fs.readFileSync(htmlPath, "utf8");
