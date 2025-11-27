@@ -498,6 +498,118 @@
           overlay.classList.remove("active");
         });
       });
+      // ============================================
+      // SETTINGS PAGE FUNCTIONALITY
+      // ============================================
+
+      const shopParam = new URLSearchParams(window.location.search).get("shop");
+
+      // Load settings on page load
+      async function loadSettings() {
+        try {
+          const response = await fetch(`/api/settings?shop=${shopParam}`);
+          const data = await response.json();
+
+          document.getElementById("badge-display-enabled").checked =
+            data.badgeDisplayEnabled;
+          document.getElementById("auto-sale-enabled").checked =
+            data.autoSaleEnabled;
+
+          if (data.selectedOption) {
+            document.getElementById("selected-option").value =
+              data.selectedOption;
+          }
+
+          console.log("Settings loaded:", data);
+        } catch (error) {
+          console.error("Error loading settings:", error);
+        }
+      }
+
+      // Load available product options (Color, Size, Material, etc.)
+      async function loadProductOptions() {
+        try {
+          const response = await fetch(
+            `/api/products/options?shop=${shopParam}`
+          );
+          const data = await response.json();
+
+          const dropdown = document.getElementById("selected-option");
+          dropdown.innerHTML =
+            '<option value="">Select an option type...</option>';
+
+          // Add all unique option names from products
+          data.options.forEach((option) => {
+            const optionElement = document.createElement("option");
+            optionElement.value = option;
+            optionElement.textContent = option;
+            dropdown.appendChild(optionElement);
+          });
+
+          console.log("Product options loaded:", data.options);
+        } catch (error) {
+          console.error("Error loading options:", error);
+          document.getElementById("selected-option").innerHTML =
+            '<option value="">Error loading options</option>';
+        }
+      }
+
+      // Save settings
+      document
+        .getElementById("save-settings")
+        .addEventListener("click", async () => {
+          const button = document.getElementById("save-settings");
+          const status = document.getElementById("save-status");
+
+          button.disabled = true;
+          button.textContent = "Saving...";
+
+          try {
+            const settings = {
+              shop: shopParam,
+              selectedOption: document.getElementById("selected-option").value,
+              badgeDisplayEnabled: document.getElementById(
+                "badge-display-enabled"
+              ).checked,
+              autoSaleEnabled:
+                document.getElementById("auto-sale-enabled").checked,
+            };
+
+            const response = await fetch("/api/settings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(settings),
+            });
+
+            if (response.ok) {
+              status.textContent = "✓ Settings saved successfully!";
+              status.style.color = "#008060";
+              setTimeout(() => (status.textContent = ""), 3000);
+            } else {
+              throw new Error("Failed to save");
+            }
+          } catch (error) {
+            status.textContent = "✗ Error saving settings";
+            status.style.color = "#d82c0d";
+            console.error("Error saving settings:", error);
+          } finally {
+            button.disabled = false;
+            button.textContent = "Save Settings";
+          }
+        });
+
+      // Initialize settings page when it becomes active
+      const settingsNavItem = document.querySelector('[data-page="settings"]');
+      settingsNavItem.addEventListener("click", () => {
+        loadSettings();
+        loadProductOptions();
+      });
+
+      // Load on initial page load if settings page is active
+      if (window.location.search.includes("page=settings")) {
+        loadSettings();
+        loadProductOptions();
+      }
     </script>
   </body>
 </html>
