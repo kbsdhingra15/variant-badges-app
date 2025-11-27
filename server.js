@@ -101,6 +101,15 @@ app.get("/app", async (req, res) => {
     const { shop } = req.query;
     if (!shop) return res.status(400).send("Missing shop");
     console.log("[App] Serving for:", shop);
+
+    // Prevent caching
+    res.setHeader(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, private"
+    );
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+
     const session = await getShopSession(shop);
     if (!session) {
       console.log("[WARNING] Not authenticated");
