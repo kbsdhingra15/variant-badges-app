@@ -2,60 +2,39 @@ const express = require("express");
 const router = express.Router();
 const { getAppSettings, saveAppSettings } = require("../database/db");
 
-// GET /api/settings - Get app settings for this shop
-router.get("/settings", async (req, res) => {
+// Get settings for shop
+router.get("/", async (req, res) => {
   try {
-    const { shop } = req.shopifySession;
-    console.log("⚙️  Fetching settings for shop:", shop);
-
+    const shop = req.query.shop;
     const settings = await getAppSettings(shop);
 
     res.json({
-      settings,
-      message: "Settings retrieved successfully",
+      selectedOption: settings.selected_option || "",
+      badgeDisplayEnabled: settings.badge_display_enabled !== false,
+      autoSaleEnabled: settings.auto_sale_enabled || false,
     });
   } catch (error) {
-    console.error("❌ Error fetching settings:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      details: error.message,
-    });
+    console.error("Error fetching settings:", error);
+    res.status(500).json({ error: "Failed to fetch settings" });
   }
 });
 
-// POST /api/settings - Save app settings
-router.post("/settings", async (req, res) => {
+// Save settings
+router.post("/", async (req, res) => {
   try {
-    const { shop } = req.shopifySession;
-    const { selectedOption } = req.body;
+    const { shop, selectedOption, badgeDisplayEnabled, autoSaleEnabled } =
+      req.body;
 
-    console.log("⚙️  Saving settings for shop:", shop);
-    console.log("   Selected option:", selectedOption);
-
-    // Validate that selectedOption is provided
-    if (!selectedOption) {
-      return res.status(400).json({
-        error: "Missing required field: selectedOption",
-      });
-    }
-
-    // Valid option types: Color, Size, Material, Style, etc.
-    // We're flexible here - merchant can choose any option name they want
-    await saveAppSettings(shop, selectedOption);
-
-    res.json({
-      success: true,
-      message: "Settings saved successfully",
-      settings: {
-        selectedOption,
-      },
+    await saveAppSettings(shop, {
+      selected_option: selectedOption,
+      badge_display_enabled: badgeDisplayEnabled,
+      auto_sale_enabled: autoSaleEnabled,
     });
+
+    res.json({ success: true });
   } catch (error) {
-    console.error("❌ Error saving settings:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      details: error.message,
-    });
+    console.error("Error saving settings:", error);
+    res.status(500).json({ error: "Failed to save settings" });
   }
 });
 

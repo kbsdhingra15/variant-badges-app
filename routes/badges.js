@@ -4,206 +4,70 @@ const {
   getBadgeAssignments,
   saveBadgeAssignment,
   deleteBadgeAssignment,
+  getBadgesForPublicAPI,
 } = require("../database/db");
 
-// GET /api/badges - Get all badge assignments for this shop
-router.get("/badges", async (req, res) => {
+// Get all badge assignments for shop
+router.get("/", async (req, res) => {
   try {
-    const { shop } = req.shopifySession;
-    console.log("🏷️  Fetching badge assignments for shop:", shop);
-
+    const shop = req.query.shop;
     const badges = await getBadgeAssignments(shop);
-
-    res.json({
-      badges,
-      count: badges.length,
-      message: "Badge assignments retrieved successfully",
-    });
+    res.json({ badges });
   } catch (error) {
-    console.error("❌ Error fetching badges:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      details: error.message,
-    });
+    console.error("Error fetching badges:", error);
+    res.status(500).json({ error: "Failed to fetch badges" });
   }
 });
 
-// POST /api/badges - Assign a badge to a variant
-router.post("/badges", async (req, res) => {
+// Save badge assignment (option_value based)
+router.post("/", async (req, res) => {
   try {
-    const { shop } = req.shopifySession;
-    const { productId, variantId, badgeType, optionValue } = req.body;
+    const { shop, optionValue, badgeType } = req.body;
 
-    console.log("🏷️  Assigning badge for shop:", shop);
-    console.log("   Product:", productId);
-    console.log("   Variant:", variantId);
-    console.log("   Badge Type:", badgeType);
-    console.log("   Option Value:", optionValue);
-
-    // Validate required fields
-    if (!productId || !variantId || !badgeType) {
-      return res.status(400).json({
-        error: "Missing required fields: productId, variantId, badgeType",
-      });
+    if (!shop || !optionValue || !badgeType) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Validate badge type
-    const validBadgeTypes = ["HOT", "NEW", "SALE"];
-    if (!validBadgeTypes.includes(badgeType)) {
-      return res.status(400).json({
-        error: `Invalid badge type. Must be one of: ${validBadgeTypes.join(
-          ", "
-        )}`,
-      });
+    if (!["HOT", "NEW"].includes(badgeType)) {
+      return res.status(400).json({ error: "Invalid badge type" });
     }
 
-    await saveBadgeAssignment(
+    const badge = await saveBadgeAssignment(shop, optionValue, badgeType);
+    res.json({ success: true, badge });
+  } catch (error) {
+    console.error("Error saving badge:", error);
+    res.status(500).json({ error: "Failed to save badge" });
+  }
+});
+
+// Delete badge assignment
+router.delete("/:optionValue/:badgeType", async (req, res) => {
+  try {
+    const shop = req.query.shop;
+    const { optionValue, badgeType } = req.params;
+
+    await deleteBadgeAssignment(
       shop,
-      productId,
-      variantId,
-      badgeType,
-      optionValue
+      decodeURIComponent(optionValue),
+      badgeType
     );
-
-    res.json({
-      success: true,
-      message: "Badge assigned successfully",
-      badge: {
-        productId,
-        variantId,
-        badgeType,
-        optionValue,
-      },
-    });
+    res.json({ success: true });
   } catch (error) {
-    console.error("❌ Error assigning badge:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      details: error.message,
-    });
+    console.error("Error deleting badge:", error);
+    res.status(500).json({ error: "Failed to delete badge" });
   }
 });
 
-// DELETE /api/badges/:variantId/:badgeType - Remove a badge from a variant
-router.delete("/badges/:variantId/:badgeType", async (req, res) => {
+// Public API endpoint (no auth) - for storefront
+router.get("/public/:shop", async (req, res) => {
   try {
-    const { shop } = req.shopifySession;
-    const { variantId, badgeType } = req.params;
+    const shop = req.params.shop;
+    const badges = await getBadgesForPublicAPI(shop);
 
-    console.log("🏷️  Removing badge for shop:", shop);
-    console.log("   Variant:", variantId);
-    console.log("   Badge Type:", badgeType);
-
-    await deleteBadgeAssignment(shop, variantId, badgeType);
-
-    res.json({
-      success: true,
-      message: "Badge removed successfully",
-    });
-  } catch (error) {
-    console.error("❌ Error removing badge:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      details: error.message,
-    });
-  }
-});
-
-// POST /api/badges/bulk - Assign badges to multiple variants at once
-router.post("/badges/bulk", async (req, res) => {
-  try {
-    const { shop } = req.shopifySession;
-    const { assignments } = req.body;
-
-    console.log("🏷️  Bulk assigning badges for shop:", shop);
-    console.log("   Number of assignments:", assignments?.length || 0);
-
-    // Validate request
-    if (!assignments || !Array.isArray(assignments)) {
-      return res.status(400).json({
-        error: "Missing or invalid 'assignments' array",
-      });
-    }
-
-    // Process each assignment
-    const results = [];
-    for (const assignment of assignments) {
-      const { productId, variantId, badgeType, optionValue } = assignment;
-
-      try {
-        await saveBadgeAssignment(
-          shop,
-          productId,
-          variantId,
-          badgeType,
-          optionValue
-        );
-        results.push({
-          variantId,
-          badgeType,
-          success: true,
-        });
-      } catch (error) {
-        console.error(
-          `❌ Failed to assign badge to variant ${variantId}:`,
-          error
-        );
-        results.push({
-          variantId,
-          badgeType,
-          success: false,
-          error: error.message,
-        });
-      }
-    }
-
-    const successCount = results.filter((r) => r.success).length;
-    const failureCount = results.filter((r) => !r.success).length;
-
-    res.json({
-      success: failureCount === 0,
-      message: `Assigned ${successCount} badges, ${failureCount} failed`,
-      results,
-    });
-  } catch (error) {
-    console.error("❌ Error in bulk badge assignment:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      details: error.message,
-    });
-  }
-});
-
-// GET /api/badges/public/:shop - Public endpoint for storefront (NO AUTH)
-router.get("/badges/public/:shop", async (req, res) => {
-  try {
-    const { shop } = req.params;
-    console.log("Fetching public badges for shop:", shop);
-
-    // Get badges from database (no auth needed for read-only public endpoint)
-    const { getBadgeAssignments } = require("../database/db");
-    const badges = await getBadgeAssignments(shop);
-
-    // Format for easy lookup by variant ID
-    const badgeMap = {};
-    badges.forEach((badge) => {
-      if (!badgeMap[badge.variant_id]) {
-        badgeMap[badge.variant_id] = [];
-      }
-      badgeMap[badge.variant_id].push(badge.badge_type);
-    });
-
-    res.json({
-      success: true,
-      badges: badgeMap,
-      count: badges.length,
-    });
+    res.json({ badges });
   } catch (error) {
     console.error("Error fetching public badges:", error);
-    res.status(500).json({
-      error: "Internal server error",
-      details: error.message,
-    });
+    res.status(500).json({ error: "Failed to fetch badges" });
   }
 });
 

@@ -23,7 +23,7 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
     // App Settings table (which variant option chosen)
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_settings (
@@ -34,7 +34,7 @@ async function initDB() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    
+
     // Badge Assignments table (which variants have which badges)
     await client.query(`
       CREATE TABLE IF NOT EXISTS badge_assignments (
@@ -49,7 +49,7 @@ async function initDB() {
         UNIQUE(shop, variant_id, badge_type)
       )
     `);
-    
+
     // Create indexes for better query performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_badge_shop ON badge_assignments(shop)
@@ -60,8 +60,10 @@ async function initDB() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_badge_variant ON badge_assignments(variant_id)
     `);
-    
-    console.log("✅ Database initialized (shops, app_settings, badge_assignments)");
+
+    console.log(
+      "✅ Database initialized (shops, app_settings, badge_assignments)"
+    );
   } catch (error) {
     console.error("❌ Database initialization error:", error);
     throw error;
@@ -97,11 +99,11 @@ async function getShopSession(shop) {
       "SELECT shop, access_token FROM shops WHERE shop = $1",
       [shop]
     );
-    
+
     if (result.rows.length === 0) {
       return null;
     }
-    
+
     return {
       shop: result.rows[0].shop,
       accessToken: result.rows[0].access_token,
@@ -122,11 +124,11 @@ async function getAppSettings(shop) {
       "SELECT selected_option FROM app_settings WHERE shop = $1",
       [shop]
     );
-    
+
     if (result.rows.length === 0) {
       return { selectedOption: null };
     }
-    
+
     return {
       selectedOption: result.rows[0].selected_option,
     };
@@ -138,17 +140,49 @@ async function getAppSettings(shop) {
   }
 }
 
-async function saveAppSettings(shop, selectedOption) {
+async function saveAppSettings(shop, settings) {
   const client = await pool.connect();
   try {
+    const { selected_option, badge_display_enabled, auto_sale_enabled } =
+      settings;
+
     await client.query(
-      `INSERT INTO app_settings (shop, selected_option, updated_at) 
-       VALUES ($1, $2, NOW())
+      `INSERT INTO app_settings (shop, selected_option, badge_display_enabled, auto_sale_enabled, updated_at) 
+       VALUES ($1, $2, $3, $4, NOW())
        ON CONFLICT (shop) 
-       DO UPDATE SET selected_option = $2, updated_at = NOW()`,
-      [shop, selectedOption]
+       DO UPDATE SET 
+         selected_option = COALESCE($2, app_settings.selected_option),
+         badge_display_enabled = COALESCE($3, app_settings.badge_display_enabled),
+         auto_sale_enabled = COALESCE($4, app_settings.auto_sale_enabled),
+         updated_at = NOW()`,
+      [shop, selected_option, badge_display_enabled, auto_sale_enabled]
     );
-    console.log("✅ App settings saved:", shop, selectedOption);
+    console.log("✅ App settings saved:", shop);
+  } catch (error) {
+    console.error("❌ Error saving app settings:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+async function saveAppSettings(shop, settings) {
+  const client = await pool.connect();
+  try {
+    const { selected_option, badge_display_enabled, auto_sale_enabled } =
+      settings;
+
+    await client.query(
+      `INSERT INTO app_settings (shop, selected_option, badge_display_enabled, auto_sale_enabled, updated_at) 
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (shop) 
+       DO UPDATE SET 
+         selected_option = COALESCE($2, app_settings.selected_option),
+         badge_display_enabled = COALESCE($3, app_settings.badge_display_enabled),
+         auto_sale_enabled = COALESCE($4, app_settings.auto_sale_enabled),
+         updated_at = NOW()`,
+      [shop, selected_option, badge_display_enabled, auto_sale_enabled]
+    );
+    console.log("✅ App settings saved:", shop);
   } catch (error) {
     console.error("❌ Error saving app settings:", error);
     throw error;
@@ -157,15 +191,15 @@ async function saveAppSettings(shop, selectedOption) {
   }
 }
 
-// Badge management
+// Badge management (SIMPLIFIED - option_value based)
 async function getBadgeAssignments(shop) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT product_id, variant_id, badge_type, option_value 
+      `SELECT option_value, badge_type 
        FROM badge_assignments 
        WHERE shop = $1 
-       ORDER BY created_at DESC`,
+       ORDER BY option_value`,
       [shop]
     );
     return result.rows;
@@ -177,17 +211,17 @@ async function getBadgeAssignments(shop) {
   }
 }
 
-async function saveBadgeAssignment(shop, productId, variantId, badgeType, optionValue) {
+async function saveBadgeAssignment(shop, optionValue, badgeType) {
   const client = await pool.connect();
   try {
     await client.query(
-      `INSERT INTO badge_assignments (shop, product_id, variant_id, badge_type, option_value, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
-       ON CONFLICT (shop, variant_id, badge_type)
-       DO UPDATE SET option_value = $5, updated_at = NOW()`,
-      [shop, productId, variantId, badgeType, optionValue]
+      `INSERT INTO badge_assignments (shop, option_value, badge_type, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (shop, option_value, badge_type)
+       DO UPDATE SET updated_at = NOW()`,
+      [shop, optionValue, badgeType]
     );
-    console.log("✅ Badge assignment saved:", shop, variantId, badgeType);
+    console.log("✅ Badge assignment saved:", shop, optionValue, badgeType);
   } catch (error) {
     console.error("❌ Error saving badge assignment:", error);
     throw error;
@@ -196,17 +230,43 @@ async function saveBadgeAssignment(shop, productId, variantId, badgeType, option
   }
 }
 
-async function deleteBadgeAssignment(shop, variantId, badgeType) {
+async function deleteBadgeAssignment(shop, optionValue, badgeType) {
   const client = await pool.connect();
   try {
     await client.query(
       `DELETE FROM badge_assignments 
-       WHERE shop = $1 AND variant_id = $2 AND badge_type = $3`,
-      [shop, variantId, badgeType]
+       WHERE shop = $1 AND option_value = $2 AND badge_type = $3`,
+      [shop, optionValue, badgeType]
     );
-    console.log("✅ Badge assignment deleted:", shop, variantId, badgeType);
+    console.log("✅ Badge assignment deleted:", shop, optionValue, badgeType);
   } catch (error) {
     console.error("❌ Error deleting badge assignment:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function getBadgesForPublicAPI(shop) {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      "SELECT option_value, badge_type FROM badge_assignments WHERE shop = $1",
+      [shop]
+    );
+
+    // Convert to format: { "Red": ["HOT"], "Blue": ["NEW", "HOT"] }
+    const badges = {};
+    result.rows.forEach((row) => {
+      if (!badges[row.option_value]) {
+        badges[row.option_value] = [];
+      }
+      badges[row.option_value].push(row.badge_type);
+    });
+
+    return badges;
+  } catch (error) {
+    console.error("❌ Error getting public badges:", error);
     throw error;
   } finally {
     client.release();
@@ -223,4 +283,5 @@ module.exports = {
   getBadgeAssignments,
   saveBadgeAssignment,
   deleteBadgeAssignment,
+  getBadgesForPublicAPI, // ADD THIS LINE
 };

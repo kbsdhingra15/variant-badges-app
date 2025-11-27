@@ -92,6 +92,20 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
+// Public endpoint (no auth required) - for storefront badge display
+app.get("/api/badges/public/:shop", async (req, res) => {
+  const { getBadgesForPublicAPI } = require("./database/db");
+  try {
+    const shop = req.params.shop;
+    const badges = await getBadgesForPublicAPI(shop);
+    res.json({ badges });
+  } catch (error) {
+    console.error("Error fetching public badges:", error);
+    res.status(500).json({ error: "Failed to fetch badges" });
+  }
+});
+
+// Protected endpoints (require auth)
 app.use("/api", validateSessionToken(shopify), productsRouter);
 app.use("/api", validateSessionToken(shopify), badgesRouter);
 app.use("/api", validateSessionToken(shopify), settingsRouter);
