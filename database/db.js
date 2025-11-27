@@ -24,29 +24,29 @@ async function initDB() {
       )
     `);
 
-    // App Settings table (which variant option chosen)
+    // App Settings table
     await client.query(`
       CREATE TABLE IF NOT EXISTS app_settings (
         id SERIAL PRIMARY KEY,
         shop VARCHAR(255) UNIQUE NOT NULL,
         selected_option VARCHAR(100),
+        badge_display_enabled BOOLEAN DEFAULT true,
+        auto_sale_enabled BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // Badge Assignments table (which variants have which badges)
+    // Badge Assignments table (SIMPLIFIED - option_value based)
     await client.query(`
       CREATE TABLE IF NOT EXISTS badge_assignments (
         id SERIAL PRIMARY KEY,
         shop VARCHAR(255) NOT NULL,
-        product_id VARCHAR(50) NOT NULL,
-        variant_id VARCHAR(50) NOT NULL,
-        badge_type VARCHAR(20) NOT NULL,
-        option_value VARCHAR(100),
+        option_value VARCHAR(100) NOT NULL,
+        badge_type VARCHAR(20) NOT NULL CHECK (badge_type IN ('HOT', 'NEW')),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(shop, variant_id, badge_type)
+        CONSTRAINT unique_shop_value_badge UNIQUE(shop, option_value, badge_type)
       )
     `);
 
@@ -55,15 +55,10 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_badge_shop ON badge_assignments(shop)
     `);
     await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_badge_product ON badge_assignments(product_id)
-    `);
-    await client.query(`
-      CREATE INDEX IF NOT EXISTS idx_badge_variant ON badge_assignments(variant_id)
+      CREATE INDEX IF NOT EXISTS idx_badge_value ON badge_assignments(option_value)
     `);
 
-    console.log(
-      "✅ Database initialized (shops, app_settings, badge_assignments)"
-    );
+    console.log("✅ Database initialized");
   } catch (error) {
     console.error("❌ Database initialization error:", error);
     throw error;
