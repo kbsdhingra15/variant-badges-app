@@ -502,28 +502,9 @@
       // SETTINGS PAGE FUNCTIONALITY
       // ============================================
 
-      // Get shop from URL or extract from Shopify's embedded context
-      let shopParam = new URLSearchParams(window.location.search).get("shop");
+      const shopParam = "{{SHOP}}";
+      console.log("Shop injected from server:", shopParam);
 
-      // If not in URL, extract from Shopify's embedded app domain
-      if (!shopParam) {
-        // Extract from current page domain or parent frame
-        const urlParts = window.location.hostname.split(".");
-        // Try to get from admin URL pattern
-        if (
-          window.location.ancestorOrigins &&
-          window.location.ancestorOrigins[0]
-        ) {
-          const match = window.location.ancestorOrigins[0].match(
-            /admin\.shopify\.com\/store\/([^\/]+)/
-          );
-          if (match) {
-            shopParam = match[1] + ".myshopify.com";
-          }
-        }
-      }
-
-      console.log("Shop detected:", shopParam);
       // Load settings on page load
       async function loadSettings() {
         try {

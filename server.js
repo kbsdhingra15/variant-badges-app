@@ -130,6 +130,7 @@ app.get("/app", async (req, res) => {
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html.replace(/{{APP_HOST}}/g, process.env.HOST);
     html = html.replace(/{{SHOPIFY_API_KEY}}/g, process.env.SHOPIFY_API_KEY);
+    html = html.replace(/{{SHOP}}/g, shop); // ADD THIS LINE
     res.type("html").send(html);
   } catch (error) {
     console.error("[ERROR] App page:", error);
