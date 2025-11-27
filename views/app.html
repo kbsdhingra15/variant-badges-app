@@ -252,15 +252,6 @@
       // Load products
       async function loadProducts() {
         try {
-          // Check for fresh install - wait for OAuth to complete
-          const freshInstall = urlParams.get("fresh");
-          if (freshInstall) {
-            console.log("🎉 Fresh install - waiting 4 seconds...");
-            document.getElementById("status").textContent =
-              "Completing installation...";
-            await new Promise((resolve) => setTimeout(resolve, 4000));
-          }
-
           document.getElementById("status").textContent = "Initializing...";
           console.log("Step 1: Starting loadProducts");
 

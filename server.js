@@ -82,9 +82,8 @@ app.get("/auth/callback", async (req, res) => {
     console.log("[SUCCESS] OAuth for:", callback.session.shop);
     await saveShopSession(callback.session.shop, callback.session.accessToken);
     console.log("[SUCCESS] Token saved");
-    await new Promise((r) => setTimeout(r, 1000));
-    const timestamp = Date.now();
-    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges?fresh=1&t=${timestamp}`;
+    await new Promise((r) => setTimeout(r, 3000));
+    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges`;
     console.log("[Redirect]", redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
