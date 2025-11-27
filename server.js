@@ -112,8 +112,7 @@ app.get("/app", async (req, res) => {
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html.replace(/{{APP_HOST}}/g, process.env.HOST);
     html = html.replace(/{{SHOPIFY_API_KEY}}/g, process.env.SHOPIFY_API_KEY);
-    res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.send(html);
+    res.type("html").send(html);
   } catch (error) {
     console.error("[ERROR] App page:", error);
     res.status(500).send("Failed to load");
