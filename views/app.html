@@ -605,11 +605,11 @@
         loadProductOptions();
       });
 
-      // Load on initial page load if settings page is active
-      if (window.location.search.includes("page=settings")) {
+      // Load settings immediately when page loads
+      setTimeout(() => {
         loadSettings();
         loadProductOptions();
-      }
+      }, 500);
     </script>
   </body>
 </html>
