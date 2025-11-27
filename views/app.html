@@ -16,63 +16,13 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
         background: #f6f6f7;
-      }
-
-      .app-container {
-        display: flex;
-        height: 100vh;
-      }
-
-      /* Sidebar */
-      .sidebar {
-        width: 250px;
-        background: white;
-        border-right: 1px solid #e1e3e5;
-        padding: 20px 0;
-      }
-
-      .app-title {
-        padding: 0 20px 20px;
-        font-size: 20px;
-        font-weight: 600;
-        color: #202223;
-        border-bottom: 1px solid #e1e3e5;
-      }
-
-      .nav-menu {
-        list-style: none;
-        margin-top: 10px;
-      }
-
-      .nav-item {
-        padding: 12px 20px;
-        cursor: pointer;
-        color: #6d7175;
-        font-size: 14px;
-        transition: all 0.2s;
-      }
-
-      .nav-item:hover {
-        background: #f6f6f7;
-        color: #202223;
-      }
-
-      .nav-item.active {
-        background: #f1f2f3;
-        color: #008060;
-        font-weight: 500;
-        border-left: 3px solid #008060;
-      }
-
-      /* Main Content */
-      .main-content {
-        flex: 1;
         padding: 40px;
-        overflow-y: auto;
       }
 
       .page {
         display: none;
+        max-width: 1200px;
+        margin: 0 auto;
       }
 
       .page.active {
@@ -83,7 +33,7 @@
         font-size: 24px;
         font-weight: 600;
         color: #202223;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
       }
 
       .page-subtitle {
@@ -94,73 +44,83 @@
     </style>
   </head>
   <body>
-    <div class="app-container">
-      <!-- Sidebar Navigation -->
-      <div class="sidebar">
-        <div class="app-title">Variant Badges</div>
-        <ul class="nav-menu">
-          <li class="nav-item active" data-page="main">🏷️ Variant Badges</li>
-          <li class="nav-item" data-page="plans">💳 Plans</li>
-          <li class="nav-item" data-page="settings">⚙️ Settings</li>
-          <li class="nav-item" data-page="help">❓ Help</li>
-        </ul>
-      </div>
+    <!-- Main Page -->
+    <div class="page active" id="main-page">
+      <h1 class="page-title">Variant Badges</h1>
+      <p class="page-subtitle">Assign HOT and NEW badges to product variants</p>
+      <p>Main page content will go here...</p>
+    </div>
 
-      <!-- Main Content Area -->
-      <div class="main-content">
-        <!-- Main Page -->
-        <div class="page active" id="main-page">
-          <h1 class="page-title">Variant Badges</h1>
-          <p class="page-subtitle">
-            Assign HOT and NEW badges to product variants
-          </p>
-          <p>Main page content will go here...</p>
-        </div>
+    <!-- Plans Page -->
+    <div class="page" id="plans-page">
+      <h1 class="page-title">Plans</h1>
+      <p class="page-subtitle">
+        Choose the plan that works best for your business
+      </p>
+      <p>Plans content will go here...</p>
+    </div>
 
-        <!-- Plans Page -->
-        <div class="page" id="plans-page">
-          <h1 class="page-title">Plans</h1>
-          <p class="page-subtitle">
-            Choose the plan that works best for your business
-          </p>
-          <p>Plans content will go here...</p>
-        </div>
+    <!-- Settings Page -->
+    <div class="page" id="settings-page">
+      <h1 class="page-title">Settings</h1>
+      <p class="page-subtitle">Configure your badge display preferences</p>
+      <p>Settings content will go here...</p>
+    </div>
 
-        <!-- Settings Page -->
-        <div class="page" id="settings-page">
-          <h1 class="page-title">Settings</h1>
-          <p class="page-subtitle">Configure your badge display preferences</p>
-          <p>Settings content will go here...</p>
-        </div>
-
-        <!-- Help Page -->
-        <div class="page" id="help-page">
-          <h1 class="page-title">Help</h1>
-          <p class="page-subtitle">Find answers to common questions</p>
-          <p>Help content will go here...</p>
-        </div>
-      </div>
+    <!-- Help Page -->
+    <div class="page" id="help-page">
+      <h1 class="page-title">Help</h1>
+      <p class="page-subtitle">Find answers to common questions</p>
+      <p>Help content will go here...</p>
     </div>
 
     <script>
-      // Page navigation
-      const navItems = document.querySelectorAll(".nav-item");
-      const pages = document.querySelectorAll(".page");
+      const shopifyConfig = {
+        apiKey: "{{SHOPIFY_API_KEY}}",
+        host: new URLSearchParams(window.location.search).get("host"),
+      };
 
-      navItems.forEach((item) => {
-        item.addEventListener("click", () => {
-          // Remove active class from all items and pages
-          navItems.forEach((i) => i.classList.remove("active"));
-          pages.forEach((p) => p.classList.remove("active"));
+      // Initialize App Bridge
+      const AppBridge = window["app-bridge"];
+      const createApp = AppBridge.default;
+      const { NavigationMenu } = AppBridge.actions;
 
-          // Add active class to clicked item
-          item.classList.add("active");
+      const app = createApp(shopifyConfig);
 
-          // Show corresponding page
-          const pageId = item.getAttribute("data-page") + "-page";
-          document.getElementById(pageId).classList.add("active");
-        });
+      // Create navigation menu in Shopify's left sidebar
+      const navigationMenu = NavigationMenu.create(app, {
+        items: [
+          {
+            label: "Variant Badges",
+            destination: "/app?page=main",
+          },
+          {
+            label: "Plans",
+            destination: "/app?page=plans",
+          },
+          {
+            label: "Settings",
+            destination: "/app?page=settings",
+          },
+          {
+            label: "Help",
+            destination: "/app?page=help",
+          },
+        ],
       });
+
+      // Handle page routing based on URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const currentPage = urlParams.get("page") || "main";
+
+      // Show the correct page
+      document
+        .querySelectorAll(".page")
+        .forEach((p) => p.classList.remove("active"));
+      const pageToShow = document.getElementById(currentPage + "-page");
+      if (pageToShow) {
+        pageToShow.classList.add("active");
+      }
     </script>
   </body>
 </html>
