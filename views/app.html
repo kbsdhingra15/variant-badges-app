@@ -24,9 +24,6 @@
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         margin-bottom: 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
       }
       .header h1 {
         font-size: 24px;
@@ -50,6 +47,31 @@
         background: #ffc2c2;
         color: #bf0711;
       }
+
+      .option-selector {
+        background: white;
+        padding: 20px 30px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+      }
+      .option-selector h2 {
+        font-size: 18px;
+        margin-bottom: 15px;
+      }
+      .option-selector select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #c9cccf;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      .option-selector p {
+        margin-top: 10px;
+        color: #6d7175;
+        font-size: 14px;
+      }
+
       .products-container {
         background: white;
         padding: 30px;
@@ -71,19 +93,12 @@
       .variant-row {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         padding: 12px;
-        border: 1px solid #e1e3e5;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        background: #fafbfb;
+        border-bottom: 1px solid #e1e3e5;
       }
-      .variant-image {
-        width: 60px;
-        height: 60px;
-        object-fit: cover;
-        border-radius: 4px;
-        margin-right: 15px;
-        background: #e1e3e5;
+      .variant-row:last-child {
+        border-bottom: none;
       }
       .variant-info {
         flex: 1;
@@ -91,28 +106,45 @@
       .variant-info strong {
         display: block;
         margin-bottom: 4px;
-        font-size: 15px;
       }
-      .variant-option {
-        font-size: 13px;
+      .variant-info .option-value {
         color: #6d7175;
-        margin-top: 2px;
+        font-size: 14px;
       }
-      .success {
-        background: #d1f0e5;
-        color: #008060;
-        padding: 15px;
-        border-radius: 4px;
-        margin-bottom: 20px;
-        border-left: 4px solid #008060;
+      .badge-controls {
+        display: flex;
+        gap: 8px;
       }
-      .error {
-        background: #ffc2c2;
-        color: #bf0711;
-        padding: 15px;
+      .badge-btn {
+        padding: 8px 16px;
+        border: 2px solid #e1e3e5;
         border-radius: 4px;
-        margin-bottom: 20px;
-        border-left: 4px solid #bf0711;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        background: white;
+        transition: all 0.2s;
+      }
+      .badge-btn:hover {
+        border-color: #008060;
+      }
+      .badge-btn.hot {
+        border-color: #ff4d4d;
+        background: #fff5f5;
+        color: #ff4d4d;
+      }
+      .badge-btn.new {
+        border-color: #1f8eff;
+        background: #f0f7ff;
+        color: #1f8eff;
+      }
+      .badge-btn.sale {
+        border-color: #ff9500;
+        background: #fff8e6;
+        color: #ff9500;
+      }
+      .badge-btn.active {
+        font-weight: 700;
       }
       .empty-state {
         text-align: center;
@@ -132,6 +164,17 @@
       <span class="status-badge loading" id="status">Loading...</span>
     </div>
 
+    <div class="option-selector" id="optionSelector" style="display: none">
+      <h2>Select Product Option</h2>
+      <select id="optionSelect">
+        <option value="">Choose an option...</option>
+      </select>
+      <p>
+        Select which product option (e.g., Size, Color) you want to assign
+        badges to.
+      </p>
+    </div>
+
     <div class="products-container">
       <div id="products">
         <div class="empty-state">
@@ -142,18 +185,17 @@
     </div>
 
     <script>
+      const appHost = "{{APP_HOST}}";
+      const apiKey = "{{SHOPIFY_API_KEY}}";
       const urlParams = new URLSearchParams(window.location.search);
       const shop = urlParams.get("shop");
       const host = urlParams.get("host");
-      const appHost = "{{APP_HOST}}";
-      const apiKey = "{{SHOPIFY_API_KEY}}";
 
       let app = null;
       let currentToken = null;
-
-      console.log("Variant Badges App Loading...");
-      console.log("   Shop:", shop);
-      console.log("   Host:", host);
+      let allProducts = [];
+      let selectedOption = null;
+      let badgeAssignments = [];
 
       // Initialize App Bridge
       async function initAppBridge() {
@@ -174,32 +216,23 @@
         });
       }
 
-      // Get session token - tries App Bridge first, falls back to URL
+      // Get session token
       async function getSessionToken() {
-        // First, try URL token (fastest and most reliable)
         const urlToken = urlParams.get("id_token");
         if (urlToken) {
           console.log("Using token from URL (fast path)");
-          currentToken = urlToken;
           return urlToken;
         }
 
-        // Try App Bridge with timeout
         if (app && app.idToken) {
           try {
-            console.log("Trying App Bridge idToken() with 2s timeout...");
-            const token = await Promise.race([
+            currentToken = await Promise.race([
               app.idToken(),
               new Promise((_, reject) =>
                 setTimeout(() => reject(new Error("App Bridge timeout")), 2000)
               ),
             ]);
-
-            if (token) {
-              console.log("Got token from App Bridge");
-              currentToken = token;
-              return token;
-            }
+            return currentToken;
           } catch (err) {
             console.log("App Bridge failed:", err.message);
           }
@@ -207,132 +240,303 @@
 
         throw new Error("No session token available");
       }
-      // Make authenticated API call with automatic retry
-      async function apiCall(url, options = {}) {
-        const token = await getSessionToken();
 
-        const response = await fetch(url, {
-          ...options,
-          headers: {
-            Authorization: "Bearer " + token,
-            "Content-Type": "application/json",
-            ...options.headers,
-          },
-        });
-
-        // If token expired (401), try to refresh and retry once
-        if (response.status === 401) {
-          console.log("Token expired, refreshing...");
-
-          // Force new token
-          currentToken = null;
-          if (app && app.idToken) {
-            try {
-              const newToken = await app.idToken();
-              currentToken = newToken;
-
-              // Retry with new token
-              return fetch(url, {
-                ...options,
-                headers: {
-                  Authorization: "Bearer " + currentToken,
-                  "Content-Type": "application/json",
-                  ...options.headers,
-                },
-              });
-            } catch (err) {
-              console.error("Token refresh failed:", err);
-            }
-          }
-        }
-
-        return response;
-      }
-
-      // Load products
+      // Fetch products
       async function loadProducts() {
         try {
           document.getElementById("status").textContent = "Initializing...";
-          console.log("Step 1: Starting loadProducts");
-
-          // Initialize App Bridge (but don't block if it fails)
           await initAppBridge();
-          console.log("Step 2: App Bridge done");
 
           document.getElementById("status").textContent = "Loading Products...";
-          console.log("Step 3: About to fetch products");
-          console.log("   URL:", appHost + "/api/products");
-
-          // Get token first
-          console.log("Step 4: Getting token...");
           const token = await getSessionToken();
-          console.log("Step 5: Got token, length:", token.length);
 
-          // Make the actual fetch
-          console.log("Step 6: Making fetch call...");
-          const response = await fetch(appHost + "/api/products", {
-            method: "GET",
-            headers: {
-              Authorization: "Bearer " + token,
-              "Content-Type": "application/json",
-            },
-          });
-
-          console.log("Step 7: Got response, status:", response.status);
+          const response = await fetch(
+            appHost + "/api/products?shop=" + encodeURIComponent(shop),
+            {
+              headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json",
+              },
+            }
+          );
 
           if (!response.ok) {
             const errorData = await response.json();
-            console.log("Step 8: Error data:", errorData);
-
             if (errorData.needsAuth) {
-              console.log("Need OAuth - redirecting...");
-              document.getElementById("status").textContent =
-                "Redirecting to install...";
-
-              const authUrl =
-                appHost + "/auth?shop=" + encodeURIComponent(shop);
-              console.log("   Redirect URL:", authUrl);
-
-              // Use App Bridge Redirect for embedded apps
-              if (app && app.dispatch) {
-                app.dispatch(window.shopify.Redirect.Action.REMOTE, authUrl);
-              } else {
-                // Fallback: show install button
-                document.getElementById("products").innerHTML =
-                  '<div class="product-card" style="text-align: center; padding: 60px 20px;">' +
-                  "<h2>Reinstall Required</h2>" +
-                  '<p style="margin: 20px 0;">Your access token has expired.</p>' +
-                  '<a href="' +
-                  authUrl +
-                  '" target="_top" ' +
-                  'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
-                  'text-decoration: none; border-radius: 4px; font-weight: 600;">Reinstall App</a>' +
-                  "</div>";
-              }
+              showReinstallButton();
               return;
             }
-            throw new Error(errorData.error || "HTTP " + response.status);
+            throw new Error("Failed to fetch products");
           }
 
           const data = await response.json();
-          console.log("Step 9: Products loaded:", data.products.length);
+          allProducts = data.products;
+
+          // Load badge assignments
+          await loadBadgeAssignments(token);
+
+          // Extract and show options
+          showOptionSelector();
 
           document.getElementById("status").textContent = "Connected";
           document.getElementById("status").className =
             "status-badge connected";
-          displayProducts(data.products);
-
-          console.log("Step 10: All done!");
         } catch (error) {
-          console.error("Error at some step:", error);
-          console.error("   Stack:", error.stack);
+          console.error("Error:", error);
           document.getElementById("status").textContent = "Error";
           document.getElementById("status").className = "status-badge error";
-          showError(error.message);
         }
       }
 
-      // Auto-refresh token in background
+      // Load existing badge assignments
+      async function loadBadgeAssignments(token) {
+        try {
+          const response = await fetch(
+            appHost + "/api/badges?shop=" + encodeURIComponent(shop),
+            {
+              headers: {
+                Authorization: "Bearer " + token,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            badgeAssignments = data.badges;
+            console.log("Loaded badge assignments:", badgeAssignments.length);
+          }
+        } catch (error) {
+          console.error("Error loading badges:", error);
+        }
+      }
+
+      // Extract unique options from products
+      function extractOptions() {
+        const optionsSet = new Set();
+        allProducts.forEach((product) => {
+          product.options.forEach((option) => {
+            optionsSet.add(option.name);
+          });
+        });
+        return Array.from(optionsSet);
+      }
+
+      // Show option selector
+      function showOptionSelector() {
+        const options = extractOptions();
+        const select = document.getElementById("optionSelect");
+
+        options.forEach((option) => {
+          const optionElement = document.createElement("option");
+          optionElement.value = option;
+          optionElement.textContent = option;
+          select.appendChild(optionElement);
+        });
+
+        document.getElementById("optionSelector").style.display = "block";
+
+        select.addEventListener("change", (e) => {
+          selectedOption = e.target.value;
+          if (selectedOption) {
+            displayFilteredProducts();
+          } else {
+            document.getElementById("products").innerHTML = `
+              <div class="empty-state">
+                <h2>Select an option above</h2>
+                <p>Choose which product option you want to work with</p>
+              </div>
+            `;
+          }
+        });
+      }
+
+      // Display products filtered by selected option
+      function displayFilteredProducts() {
+        const productsDiv = document.getElementById("products");
+
+        // Filter products that have the selected option
+        const filteredProducts = allProducts.filter((product) =>
+          product.options.some((opt) => opt.name === selectedOption)
+        );
+
+        if (filteredProducts.length === 0) {
+          productsDiv.innerHTML = `
+            <div class="empty-state">
+              <h2>No products found</h2>
+              <p>No products have the "${selectedOption}" option</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = "";
+        filteredProducts.forEach((product) => {
+          // Get the option index
+          const optionIndex = product.options.findIndex(
+            (opt) => opt.name === selectedOption
+          );
+
+          html += `
+            <div class="product-card">
+              <div class="product-title">${product.title}</div>
+          `;
+
+          product.variants.forEach((variant) => {
+            const optionValue =
+              variant.title.split(" / ")[optionIndex] || variant.title;
+            const variantBadges = badgeAssignments.filter(
+              (b) => b.variant_id === variant.id
+            );
+
+            html += `
+              <div class="variant-row">
+                <div class="variant-info">
+                  <strong>${variant.title}</strong>
+                  <span class="option-value">${selectedOption}: ${optionValue}</span>
+                </div>
+                <div class="badge-controls">
+                  <button class="badge-btn ${
+                    variantBadges.find((b) => b.badge_type === "HOT")
+                      ? "hot active"
+                      : ""
+                  }" 
+                          onclick="toggleBadge('${product.id}', '${
+              variant.id
+            }', 'HOT', '${optionValue}')">
+                    ${
+                      variantBadges.find((b) => b.badge_type === "HOT")
+                        ? "✓ "
+                        : ""
+                    }HOT
+                  </button>
+                  <button class="badge-btn ${
+                    variantBadges.find((b) => b.badge_type === "NEW")
+                      ? "new active"
+                      : ""
+                  }" 
+                          onclick="toggleBadge('${product.id}', '${
+              variant.id
+            }', 'NEW', '${optionValue}')">
+                    ${
+                      variantBadges.find((b) => b.badge_type === "NEW")
+                        ? "✓ "
+                        : ""
+                    }NEW
+                  </button>
+                  <button class="badge-btn ${
+                    variantBadges.find((b) => b.badge_type === "SALE")
+                      ? "sale active"
+                      : ""
+                  }" 
+                          onclick="toggleBadge('${product.id}', '${
+              variant.id
+            }', 'SALE', '${optionValue}')">
+                    ${
+                      variantBadges.find((b) => b.badge_type === "SALE")
+                        ? "✓ "
+                        : ""
+                    }SALE
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+
+          html += `</div>`;
+        });
+
+        productsDiv.innerHTML = html;
+      }
+
+      // Toggle badge assignment
+      async function toggleBadge(productId, variantId, badgeType, optionValue) {
+        try {
+          const existingBadge = badgeAssignments.find(
+            (b) => b.variant_id === variantId && b.badge_type === badgeType
+          );
+
+          const token = await getSessionToken();
+
+          if (existingBadge) {
+            // Remove badge
+            const response = await fetch(
+              `${appHost}/api/badges/${variantId}/${badgeType}?shop=${encodeURIComponent(
+                shop
+              )}`,
+              {
+                method: "DELETE",
+                headers: {
+                  Authorization: "Bearer " + token,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            if (response.ok) {
+              badgeAssignments = badgeAssignments.filter(
+                (b) =>
+                  !(b.variant_id === variantId && b.badge_type === badgeType)
+              );
+              console.log("Badge removed:", badgeType);
+            }
+          } else {
+            // Add badge
+            const response = await fetch(
+              appHost + "/api/badges?shop=" + encodeURIComponent(shop),
+              {
+                method: "POST",
+                headers: {
+                  Authorization: "Bearer " + token,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  productId,
+                  variantId,
+                  badgeType,
+                  optionValue,
+                }),
+              }
+            );
+
+            if (response.ok) {
+              badgeAssignments.push({
+                product_id: productId,
+                variant_id: variantId,
+                badge_type: badgeType,
+                option_value: optionValue,
+              });
+              console.log("Badge added:", badgeType);
+            }
+          }
+
+          // Refresh display
+          displayFilteredProducts();
+        } catch (error) {
+          console.error("Error toggling badge:", error);
+          alert("Failed to update badge. Please try again.");
+        }
+      }
+
+      // Show reinstall button
+      function showReinstallButton() {
+        document.getElementById("status").textContent = "Reinstall Required";
+        document.getElementById("status").className = "status-badge error";
+
+        const authUrl = appHost + "/auth?shop=" + encodeURIComponent(shop);
+        document.getElementById("products").innerHTML =
+          '<div class="empty-state">' +
+          "<h2>Reinstall Required</h2>" +
+          '<p style="margin: 20px 0;">Your access token has expired.</p>' +
+          '<a href="' +
+          authUrl +
+          '" target="_top" ' +
+          'style="display: inline-block; padding: 16px 40px; background: #008060; color: white; ' +
+          'text-decoration: none; border-radius: 4px; font-weight: 600;">Reinstall App</a>' +
+          "</div>";
+      }
+
+      // Auto-refresh token
       function startTokenRefresh() {
         setInterval(async () => {
           if (app && app.idToken) {
@@ -340,103 +544,15 @@
               currentToken = await app.idToken();
               console.log("Token auto-refreshed");
             } catch (err) {
-              console.log("Auto-refresh failed (will retry)");
+              console.log("Token refresh failed:", err.message);
             }
           }
-        }, 50000); // Every 50 seconds
+        }, 50000);
       }
 
-      // Display products
-      function displayProducts(products) {
-        const container = document.getElementById("products");
-
-        if (!products || products.length === 0) {
-          container.innerHTML =
-            '<div class="empty-state">' +
-            "<h2>No Products Found</h2>" +
-            "<p>Add products to your store to get started!</p>" +
-            "</div>";
-          return;
-        }
-
-        let html =
-          '<div class="success"><strong>Success!</strong> Loaded ' +
-          products.length +
-          " products via GraphQL</div>";
-
-        products.forEach((product) => {
-          html += '<div class="product-card">';
-          html +=
-            '<div class="product-title">' +
-            escapeHtml(product.title) +
-            "</div>";
-
-          if (product.variants && product.variants.length > 0) {
-            product.variants.forEach((variant) => {
-              html += '<div class="variant-row">';
-
-              const image = variant.image_id
-                ? product.images &&
-                  product.images.find((img) => img.id === variant.image_id)
-                : product.images && product.images[0];
-
-              if (image && image.src) {
-                html +=
-                  '<img class="variant-image" src="' +
-                  escapeHtml(image.src) +
-                  '" />';
-              } else {
-                html += '<div class="variant-image"></div>';
-              }
-
-              html += '<div class="variant-info">';
-              html += "<strong>" + escapeHtml(variant.title) + "</strong>";
-              html +=
-                '<div class="variant-option">Price: $' +
-                escapeHtml(variant.price) +
-                "</div>";
-
-              if (variant.option1)
-                html +=
-                  '<div class="variant-option">Option 1: ' +
-                  escapeHtml(variant.option1) +
-                  "</div>";
-              if (variant.option2)
-                html +=
-                  '<div class="variant-option">Option 2: ' +
-                  escapeHtml(variant.option2) +
-                  "</div>";
-              if (variant.option3)
-                html +=
-                  '<div class="variant-option">Option 3: ' +
-                  escapeHtml(variant.option3) +
-                  "</div>";
-
-              html += "</div></div>";
-            });
-          }
-          html += "</div>";
-        });
-
-        container.innerHTML = html;
-      }
-
-      function showError(message) {
-        document.getElementById("products").innerHTML =
-          '<div class="error"><strong> Error:</strong><br>' +
-          escapeHtml(message) +
-          "</div>";
-      }
-
-      function escapeHtml(text) {
-        if (!text) return "";
-        const div = document.createElement("div");
-        div.textContent = text.toString();
-        return div.innerHTML;
-      }
-
-      // Start loading
+      // Start the app
       loadProducts();
+      startTokenRefresh();
     </script>
   </body>
 </html>
