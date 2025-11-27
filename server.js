@@ -110,12 +110,7 @@ app.get("/app", async (req, res) => {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    const session = await getShopSession(shop);
-    if (!session) {
-      console.log("[WARNING] Not authenticated, redirecting to OAuth...");
-      return res.redirect(`/auth?shop=${shop}`);
-    }
-
+    // Always serve the app - let frontend handle auth check
     console.log("[SUCCESS] Serving app");
     const htmlPath = path.join(__dirname, "views", "app.html");
     let html = fs.readFileSync(htmlPath, "utf8");
