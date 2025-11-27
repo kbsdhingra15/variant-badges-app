@@ -102,6 +102,26 @@ app.get("/app", async (req, res) => {
     if (!shop) return res.status(400).send("Missing shop");
     console.log("[App] Serving for:", shop);
 
+    const session = await getShopSession(shop);
+    if (!session) {
+      console.log(
+        "[WARNING] No session, triggering OAuth via client-side redirect"
+      );
+      // Client-side redirect preserves cookies
+      return res.send(`
+        <html>
+          <body>
+            <h3>Initializing app...</h3>
+            <script>
+              window.top.location.href = '${process.env.HOST}/auth?shop=${shop}';
+            </script>
+          </body>
+        </html>
+      `);
+    }
+
+    console.log("[SUCCESS] Serving app");
+
     // Prevent caching
     res.setHeader(
       "Cache-Control",
@@ -110,13 +130,6 @@ app.get("/app", async (req, res) => {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    const session = await getShopSession(shop);
-    if (!session) {
-      console.log("[WARNING] Not authenticated");
-      return res.redirect(`/auth?shop=${shop}`);
-    }
-
-    console.log("[SUCCESS] Serving app");
     const htmlPath = path.join(__dirname, "views", "app.html");
     let html = fs.readFileSync(htmlPath, "utf8");
     html = html.replace(/{{APP_HOST}}/g, process.env.HOST);
