@@ -51,11 +51,19 @@ router.post("/badges", async (req, res) => {
     const validBadgeTypes = ["HOT", "NEW", "SALE"];
     if (!validBadgeTypes.includes(badgeType)) {
       return res.status(400).json({
-        error: `Invalid badge type. Must be one of: ${validBadgeTypes.join(", ")}`,
+        error: `Invalid badge type. Must be one of: ${validBadgeTypes.join(
+          ", "
+        )}`,
       });
     }
 
-    await saveBadgeAssignment(shop, productId, variantId, badgeType, optionValue);
+    await saveBadgeAssignment(
+      shop,
+      productId,
+      variantId,
+      badgeType,
+      optionValue
+    );
 
     res.json({
       success: true,
@@ -123,14 +131,23 @@ router.post("/badges/bulk", async (req, res) => {
       const { productId, variantId, badgeType, optionValue } = assignment;
 
       try {
-        await saveBadgeAssignment(shop, productId, variantId, badgeType, optionValue);
+        await saveBadgeAssignment(
+          shop,
+          productId,
+          variantId,
+          badgeType,
+          optionValue
+        );
         results.push({
           variantId,
           badgeType,
           success: true,
         });
       } catch (error) {
-        console.error(`❌ Failed to assign badge to variant ${variantId}:`, error);
+        console.error(
+          `❌ Failed to assign badge to variant ${variantId}:`,
+          error
+        );
         results.push({
           variantId,
           badgeType,
@@ -150,6 +167,39 @@ router.post("/badges/bulk", async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error in bulk badge assignment:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+    });
+  }
+});
+
+// GET /api/badges/public/:shop - Public endpoint for storefront (NO AUTH)
+router.get("/badges/public/:shop", async (req, res) => {
+  try {
+    const { shop } = req.params;
+    console.log("Fetching public badges for shop:", shop);
+
+    // Get badges from database (no auth needed for read-only public endpoint)
+    const { getBadgeAssignments } = require("../database/db");
+    const badges = await getBadgeAssignments(shop);
+
+    // Format for easy lookup by variant ID
+    const badgeMap = {};
+    badges.forEach((badge) => {
+      if (!badgeMap[badge.variant_id]) {
+        badgeMap[badge.variant_id] = [];
+      }
+      badgeMap[badge.variant_id].push(badge.badge_type);
+    });
+
+    res.json({
+      success: true,
+      badges: badgeMap,
+      count: badges.length,
+    });
+  } catch (error) {
+    console.error("Error fetching public badges:", error);
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
