@@ -506,16 +506,15 @@
         const shopParam = "{{SHOP}}";
         const APP_URL = "{{APP_HOST}}";
         console.log("Shop injected from server:", shopParam);
-        // Create authenticated fetch for Shopify embedded app
-        const authenticatedFetch = window.shopify?.authenticatedFetch || fetch;
 
         // Load settings on page load
         async function loadSettings() {
           console.log("loadSettings STARTED");
           try {
             console.log("About to fetch settings...");
-            const response = await authenticatedFetch(
-              `/api/settings?shop=${shopParam}`
+            const response = await fetch(
+              `${APP_URL}/api/settings?shop=${shopParam}`,
+              { credentials: "include" }
             );
             console.log("Settings fetch complete, response:", response);
             const data = await response.json();
@@ -541,8 +540,9 @@
           console.log("loadProductOptions STARTED");
           try {
             console.log("About to fetch product options...");
-            const response = await authenticatedFetch(
-              `/api/products/options?shop=${shopParam}`
+            const response = await fetch(
+              `${APP_URL}/api/products/options?shop=${shopParam}`,
+              { credentials: "include" }
             );
             console.log("Product options fetch complete, response:", response);
             const data = await response.json();
@@ -589,7 +589,7 @@
                   document.getElementById("auto-sale-enabled").checked,
               };
 
-              const response = await authenticatedFetch(`/api/settings`, {
+              const response = await fetch(`${APP_URL}/api/settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
