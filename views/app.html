@@ -512,9 +512,7 @@
           console.log("loadSettings STARTED");
           try {
             console.log("About to fetch settings...");
-            const response = await fetch(
-              `${APP_URL}/api/settings?shop=${shopParam}`
-            );
+            const response = await fetch(`/api/settings?shop=${shopParam}`);
             console.log("Settings fetch complete, response:", response);
             const data = await response.json();
 
@@ -540,7 +538,7 @@
           try {
             console.log("About to fetch product options...");
             const response = await fetch(
-              `${APP_URL}/api/products/options?shop=${shopParam}`
+              `/api/products/options?shop=${shopParam}`
             );
             console.log("Product options fetch complete, response:", response);
             const data = await response.json();
@@ -587,7 +585,7 @@
                   document.getElementById("auto-sale-enabled").checked,
               };
 
-              const response = await fetch(`${APP_URL}/api/settings`, {
+              const response = await fetch(`/api/settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
