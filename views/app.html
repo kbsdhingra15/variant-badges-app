@@ -461,169 +461,185 @@
     </div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        // Mobile menu toggle
-        const hamburger = document.getElementById("hamburger");
-        const sidebar = document.getElementById("sidebar");
-        const overlay = document.getElementById("sidebar-overlay");
+              document.addEventListener("DOMContentLoaded", function () {
+                // Mobile menu toggle
+                const hamburger = document.getElementById("hamburger");
+                const sidebar = document.getElementById("sidebar");
+                const overlay = document.getElementById("sidebar-overlay");
 
-        hamburger.addEventListener("click", () => {
-          sidebar.classList.toggle("open");
-          overlay.classList.toggle("active");
-        });
+                hamburger.addEventListener("click", () => {
+                  sidebar.classList.toggle("open");
+                  overlay.classList.toggle("active");
+                });
 
-        overlay.addEventListener("click", () => {
-          sidebar.classList.remove("open");
-          overlay.classList.remove("active");
-        });
+                overlay.addEventListener("click", () => {
+                  sidebar.classList.remove("open");
+                  overlay.classList.remove("active");
+                });
 
-        // Page navigation
-        const navItems = document.querySelectorAll(".nav-item");
-        const pages = document.querySelectorAll(".page");
+                // Page navigation
+                const navItems = document.querySelectorAll(".nav-item");
+                const pages = document.querySelectorAll(".page");
 
-        navItems.forEach((item) => {
-          item.addEventListener("click", () => {
-            // Remove active class from all
-            navItems.forEach((i) => i.classList.remove("active"));
-            pages.forEach((p) => p.classList.remove("active"));
+                navItems.forEach((item) => {
+                  item.addEventListener("click", () => {
+                    // Remove active class from all
+                    navItems.forEach((i) => i.classList.remove("active"));
+                    pages.forEach((p) => p.classList.remove("active"));
 
-            // Add active to clicked
-            item.classList.add("active");
+                    // Add active to clicked
+                    item.classList.add("active");
 
-            // Show corresponding page
-            const pageId = item.getAttribute("data-page") + "-page";
-            document.getElementById(pageId).classList.add("active");
+                    // Show corresponding page
+                    const pageId = item.getAttribute("data-page") + "-page";
+                    document.getElementById(pageId).classList.add("active");
 
-            // Close sidebar on mobile after selection
-            sidebar.classList.remove("open");
-            overlay.classList.remove("active");
-          });
-        });
-        // ============================================
-        // SETTINGS PAGE FUNCTIONALITY
-        // ============================================
+                    // Close sidebar on mobile after selection
+                    sidebar.classList.remove("open");
+                    overlay.classList.remove("active");
+                  });
+                });
+                // ============================================
+                // SETTINGS PAGE FUNCTIONALITY
+                // ============================================
 
-        const shopParam = "{{SHOP}}";
-        const APP_URL = "{{APP_HOST}}";
-        console.log("Shop injected from server:", shopParam);
+                const shopParam = "{{SHOP}}";
+                const APP_URL = "{{APP_HOST}}";
+                console.log("Shop injected from server:", shopParam);
 
-        // Load settings on page load
-        async function loadSettings() {
+                // Load settings on page load
+                async function loadSettings() {
+                  console.log("loadSettings STARTED");
           try {
+            console.log("About to fetch settings...");
             const response = await fetch(
               `${APP_URL}/api/settings?shop=${shopParam}`
             );
+            console.log("Settings fetch complete, response:", response);
             const data = await response.json();
+                  try {
+                    const response = await fetch(
+                      `${APP_URL}/api/settings?shop=${shopParam}`
+                    );
+                    const data = await response.json();
 
-            document.getElementById("badge-display-enabled").checked =
-              data.badgeDisplayEnabled;
-            document.getElementById("auto-sale-enabled").checked =
-              data.autoSaleEnabled;
+                    document.getElementById("badge-display-enabled").checked =
+                      data.badgeDisplayEnabled;
+                    document.getElementById("auto-sale-enabled").checked =
+                      data.autoSaleEnabled;
 
-            if (data.selectedOption) {
-              document.getElementById("selected-option").value =
-                data.selectedOption;
-            }
+                    if (data.selectedOption) {
+                      document.getElementById("selected-option").value =
+                        data.selectedOption;
+                    }
 
-            console.log("Settings loaded:", data);
-          } catch (error) {
-            console.error("Error loading settings:", error);
-          }
-        }
+                    console.log("Settings loaded:", data);
+                  } catch (error) {
+                    console.error("Error loading settings:", error);
+                  }
+                }
 
-        // Load available product options (Color, Size, Material, etc.)
-        async function loadProductOptions() {
-          try {
-            const response = await fetch(
-              `${APP_URL}/api/products/options?shop=${shopParam}`
-            );
-            const data = await response.json();
-
-            const dropdown = document.getElementById("selected-option");
-            dropdown.innerHTML =
-              '<option value="">Select an option type...</option>';
-
-            // Add all unique option names from products
-            data.options.forEach((option) => {
-              const optionElement = document.createElement("option");
-              optionElement.value = option;
-              optionElement.textContent = option;
-              dropdown.appendChild(optionElement);
-            });
-
-            console.log("Product options loaded:", data.options);
-          } catch (error) {
-            console.error("Error loading options:", error);
-            document.getElementById("selected-option").innerHTML =
-              '<option value="">Error loading options</option>';
-          }
-        }
-
-        // Save settings
-        document
-          .getElementById("save-settings")
-          .addEventListener("click", async () => {
-            const button = document.getElementById("save-settings");
-            const status = document.getElementById("save-status");
-
-            button.disabled = true;
-            button.textContent = "Saving...";
-
-            try {
-              const settings = {
-                shop: shopParam,
-                selectedOption:
-                  document.getElementById("selected-option").value,
-                badgeDisplayEnabled: document.getElementById(
-                  "badge-display-enabled"
-                ).checked,
-                autoSaleEnabled:
-                  document.getElementById("auto-sale-enabled").checked,
-              };
-
-              const response = await fetch(`${APP_URL}/api/settings`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(settings),
-              });
-
-              if (response.ok) {
-                status.textContent = "✓ Settings saved successfully!";
-                status.style.color = "#008060";
-                setTimeout(() => (status.textContent = ""), 3000);
-              } else {
-                throw new Error("Failed to save");
-              }
-            } catch (error) {
-              status.textContent = "✗ Error saving settings";
-              status.style.color = "#d82c0d";
-              console.error("Error saving settings:", error);
-            } finally {
-              button.disabled = false;
-              button.textContent = "Save Settings";
-            }
-          });
-
-        // Initialize settings page when it becomes active
-        const settingsNavItem = document.querySelector(
-          '[data-page="settings"]'
+                // Load available product options (Color, Size, Material, etc.)
+                async function loadProductOptions() {
+                  console.log("loadProductOptions STARTED");
+      try {
+        console.log("About to fetch product options...");
+        const response = await fetch(
+          `${APP_URL}/api/products/options?shop=${shopParam}`
         );
-        settingsNavItem.addEventListener("click", () => {
-          loadSettings();
-          loadProductOptions();
-        });
+        console.log("Product options fetch complete, response:", response);
+        const data = await response.json();
+                  try {
+                    const response = await fetch(
+                      `${APP_URL}/api/products/options?shop=${shopParam}`
+                    );
+                    const data = await response.json();
 
-        // Load settings immediately when page loads
-        console.log("Setting up setTimeout...");
-        setTimeout(() => {
-          console.log("setTimeout fired! APP_URL is:", APP_URL);
-          console.log("Calling loadSettings...");
-          loadSettings();
-          console.log("Calling loadProductOptions...");
-          loadProductOptions();
-        }, 500);
-        console.log("setTimeout setup complete");
-      }); // End DOMContentLoaded
+                    const dropdown = document.getElementById("selected-option");
+                    dropdown.innerHTML =
+                      '<option value="">Select an option type...</option>';
+
+                    // Add all unique option names from products
+                    data.options.forEach((option) => {
+                      const optionElement = document.createElement("option");
+                      optionElement.value = option;
+                      optionElement.textContent = option;
+                      dropdown.appendChild(optionElement);
+                    });
+
+                    console.log("Product options loaded:", data.options);
+                  } catch (error) {
+                    console.error("Error loading options:", error);
+                    document.getElementById("selected-option").innerHTML =
+                      '<option value="">Error loading options</option>';
+                  }
+                }
+
+                // Save settings
+                document
+                  .getElementById("save-settings")
+                  .addEventListener("click", async () => {
+                    const button = document.getElementById("save-settings");
+                    const status = document.getElementById("save-status");
+
+                    button.disabled = true;
+                    button.textContent = "Saving...";
+
+                    try {
+                      const settings = {
+                        shop: shopParam,
+                        selectedOption:
+                          document.getElementById("selected-option").value,
+                        badgeDisplayEnabled: document.getElementById(
+                          "badge-display-enabled"
+                        ).checked,
+                        autoSaleEnabled:
+                          document.getElementById("auto-sale-enabled").checked,
+                      };
+
+                      const response = await fetch(`${APP_URL}/api/settings`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(settings),
+                      });
+
+                      if (response.ok) {
+                        status.textContent = "✓ Settings saved successfully!";
+                        status.style.color = "#008060";
+                        setTimeout(() => (status.textContent = ""), 3000);
+                      } else {
+                        throw new Error("Failed to save");
+                      }
+                    } catch (error) {
+                      status.textContent = "✗ Error saving settings";
+                      status.style.color = "#d82c0d";
+                      console.error("Error saving settings:", error);
+                    } finally {
+                      button.disabled = false;
+                      button.textContent = "Save Settings";
+                    }
+                  });
+
+                // Initialize settings page when it becomes active
+                const settingsNavItem = document.querySelector(
+                  '[data-page="settings"]'
+                );
+                settingsNavItem.addEventListener("click", () => {
+                  loadSettings();
+                  loadProductOptions();
+                });
+
+                // Load settings immediately when page loads
+                console.log("Setting up setTimeout...");
+                setTimeout(() => {
+                  console.log("setTimeout fired! APP_URL is:", APP_URL);
+                  console.log("Calling loadSettings...");
+                  loadSettings();
+                  console.log("Calling loadProductOptions...");
+                  loadProductOptions();
+                }, 500);
+                console.log("setTimeout setup complete");
+              }); // End DOMContentLoaded
     </script>
   </body>
 </html>
