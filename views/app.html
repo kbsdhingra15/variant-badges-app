@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
-    <!-- App Bridge for authentication -->
-    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+    <!-- App Bridge 2.0 for authentication -->
+    <script src="https://unpkg.com/@shopify/app-bridge@2"></script>
     <style>
       * {
         margin: 0;
@@ -486,44 +486,72 @@
 
         // Initialize App Bridge
         let appBridge = null;
-        if (typeof createApp !== "undefined" && hostParam) {
+
+        // Wait for App Bridge to load
+        function initAppBridge() {
+          if (
+            typeof window.shopify === "undefined" ||
+            !window.shopify.AppBridge
+          ) {
+            console.log("⏳ Waiting for App Bridge to load...");
+            return false;
+          }
+
+          if (!hostParam) {
+            console.error("❌ Missing host parameter");
+            return false;
+          }
+
           try {
-            appBridge = createApp({
+            appBridge = window.shopify.AppBridge.createApp({
               apiKey: API_KEY,
               host: hostParam,
             });
             console.log("✅ App Bridge initialized");
+            return true;
           } catch (error) {
             console.error("❌ App Bridge initialization failed:", error);
+            return false;
           }
-        } else {
-          console.warn("⚠️ App Bridge not available or missing host parameter");
+        }
+
+        // Try to initialize immediately
+        if (!initAppBridge()) {
+          // If failed, wait a bit for the script to load
+          setTimeout(() => {
+            if (!initAppBridge()) {
+              console.error("❌ App Bridge failed to initialize after waiting");
+            }
+          }, 500);
         }
 
         // Helper function to get session token
         async function getSessionToken() {
+          // Wait for App Bridge to be ready
+          let attempts = 0;
+          while (!appBridge && attempts < 20) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            attempts++;
+          }
+
           if (!appBridge) {
-            console.error("App Bridge not initialized");
-            return null;
+            console.error("❌ App Bridge not initialized after waiting");
+            throw new Error("App Bridge not initialized");
           }
 
           try {
-            const token = await appBridge.idToken();
+            const token = await appBridge.getSessionToken();
             console.log("✅ Got session token");
             return token;
           } catch (error) {
             console.error("❌ Failed to get session token:", error);
-            return null;
+            throw error;
           }
         }
 
         // Helper function for authenticated fetch
         async function authenticatedFetch(url, options = {}) {
           const token = await getSessionToken();
-
-          if (!token) {
-            throw new Error("Unable to get session token");
-          }
 
           const headers = {
             "Content-Type": "application/json",
@@ -732,7 +760,7 @@
           console.log("🔄 Initial load starting...");
           loadSettings();
           loadProductOptions();
-        }, 500);
+        }, 1000);
       });
     </script>
   </body>
