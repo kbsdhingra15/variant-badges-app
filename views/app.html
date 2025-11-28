@@ -504,12 +504,15 @@
         // ============================================
 
         const shopParam = "{{SHOP}}";
+        const APP_URL = "{{APP_HOST}}";
         console.log("Shop injected from server:", shopParam);
 
         // Load settings on page load
         async function loadSettings() {
           try {
-            const response = await fetch(`/api/settings?shop=${shopParam}`);
+            const response = await fetch(
+              `${APP_URL}/api/settings?shop=${shopParam}`
+            );
             const data = await response.json();
 
             document.getElementById("badge-display-enabled").checked =
@@ -532,7 +535,7 @@
         async function loadProductOptions() {
           try {
             const response = await fetch(
-              `/api/products/options?shop=${shopParam}`
+              `${APP_URL}/api/products/options?shop=${shopParam}`
             );
             const data = await response.json();
 
@@ -578,7 +581,7 @@
                   document.getElementById("auto-sale-enabled").checked,
               };
 
-              const response = await fetch("/api/settings", {
+              const response = await fetch(`${APP_URL}/api/settings`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(settings),
