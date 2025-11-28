@@ -513,8 +513,7 @@
           try {
             console.log("About to fetch settings...");
             const response = await fetch(
-              `${APP_URL}/api/settings?shop=${shopParam}`,
-              { credentials: "include" }
+              `${APP_URL}/api/settings?shop=${shopParam}`
             );
             console.log("Settings fetch complete, response:", response);
             const data = await response.json();
@@ -541,8 +540,7 @@
           try {
             console.log("About to fetch product options...");
             const response = await fetch(
-              `${APP_URL}/api/products/options?shop=${shopParam}`,
-              { credentials: "include" }
+              `${APP_URL}/api/products/options?shop=${shopParam}`
             );
             console.log("Product options fetch complete, response:", response);
             const data = await response.json();
