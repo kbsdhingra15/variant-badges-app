@@ -614,10 +614,15 @@
         });
 
         // Load settings immediately when page loads
+        console.log("Setting up setTimeout...");
         setTimeout(() => {
+          console.log("setTimeout fired! APP_URL is:", APP_URL);
+          console.log("Calling loadSettings...");
           loadSettings();
+          console.log("Calling loadProductOptions...");
           loadProductOptions();
         }, 500);
+        console.log("setTimeout setup complete");
       }); // End DOMContentLoaded
     </script>
   </body>
