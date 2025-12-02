@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const { getShopSession } = require("../database/db");
 
 // GraphQL query to fetch products with variants and options
 const PRODUCTS_QUERY = `

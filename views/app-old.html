@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Variant Badges</title>
+    <!-- App Bridge 2.0 for authentication -->
+    <script src="https://unpkg.com/@shopify/app-bridge@2"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: #f6f6f7;
+        color: #202223;
+        display: flex;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* Sidebar Navigation */
+      .sidebar {
+        width: 240px;
+        background: white;
+        border-right: 1px solid #e1e3e5;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.3s ease;
+      }
+
+      .sidebar-header {
+        padding: 20px;
+        border-bottom: 1px solid #e1e3e5;
+      }
+
+      .sidebar-header h1 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #202223;
+      }
+
+      .nav-items {
+        flex: 1;
+        padding: 16px 0;
+      }
+
+      .nav-item {
+        padding: 12px 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #6d7175;
+        transition: all 0.2s;
+        border-left: 3px solid transparent;
+      }
+
+      .nav-item:hover {
+        background: #f6f6f7;
+        color: #202223;
+      }
+
+      .nav-item.active {
+        background: #f1f2f3;
+        color: #202223;
+        border-left-color: #008060;
+        font-weight: 500;
+      }
+
+      .nav-icon {
+        font-size: 18px;
+      }
+
+      /* Main Content Area */
+      .main-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+      }
+
+      .page {
+        display: none;
+        max-width: 1000px;
+      }
+
+      .page.active {
+        display: block;
+      }
+
+      .page-header {
+        margin-bottom: 24px;
+      }
+
+      .page-header h2 {
+        font-size: 24px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .page-header p {
+        color: #6d7175;
+        font-size: 14px;
+      }
+
+      /* Card */
+      .card {
+        background: white;
+        border-radius: 8px;
+        padding: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        margin-bottom: 16px;
+      }
+
+      .card h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 16px;
+      }
+
+      /* Settings Form */
+      .setting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid #e1e3e5;
+      }
+
+      .setting-row:last-child {
+        border-bottom: none;
+      }
+
+      .setting-info {
+        flex: 1;
+      }
+
+      .setting-info h4 {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+
+      .setting-info p {
+        font-size: 13px;
+        color: #6d7175;
+      }
+
+      /* Toggle Switch */
+      .toggle {
+        position: relative;
+        width: 44px;
+        height: 24px;
+      }
+
+      .toggle input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .toggle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #c9cccf;
+        transition: 0.3s;
+        border-radius: 24px;
+      }
+
+      .toggle-slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+
+      .toggle input:checked + .toggle-slider {
+        background-color: #008060;
+      }
+
+      .toggle input:checked + .toggle-slider:before {
+        transform: translateX(20px);
+      }
+
+      /* Select Dropdown */
+      select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #c9cccf;
+        border-radius: 4px;
+        font-size: 14px;
+        background: white;
+        cursor: pointer;
+      }
+
+      select:focus {
+        outline: none;
+        border-color: #008060;
+      }
+
+      /* Button */
+      .btn {
+        padding: 12px 24px;
+        background: #008060;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .btn:hover {
+        background: #006e52;
+      }
+
+      .btn:disabled {
+        background: #c9cccf;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background: white;
+        color: #202223;
+        border: 1px solid #c9cccf;
+      }
+
+      .btn-secondary:hover {
+        background: #f6f6f7;
+      }
+
+      /* Premium Badge */
+      .premium-badge {
+        display: inline-block;
+        background: #ffc107;
+        color: #663c00;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-left: 8px;
+      }
+
+      /* Status Message */
+      .status-message {
+        margin-top: 12px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      /* Mobile Responsiveness */
+      @media (max-width: 768px) {
+        .sidebar {
+          position: fixed;
+          left: 0;
+          top: 0;
+          height: 100%;
+          z-index: 1000;
+          transform: translateX(-100%);
+        }
+
+        .sidebar.open {
+          transform: translateX(0);
+        }
+
+        .sidebar-overlay {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 999;
+        }
+
+        .sidebar-overlay.active {
+          display: block;
+        }
+
+        .mobile-header {
+          display: flex;
+          padding: 16px;
+          background: white;
+          border-bottom: 1px solid #e1e3e5;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .hamburger {
+          width: 24px;
+          height: 20px;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          cursor: pointer;
+        }
+
+        .hamburger span {
+          width: 100%;
+          height: 3px;
+          background: #202223;
+          border-radius: 2px;
+        }
+
+        .main-content {
+          width: 100%;
+        }
+      }
+
+      @media (min-width: 769px) {
+        .mobile-header {
+          display: none;
+        }
+
+        .sidebar-overlay {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Mobile Header -->
+    <div class="mobile-header">
+      <div class="hamburger" id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <h1>Variant Badges</h1>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1>🎨 Variant Badges</h1>
+      </div>
+      <div class="nav-items">
+        <div class="nav-item" data-page="badges">
+          <span class="nav-icon">🎨</span>
+          <span>Variant Badges</span>
+        </div>
+        <div class="nav-item" data-page="plans">
+          <span class="nav-icon">📊</span>
+          <span>Plans</span>
+        </div>
+        <div class="nav-item active" data-page="settings">
+          <span class="nav-icon">⚙️</span>
+          <span>Settings</span>
+        </div>
+        <div class="nav-item" data-page="help">
+          <span class="nav-icon">❓</span>
+          <span>Help</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Variant Badges Page -->
+      <div id="badges-page" class="page">
+        <div class="page-header">
+          <h2>Variant Badges</h2>
+          <p>Manage badges for your product variants</p>
+        </div>
+        <div class="card">
+          <p>Coming soon: Assign HOT, NEW, and SALE badges to variants</p>
+        </div>
+      </div>
+
+      <!-- Plans Page -->
+      <div id="plans-page" class="page">
+        <div class="page-header">
+          <h2>Plans</h2>
+          <p>Choose the plan that works for you</p>
+        </div>
+        <div class="card">
+          <p>Coming soon: Premium features</p>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" class="page active">
+        <div class="page-header">
+          <h2>Settings</h2>
+          <p>Configure your badge display preferences</p>
+        </div>
+
+        <div class="card">
+          <h3>Badge Display</h3>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Enable Badge Display</h4>
+              <p>Badges appear on variant swatches when enabled</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="badge-display-enabled" checked />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>Select variant type you want to apply badges to:</h4>
+              <p>
+                Choose which product option (Color, Size, etc.) will display
+                badges
+              </p>
+            </div>
+            <div style="width: 300px">
+              <select id="selected-option">
+                <option value="">Loading options...</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="setting-row">
+            <div class="setting-info">
+              <h4>
+                Automatically display SALE badge on discounted variants
+                <span class="premium-badge">Premium</span>
+              </h4>
+              <p>Premium feature - SALE badges override manual selections</p>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="auto-sale-enabled" disabled />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div style="margin-top: 24px">
+            <button class="btn" id="save-settings">Save Settings</button>
+            <span id="save-status" class="status-message"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Help Page -->
+      <div id="help-page" class="page">
+        <div class="page-header">
+          <h2>Help</h2>
+          <p>Get support and documentation</p>
+        </div>
+        <div class="card">
+          <p>Need help? Contact support@variantbadges.com</p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // ============================================
+        // APP BRIDGE INITIALIZATION
+        // ============================================
+
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const shopParam = urlParams.get("shop") || "{{SHOP}}";
+        const hostParam = urlParams.get("host");
+        const APP_URL = "{{APP_HOST}}";
+        const API_KEY = "{{SHOPIFY_API_KEY}}";
+
+        console.log("🚀 Variant Badges App Initializing...");
+        console.log("   Shop:", shopParam);
+        console.log("   Host:", hostParam);
+        console.log("   APP_URL:", APP_URL);
+
+        // Initialize App Bridge
+        let appBridge = null;
+
+        // Wait for App Bridge to load
+        function initAppBridge() {
+          if (
+            typeof window.shopify === "undefined" ||
+            !window.shopify.AppBridge
+          ) {
+            console.log("⏳ Waiting for App Bridge to load...");
+            return false;
+          }
+
+          if (!hostParam) {
+            console.error("❌ Missing host parameter");
+            return false;
+          }
+
+          try {
+            appBridge = window.shopify.AppBridge.createApp({
+              apiKey: API_KEY,
+              host: hostParam,
+            });
+            console.log("✅ App Bridge initialized");
+            return true;
+          } catch (error) {
+            console.error("❌ App Bridge initialization failed:", error);
+            return false;
+          }
+        }
+
+        // Try to initialize immediately
+        if (!initAppBridge()) {
+          // If failed, wait a bit for the script to load
+          setTimeout(() => {
+            if (!initAppBridge()) {
+              console.error("❌ App Bridge failed to initialize after waiting");
+            }
+          }, 500);
+        }
+
+        // Helper function to get session token
+        async function getSessionToken() {
+          // Wait for App Bridge to be ready
+          let attempts = 0;
+          while (!appBridge && attempts < 20) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            attempts++;
+          }
+
+          if (!appBridge) {
+            console.error("❌ App Bridge not initialized after waiting");
+            throw new Error("App Bridge not initialized");
+          }
+
+          try {
+            const token = await appBridge.getSessionToken();
+            console.log("✅ Got session token");
+            return token;
+          } catch (error) {
+            console.error("❌ Failed to get session token:", error);
+            throw error;
+          }
+        }
+
+        // Helper function for authenticated fetch
+        async function authenticatedFetch(url, options = {}) {
+          const token = await getSessionToken();
+
+          const headers = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            ...options.headers,
+          };
+
+          return fetch(url, {
+            ...options,
+            headers,
+          });
+        }
+
+        // ============================================
+        // NAVIGATION
+        // ============================================
+
+        // Mobile menu toggle
+        const hamburger = document.getElementById("hamburger");
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebar-overlay");
+
+        if (hamburger) {
+          hamburger.addEventListener("click", () => {
+            sidebar.classList.toggle("open");
+            overlay.classList.toggle("active");
+          });
+        }
+
+        if (overlay) {
+          overlay.addEventListener("click", () => {
+            sidebar.classList.remove("open");
+            overlay.classList.remove("active");
+          });
+        }
+
+        // Page navigation
+        const navItems = document.querySelectorAll(".nav-item");
+        const pages = document.querySelectorAll(".page");
+
+        navItems.forEach((item) => {
+          item.addEventListener("click", () => {
+            // Remove active class from all
+            navItems.forEach((i) => i.classList.remove("active"));
+            pages.forEach((p) => p.classList.remove("active"));
+
+            // Add active to clicked
+            item.classList.add("active");
+
+            // Show corresponding page
+            const pageId = item.getAttribute("data-page") + "-page";
+            document.getElementById(pageId).classList.add("active");
+
+            // Close sidebar on mobile after selection
+            sidebar.classList.remove("open");
+            overlay.classList.remove("active");
+          });
+        });
+
+        // ============================================
+        // SETTINGS PAGE FUNCTIONALITY
+        // ============================================
+
+        // Load settings on page load
+        async function loadSettings() {
+          console.log("📥 Loading settings...");
+          try {
+            const response = await authenticatedFetch(
+              `${APP_URL}/api/settings?shop=${shopParam}`
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `HTTP ${response.status}: ${response.statusText}`
+              );
+            }
+
+            const data = await response.json();
+
+            document.getElementById("badge-display-enabled").checked =
+              data.badgeDisplayEnabled !== false;
+            document.getElementById("auto-sale-enabled").checked =
+              data.autoSaleEnabled || false;
+
+            if (data.selectedOption) {
+              document.getElementById("selected-option").value =
+                data.selectedOption;
+            }
+
+            console.log("✅ Settings loaded successfully");
+          } catch (error) {
+            console.error("❌ Error loading settings:", error);
+            // Show error to user
+            const status = document.getElementById("save-status");
+            if (status) {
+              status.textContent = "⚠️ Error loading settings";
+              status.style.color = "#d82c0d";
+            }
+          }
+        }
+
+        // Load available product options (Color, Size, Material, etc.)
+        async function loadProductOptions() {
+          console.log("📥 Loading product options...");
+          try {
+            const response = await authenticatedFetch(
+              `${APP_URL}/api/products/options?shop=${shopParam}`
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `HTTP ${response.status}: ${response.statusText}`
+              );
+            }
+
+            const data = await response.json();
+
+            const dropdown = document.getElementById("selected-option");
+            dropdown.innerHTML =
+              '<option value="">Select an option type...</option>';
+
+            // Add all unique option names from products
+            if (data.options && data.options.length > 0) {
+              data.options.forEach((option) => {
+                const optionElement = document.createElement("option");
+                optionElement.value = option;
+                optionElement.textContent = option;
+                dropdown.appendChild(optionElement);
+              });
+              console.log(`✅ Loaded ${data.options.length} product options`);
+            } else {
+              dropdown.innerHTML =
+                '<option value="">No options found in products</option>';
+              console.log("⚠️ No product options found");
+            }
+          } catch (error) {
+            console.error("❌ Error loading product options:", error);
+            document.getElementById("selected-option").innerHTML =
+              '<option value="">Error loading options</option>';
+          }
+        }
+
+        // Save settings
+        document
+          .getElementById("save-settings")
+          .addEventListener("click", async () => {
+            const button = document.getElementById("save-settings");
+            const status = document.getElementById("save-status");
+
+            button.disabled = true;
+            button.textContent = "Saving...";
+            status.textContent = "";
+
+            try {
+              const settings = {
+                shop: shopParam,
+                selectedOption:
+                  document.getElementById("selected-option").value,
+                badgeDisplayEnabled: document.getElementById(
+                  "badge-display-enabled"
+                ).checked,
+                autoSaleEnabled:
+                  document.getElementById("auto-sale-enabled").checked,
+              };
+
+              const response = await authenticatedFetch(
+                `${APP_URL}/api/settings`,
+                {
+                  method: "POST",
+                  body: JSON.stringify(settings),
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+
+              status.textContent = "✓ Settings saved successfully!";
+              status.style.color = "#008060";
+              setTimeout(() => (status.textContent = ""), 3000);
+              console.log("✅ Settings saved successfully");
+            } catch (error) {
+              status.textContent = "✗ Error saving settings";
+              status.style.color = "#d82c0d";
+              console.error("❌ Error saving settings:", error);
+            } finally {
+              button.disabled = false;
+              button.textContent = "Save Settings";
+            }
+          });
+
+        // Initialize settings page when it becomes active
+        const settingsNavItem = document.querySelector(
+          '[data-page="settings"]'
+        );
+        if (settingsNavItem) {
+          settingsNavItem.addEventListener("click", () => {
+            loadSettings();
+            loadProductOptions();
+          });
+        }
+
+        // Load settings immediately when page loads (Settings is default active)
+        console.log("⏱️ Scheduling initial load...");
+        setTimeout(() => {
+          console.log("🔄 Initial load starting...");
+          loadSettings();
+          loadProductOptions();
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

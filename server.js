@@ -12,6 +12,7 @@ const { validateSessionToken } = require("./middleware/auth");
 const productsRouter = require("./routes/products");
 const badgesRouter = require("./routes/badges");
 const settingsRouter = require("./routes/settings");
+const authRouter = require("./routes/auth");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -106,6 +107,10 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
+// Token Generation Route
+// ================================
+app.use("/auth", authRouter);
+
 // Public endpoint (no auth required) - for storefront badge display
 app.get("/api/badges/public/:shop", async (req, res) => {
   const { getBadgesForPublicAPI } = require("./database/db");
@@ -120,9 +125,9 @@ app.get("/api/badges/public/:shop", async (req, res) => {
 });
 
 // Protected endpoints (require auth)
-app.use("/api", validateSessionToken(shopify), productsRouter);
-app.use("/api", validateSessionToken(shopify), badgesRouter);
-app.use("/api", validateSessionToken(shopify), settingsRouter);
+app.use("/api/products", validateSessionToken(shopify), productsRouter);
+app.use("/api/badges", validateSessionToken(shopify), badgesRouter);
+app.use("/api/settings", validateSessionToken(shopify), settingsRouter);
 
 app.get("/app", async (req, res) => {
   try {
