@@ -72,23 +72,4 @@ router.delete("/", async (req, res) => {
   }
 });
 
-    const assignments = await getBadgeAssignments(shop);
-
-    // Format: { "variant_id": "badge_type" }
-    const badges = {};
-    assignments.forEach((row) => {
-      badges[row.variant_id] = row.badge_type;
-    });
-
-    // Set CORS headers to allow storefront access
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET");
-
-    res.json({ badges });
-  } catch (error) {
-    console.error("Error fetching public badges:", error);
-    res.status(500).json({ error: "Failed to fetch badges" });
-  }
-});
-
 module.exports = router;
