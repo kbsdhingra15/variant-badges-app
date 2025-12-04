@@ -12,6 +12,7 @@ const { validateSessionToken } = require("./middleware/auth");
 const productsRouter = require("./routes/products");
 const badgesRouter = require("./routes/badges");
 const settingsRouter = require("./routes/settings");
+const publicRouter = require("./routes/public");
 const authRouter = require("./routes/auth");
 
 const app = express();
@@ -111,18 +112,8 @@ app.get("/auth/callback", async (req, res) => {
 // ================================
 app.use("/auth", authRouter);
 
-// Public endpoint (no auth required) - for storefront badge display
-app.get("/api/badges/public/:shop", async (req, res) => {
-  const { getBadgesForPublicAPI } = require("./database/db");
-  try {
-    const shop = req.params.shop;
-    const badges = await getBadgesForPublicAPI(shop);
-    res.json({ badges });
-  } catch (error) {
-    console.error("Error fetching public badges:", error);
-    res.status(500).json({ error: "Failed to fetch badges" });
-  }
-});
+// Public API routes (no authentication required)
+app.use("/api/public", publicRouter);
 
 // Protected endpoints (require auth)
 app.use("/api/products", validateSessionToken(shopify), productsRouter);

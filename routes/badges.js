@@ -71,14 +71,6 @@ router.delete("/", async (req, res) => {
     res.status(500).json({ error: "Failed to delete badge" });
   }
 });
-// Public API endpoint for storefront (no authentication)
-router.get("/public", async (req, res) => {
-  try {
-    const shop = req.query.shop;
-
-    if (!shop) {
-      return res.status(400).json({ error: "Missing shop parameter" });
-    }
 
     const assignments = await getBadgeAssignments(shop);
 
