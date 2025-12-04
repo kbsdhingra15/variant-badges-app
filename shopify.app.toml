@@ -1,0 +1,10 @@
+# Theme App Extension Configuration
+
+type = "theme"
+name = "Variant Badges Display"
+
+[capabilities.network_access]
+purpose = "Load badge data from app backend"
+
+[extension_points.theme]
+supported_themes = ["*"]

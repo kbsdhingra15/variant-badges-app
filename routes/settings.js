@@ -9,9 +9,9 @@ router.get("/", async (req, res) => {
     const settings = await getAppSettings(shop);
 
     res.json({
-      selectedOption: settings.selected_option || "",
-      badgeDisplayEnabled: settings.badge_display_enabled !== false,
-      autoSaleEnabled: settings.auto_sale_enabled || false,
+      selectedOption: settings.selectedOption || "",
+      badgeDisplayEnabled: settings.badgeDisplayEnabled !== false,
+      autoSaleEnabled: settings.autoSaleEnabled || false,
     });
   } catch (error) {
     console.error("Error fetching settings:", error);

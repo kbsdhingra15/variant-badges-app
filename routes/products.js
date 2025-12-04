@@ -51,7 +51,7 @@ const PRODUCTS_QUERY = `
 `;
 
 // GET /api/products - Fetch products using GraphQL
-router.get("/products", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const { shop, accessToken } = req.shopifySession;
     console.log("📦 Fetching products via GraphQL for shop:", shop);
@@ -165,8 +165,58 @@ router.get("/products", async (req, res) => {
   }
 });
 
+// Get all unique product option names (Color, Size, Material, etc.)
+router.get("/options", async (req, res) => {
+  try {
+    const { shop, accessToken } = req.shopifySession; // ← Use middleware session
+    console.log("📋 Fetching product options for:", shop);
+
+    // GraphQL query to get all products and their options
+    const query = `
+      {
+        products(first: 250) {
+          edges {
+            node {
+              options {
+                name
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(
+      `https://${shop}/admin/api/2024-10/graphql.json`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
+        body: JSON.stringify({ query }),
+      }
+    );
+
+    const result = await response.json();
+
+    // Extract unique option names
+    const optionsSet = new Set();
+    result.data.products.edges.forEach((edge) => {
+      edge.node.options.forEach((option) => {
+        optionsSet.add(option.name);
+      });
+    });
+
+    res.json({ options: Array.from(optionsSet).sort() });
+  } catch (error) {
+    console.error("Error fetching product options:", error);
+    res.status(500).json({ error: "Failed to fetch options" });
+  }
+});
+
 // GET /api/products/:id - Get a single product (for Phase 2)
-router.get("/products/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const { shop, accessToken } = req.shopifySession;
     const productId = req.params.id;
@@ -245,56 +295,3 @@ router.get("/products/:id", async (req, res) => {
 });
 
 module.exports = router;
-// Get all unique product option names (Color, Size, Material, etc.)
-router.get("/options", async (req, res) => {
-  try {
-    const { shop } = req.query;
-    const session = await getShopSession(shop);
-
-    if (!session) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    // GraphQL query to get all products and their options
-    const query = `
-      {
-        products(first: 250) {
-          edges {
-            node {
-              options {
-                name
-              }
-            }
-          }
-        }
-      }
-    `;
-
-    const response = await fetch(
-      `https://${shop}/admin/api/2024-10/graphql.json`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": session.accessToken,
-        },
-        body: JSON.stringify({ query }),
-      }
-    );
-
-    const result = await response.json();
-
-    // Extract unique option names
-    const optionsSet = new Set();
-    result.data.products.edges.forEach((edge) => {
-      edge.node.options.forEach((option) => {
-        optionsSet.add(option.name);
-      });
-    });
-
-    res.json({ options: Array.from(optionsSet).sort() });
-  } catch (error) {
-    console.error("Error fetching product options:", error);
-    res.status(500).json({ error: "Failed to fetch options" });
-  }
-});

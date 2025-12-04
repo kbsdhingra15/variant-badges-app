@@ -116,17 +116,29 @@ async function getAppSettings(shop) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      "SELECT selected_option FROM app_settings WHERE shop = $1",
+      "SELECT selected_option, badge_display_enabled, auto_sale_enabled FROM app_settings WHERE shop = $1",
       [shop]
     );
+    console.log("🔍 getAppSettings DEBUG:");
+    console.log("   Shop:", shop);
+    console.log("   Rows found:", result.rows.length);
+    console.log("   Raw row:", result.rows[0]);
 
     if (result.rows.length === 0) {
-      return { selectedOption: null };
+      return {
+        selectedOption: null,
+        badgeDisplayEnabled: true,
+        autoSaleEnabled: false,
+      };
     }
 
-    return {
+    const returnValue = {
       selectedOption: result.rows[0].selected_option,
+      badgeDisplayEnabled: result.rows[0].badge_display_enabled,
+      autoSaleEnabled: result.rows[0].auto_sale_enabled,
     };
+    console.log("   ✅ Returning:", returnValue);
+    return returnValue;
   } catch (error) {
     console.error("❌ Error getting app settings:", error);
     throw error;
@@ -160,41 +172,16 @@ async function saveAppSettings(shop, settings) {
     client.release();
   }
 }
-async function saveAppSettings(shop, settings) {
-  const client = await pool.connect();
-  try {
-    const { selected_option, badge_display_enabled, auto_sale_enabled } =
-      settings;
 
-    await client.query(
-      `INSERT INTO app_settings (shop, selected_option, badge_display_enabled, auto_sale_enabled, updated_at) 
-       VALUES ($1, $2, $3, $4, NOW())
-       ON CONFLICT (shop) 
-       DO UPDATE SET 
-         selected_option = COALESCE($2, app_settings.selected_option),
-         badge_display_enabled = COALESCE($3, app_settings.badge_display_enabled),
-         auto_sale_enabled = COALESCE($4, app_settings.auto_sale_enabled),
-         updated_at = NOW()`,
-      [shop, selected_option, badge_display_enabled, auto_sale_enabled]
-    );
-    console.log("✅ App settings saved:", shop);
-  } catch (error) {
-    console.error("❌ Error saving app settings:", error);
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
-// Badge management (SIMPLIFIED - option_value based)
+// Badge management (VARIANT-LEVEL)
 async function getBadgeAssignments(shop) {
   const client = await pool.connect();
   try {
     const result = await client.query(
-      `SELECT option_value, badge_type 
+      `SELECT variant_id, product_id, badge_type, option_value 
        FROM badge_assignments 
        WHERE shop = $1 
-       ORDER BY option_value`,
+       ORDER BY product_id, option_value`,
       [shop]
     );
     return result.rows;
@@ -206,17 +193,25 @@ async function getBadgeAssignments(shop) {
   }
 }
 
-async function saveBadgeAssignment(shop, optionValue, badgeType) {
+async function saveBadgeAssignment(
+  shop,
+  variantId,
+  productId,
+  badgeType,
+  optionValue
+) {
   const client = await pool.connect();
   try {
     await client.query(
-      `INSERT INTO badge_assignments (shop, option_value, badge_type, updated_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (shop, option_value, badge_type)
-       DO UPDATE SET updated_at = NOW()`,
-      [shop, optionValue, badgeType]
+      `INSERT INTO badge_assignments (shop, variant_id, product_id, badge_type, option_value, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (shop, variant_id)
+       DO UPDATE SET 
+         badge_type = $4,
+         updated_at = NOW()`,
+      [shop, variantId, productId, badgeType, optionValue]
     );
-    console.log("✅ Badge assignment saved:", shop, optionValue, badgeType);
+    console.log("✅ Badge assignment saved:", shop, variantId, badgeType);
   } catch (error) {
     console.error("❌ Error saving badge assignment:", error);
     throw error;
@@ -225,15 +220,15 @@ async function saveBadgeAssignment(shop, optionValue, badgeType) {
   }
 }
 
-async function deleteBadgeAssignment(shop, optionValue, badgeType) {
+async function deleteBadgeAssignment(shop, variantId) {
   const client = await pool.connect();
   try {
     await client.query(
       `DELETE FROM badge_assignments 
-       WHERE shop = $1 AND option_value = $2 AND badge_type = $3`,
-      [shop, optionValue, badgeType]
+       WHERE shop = $1 AND variant_id = $2`,
+      [shop, variantId]
     );
-    console.log("✅ Badge assignment deleted:", shop, optionValue, badgeType);
+    console.log("✅ Badge assignment deleted:", shop, variantId);
   } catch (error) {
     console.error("❌ Error deleting badge assignment:", error);
     throw error;
@@ -266,6 +261,61 @@ async function getBadgesForPublicAPI(shop) {
   } finally {
     client.release();
   }
+}
+
+// Badge Assignment Functions
+// ===========================
+
+async function getBadgeAssignments(shop) {
+  const query = `
+    SELECT * FROM badge_assignments 
+    WHERE shop = $1
+    ORDER BY created_at DESC
+  `;
+  const result = await pool.query(query, [shop]);
+  return result.rows;
+}
+
+async function saveBadgeAssignment(
+  shop,
+  variantId,
+  productId,
+  badgeType,
+  optionValue
+) {
+  const query = `
+    INSERT INTO badge_assignments (shop, variant_id, product_id, badge_type, option_value, updated_at)
+    VALUES ($1, $2, $3, $4, $5, NOW())
+    ON CONFLICT (shop, variant_id) 
+    DO UPDATE SET 
+      badge_type = $4,
+      option_value = $5,
+      updated_at = NOW()
+    RETURNING *
+  `;
+  const result = await pool.query(query, [
+    shop,
+    variantId,
+    productId,
+    badgeType,
+    optionValue,
+  ]);
+  return result.rows[0];
+}
+
+async function deleteBadgeAssignment(shop, variantId) {
+  const query = `DELETE FROM badge_assignments WHERE shop = $1 AND variant_id = $2`;
+  await pool.query(query, [shop, variantId]);
+}
+
+async function getBadgesForPublicAPI(shop) {
+  const query = `
+    SELECT variant_id, badge_type, option_value 
+    FROM badge_assignments 
+    WHERE shop = $1 AND badge_type IS NOT NULL
+  `;
+  const result = await pool.query(query, [shop]);
+  return result.rows;
 }
 
 module.exports = {

@@ -4,36 +4,51 @@ const {
   getBadgeAssignments,
   saveBadgeAssignment,
   deleteBadgeAssignment,
-  getBadgesForPublicAPI,
 } = require("../database/db");
 
 // Get all badge assignments for shop
 router.get("/", async (req, res) => {
   try {
     const shop = req.query.shop;
-    const badges = await getBadgeAssignments(shop);
+    const assignments = await getBadgeAssignments(shop);
+
+    // Format: { "variant_id": "badge_type" }
+    const badges = {};
+    assignments.forEach((row) => {
+      badges[row.variant_id] = row.badge_type;
+    });
+
     res.json({ badges });
   } catch (error) {
-    console.error("Error fetching badges:", error);
+    console.error("Error fetching badge assignments:", error);
     res.status(500).json({ error: "Failed to fetch badges" });
   }
 });
 
-// Save badge assignment (option_value based)
+// Save badge assignment for a variant
 router.post("/", async (req, res) => {
   try {
-    const { shop, optionValue, badgeType } = req.body;
+    const { shop, variantId, productId, badgeType, optionValue } = req.body;
 
-    if (!shop || !optionValue || !badgeType) {
+    if (!shop || !variantId || !productId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    if (!["HOT", "NEW"].includes(badgeType)) {
-      return res.status(400).json({ error: "Invalid badge type" });
+    if (badgeType) {
+      // Save or update badge
+      await saveBadgeAssignment(
+        shop,
+        variantId,
+        productId,
+        badgeType,
+        optionValue
+      );
+    } else {
+      // Remove badge (badgeType is null/empty)
+      await deleteBadgeAssignment(shop, variantId);
     }
 
-    const badge = await saveBadgeAssignment(shop, optionValue, badgeType);
-    res.json({ success: true, badge });
+    res.json({ success: true });
   } catch (error) {
     console.error("Error saving badge:", error);
     res.status(500).json({ error: "Failed to save badge" });
@@ -41,28 +56,41 @@ router.post("/", async (req, res) => {
 });
 
 // Delete badge assignment
-router.delete("/:optionValue/:badgeType", async (req, res) => {
+router.delete("/", async (req, res) => {
   try {
-    const shop = req.query.shop;
-    const { optionValue, badgeType } = req.params;
+    const { shop, variantId } = req.query;
 
-    await deleteBadgeAssignment(
-      shop,
-      decodeURIComponent(optionValue),
-      badgeType
-    );
+    if (!shop || !variantId) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    await deleteBadgeAssignment(shop, variantId);
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting badge:", error);
     res.status(500).json({ error: "Failed to delete badge" });
   }
 });
-
-// Public API endpoint (no auth) - for storefront
-router.get("/public/:shop", async (req, res) => {
+// Public API endpoint for storefront (no authentication)
+router.get("/public", async (req, res) => {
   try {
-    const shop = req.params.shop;
-    const badges = await getBadgesForPublicAPI(shop);
+    const shop = req.query.shop;
+
+    if (!shop) {
+      return res.status(400).json({ error: "Missing shop parameter" });
+    }
+
+    const assignments = await getBadgeAssignments(shop);
+
+    // Format: { "variant_id": "badge_type" }
+    const badges = {};
+    assignments.forEach((row) => {
+      badges[row.variant_id] = row.badge_type;
+    });
+
+    // Set CORS headers to allow storefront access
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET");
 
     res.json({ badges });
   } catch (error) {

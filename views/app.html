@@ -202,6 +202,72 @@
         font-size: 14px;
         font-weight: 500;
       }
+      /* Product Variant Card */
+      .variant-card {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        border: 1px solid #e1e3e5;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        transition: all 0.2s;
+      }
+
+      .variant-card:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+
+      .variant-image {
+        width: 60px;
+        height: 60px;
+        object-fit: cover;
+        border-radius: 4px;
+        background: #f6f6f7;
+      }
+
+      .variant-info {
+        flex: 1;
+      }
+
+      .variant-title {
+        font-size: 14px;
+        font-weight: 500;
+        margin-bottom: 4px;
+        color: #202223;
+      }
+
+      .variant-subtitle {
+        font-size: 13px;
+        color: #6d7175;
+      }
+
+      .variant-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .variant-badge-select {
+        width: 160px;
+        padding: 8px 12px;
+        border: 1px solid #c9cccf;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+
+      .preview-link {
+        color: #008060;
+        text-decoration: none;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .preview-link:hover {
+        text-decoration: underline;
+      }
     </style>
   </head>
   <body>
@@ -224,13 +290,89 @@
     </div>
 
     <div class="main-content">
+      <!-- Variant Badges Page -->
       <div id="badges-page" class="page">
         <div class="page-header">
           <h2>Variant Badges</h2>
-          <p>Manage badges for your product variants</p>
+          <p>Assign badges to specific product variants</p>
         </div>
-        <div class="card">
-          <p>Coming soon: Assign HOT, NEW, and SALE badges to variants</p>
+
+        <div
+          class="card"
+          id="badges-settings-notice"
+          style="
+            background: #fef3cd;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 16px;
+            display: none;
+          "
+        >
+          <p style="margin: 0; color: #663c00">
+            ⚠️ Please select an option type in
+            <a
+              href="#"
+              onclick="document.querySelector('[data-page=settings]').click(); return false;"
+              style="color: #663c00; text-decoration: underline"
+              >Settings</a
+            >
+            first.
+          </p>
+        </div>
+
+        <div class="card" id="badges-content">
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 24px;
+            "
+          >
+            <div>
+              <h3 style="margin: 0">Badge Assignments</h3>
+              <p
+                style="margin: 4px 0 0 0; font-size: 13px; color: #6d7175"
+                id="badges-option-type"
+              >
+                Loading...
+              </p>
+            </div>
+            <button class="btn" id="save-badges" style="display: none">
+              Save All Badges
+            </button>
+          </div>
+
+          <div
+            id="badges-loading"
+            style="text-align: center; padding: 40px; color: #6d7175"
+          >
+            <p>Loading products and variants...</p>
+          </div>
+
+          <div id="badges-list" style="display: none">
+            <!-- Product variants will be inserted here -->
+          </div>
+
+          <div
+            id="badges-empty"
+            style="
+              display: none;
+              text-align: center;
+              padding: 40px;
+              color: #6d7175;
+            "
+          >
+            <p>
+              No products found with the selected option type. Add products with
+              variants to your store.
+            </p>
+          </div>
+
+          <div
+            id="badges-save-status"
+            class="status-message"
+            style="margin-top: 16px"
+          ></div>
         </div>
       </div>
 
@@ -370,9 +512,13 @@
               .querySelectorAll(".page")
               .forEach((p) => p.classList.remove("active"));
             item.classList.add("active");
-            document
-              .getElementById(item.getAttribute("data-page") + "-page")
-              .classList.add("active");
+            const pageId = item.getAttribute("data-page") + "-page";
+            document.getElementById(pageId).classList.add("active");
+
+            // Load badges page when clicked
+            if (item.getAttribute("data-page") === "badges") {
+              loadBadgesPage();
+            }
           });
         });
 
@@ -399,10 +545,14 @@
 
         // Load product options
         async function loadProductOptions() {
+          console.log("🔍 loadProductOptions STARTED");
+          console.log("   APP_URL:", APP_URL);
+          console.log("   shopParam:", shopParam);
           try {
             const response = await authenticatedFetch(
               `${APP_URL}/api/products/options?shop=${shopParam}`
             );
+            console.log("🔍 Response received:", response.status);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const data = await response.json();
             const dropdown = document.getElementById("selected-option");
@@ -460,11 +610,247 @@
             }
           });
 
+        // ============================================
+        // BADGES PAGE FUNCTIONALITY
+        // ============================================
+
+        let selectedOptionType = null;
+        let allProducts = [];
+        let currentBadges = {};
+        let unsavedChanges = false;
+
+        async function loadBadgesPage() {
+          console.log("📥 Loading badges page...");
+
+          try {
+            // Get selected option type from settings
+            const settingsResponse = await authenticatedFetch(
+              `${APP_URL}/api/settings?shop=${shopParam}`
+            );
+
+            if (!settingsResponse.ok)
+              throw new Error(`HTTP ${settingsResponse.status}`);
+            const settings = await settingsResponse.json();
+
+            selectedOptionType = settings.selectedOption;
+
+            if (!selectedOptionType) {
+              document.getElementById("badges-settings-notice").style.display =
+                "block";
+              document.getElementById("badges-content").style.display = "none";
+              document.getElementById("badges-loading").style.display = "none";
+              return;
+            }
+
+            document.getElementById("badges-settings-notice").style.display =
+              "none";
+            document.getElementById("badges-content").style.display = "block";
+            document.getElementById(
+              "badges-option-type"
+            ).textContent = `Assigning badges to: ${selectedOptionType} variants`;
+
+            // Load all products with variants
+            const productsResponse = await authenticatedFetch(
+              `${APP_URL}/api/products?shop=${shopParam}`
+            );
+
+            if (!productsResponse.ok)
+              throw new Error(`HTTP ${productsResponse.status}`);
+            const productsData = await productsResponse.json();
+
+            allProducts = productsData.products || [];
+
+            // Filter products that have the selected option
+            const filteredVariants = [];
+            allProducts.forEach((product) => {
+              const hasOption = product.options.some(
+                (opt) => opt.name === selectedOptionType
+              );
+
+              if (hasOption) {
+                product.variants.forEach((variant) => {
+                  // Find the option value for this variant
+                  let optionValue = null;
+
+                  // Check which option position matches our selected type
+                  product.options.forEach((opt, index) => {
+                    if (opt.name === selectedOptionType) {
+                      // Get the corresponding option value from variant
+                      optionValue = variant[`option${index + 1}`];
+                    }
+                  });
+
+                  if (optionValue) {
+                    filteredVariants.push({
+                      variantId: variant.id,
+                      productId: product.id,
+                      productTitle: product.title,
+                      productHandle: product.handle,
+                      optionValue: optionValue,
+                      variantTitle: variant.title,
+                      image: product.images[0]?.src || null,
+                    });
+                  }
+                });
+              }
+            });
+
+            if (filteredVariants.length === 0) {
+              document.getElementById("badges-loading").style.display = "none";
+              document.getElementById("badges-empty").style.display = "block";
+              return;
+            }
+
+            // Load existing badge assignments
+            const badgesResponse = await authenticatedFetch(
+              `${APP_URL}/api/badges?shop=${shopParam}`
+            );
+
+            if (!badgesResponse.ok)
+              throw new Error(`HTTP ${badgesResponse.status}`);
+            const badgesData = await badgesResponse.json();
+
+            currentBadges = badgesData.badges || {};
+
+            // Render UI
+            renderVariantBadges(filteredVariants);
+
+            console.log(`✅ Loaded ${filteredVariants.length} variants`);
+          } catch (error) {
+            console.error("❌ Error loading badges:", error);
+            document.getElementById("badges-loading").innerHTML =
+              '<p style="color: #d82c0d;">Error loading products. Please try again.</p>';
+          }
+        }
+
+        function renderVariantBadges(variants) {
+          const container = document.getElementById("badges-list");
+          container.innerHTML = "";
+          container.style.display = "block";
+          document.getElementById("badges-loading").style.display = "none";
+          document.getElementById("save-badges").style.display = "inline-block";
+
+          variants.forEach((variant) => {
+            const card = document.createElement("div");
+            card.className = "variant-card";
+
+            const currentBadge = currentBadges[variant.variantId] || "";
+
+            card.innerHTML = `
+              ${
+                variant.image
+                  ? `<img src="${variant.image}" alt="${variant.productTitle}" class="variant-image" />`
+                  : '<div class="variant-image"></div>'
+              }
+              <div class="variant-info">
+                <div class="variant-title">${variant.productTitle}</div>
+                <div class="variant-subtitle">Variant: ${
+                  variant.optionValue
+                } - ${variant.variantTitle}</div>
+              </div>
+              <div class="variant-actions">
+                <select class="variant-badge-select" data-variant-id="${
+                  variant.variantId
+                }" 
+                        data-product-id="${
+                          variant.productId
+                        }" data-option-value="${variant.optionValue}">
+                  <option value="">No Badge</option>
+                  <option value="HOT" ${
+                    currentBadge === "HOT" ? "selected" : ""
+                  }>🔥 HOT</option>
+                  <option value="NEW" ${
+                    currentBadge === "NEW" ? "selected" : ""
+                  }>✨ NEW</option>
+                  <option value="SALE" ${
+                    currentBadge === "SALE" ? "selected" : ""
+                  }>💰 SALE</option>
+                </select>
+                <a href="https://${shopParam.replace(
+                  ".myshopify.com",
+                  ""
+                )}.myshopify.com/products/${variant.productHandle}" 
+                   target="_blank" class="preview-link">
+                  Preview →
+                </a>
+              </div>
+            `;
+
+            container.appendChild(card);
+
+            // Track changes
+            const select = card.querySelector(".variant-badge-select");
+            select.addEventListener("change", () => {
+              unsavedChanges = true;
+              document.getElementById("badges-save-status").textContent =
+                "⚠️ Unsaved changes";
+              document.getElementById("badges-save-status").style.color =
+                "#ffc107";
+            });
+          });
+        }
+
+        document
+          .getElementById("save-badges")
+          .addEventListener("click", async () => {
+            const button = document.getElementById("save-badges");
+            const status = document.getElementById("badges-save-status");
+
+            button.disabled = true;
+            button.textContent = "Saving...";
+            status.textContent = "";
+
+            try {
+              const selects = document.querySelectorAll(
+                ".variant-badge-select"
+              );
+              const savePromises = [];
+
+              selects.forEach((select) => {
+                const variantId = select.dataset.variantId;
+                const productId = select.dataset.productId;
+                const optionValue = select.dataset.optionValue;
+                const badgeType = select.value || null;
+
+                savePromises.push(
+                  authenticatedFetch(`${APP_URL}/api/badges`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                      shop: shopParam,
+                      variantId,
+                      productId,
+                      badgeType,
+                      optionValue,
+                    }),
+                  })
+                );
+              });
+
+              await Promise.all(savePromises);
+
+              unsavedChanges = false;
+              status.textContent = "✓ All badges saved successfully!";
+              status.style.color = "#008060";
+              setTimeout(() => (status.textContent = ""), 3000);
+
+              console.log("✅ All badges saved");
+            } catch (error) {
+              status.textContent = "✗ Error saving badges";
+              status.style.color = "#d82c0d";
+              console.error("❌ Error saving badges:", error);
+            } finally {
+              button.disabled = false;
+              button.textContent = "Save All Badges";
+            }
+          });
         // Initialize
         startTokenRefresh().then(() => {
           setTimeout(() => {
+            console.log("🚀 INITIALIZATION STARTING");
             loadSettings();
+            console.log("🚀 About to call loadProductOptions");
             loadProductOptions();
+            console.log("🚀 loadProductOptions called");
           }, 500);
         });
       });

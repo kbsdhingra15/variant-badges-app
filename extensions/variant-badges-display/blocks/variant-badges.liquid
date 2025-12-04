@@ -1,0 +1,41 @@
+{% comment %}
+  Variant Badges Block
+  Displays badge overlays on product variant swatches
+{% endcomment %}
+
+<div id="variant-badges-container" data-product-id="{{ product.id }}">
+  <!-- Badges will be injected here by JavaScript -->
+</div>
+
+<script src="{{ 'variant-badges.js' | asset_url }}" defer></script>
+
+<style>
+  {{ 'variant-badges.css' | asset_url | stylesheet_tag }}
+</style>
+
+{% schema %}
+{
+  "name": "Variant Badges",
+  "target": "section",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_badges",
+      "label": "Show badges on variants",
+      "default": true
+    },
+    {
+      "type": "select",
+      "id": "badge_position",
+      "label": "Badge position",
+      "options": [
+        { "label": "Top Left", "value": "top-left" },
+        { "label": "Top Right", "value": "top-right" },
+        { "label": "Bottom Left", "value": "bottom-left" },
+        { "label": "Bottom Right", "value": "bottom-right" }
+      ],
+      "default": "top-right"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,84 @@
+/**
+ * Variant Badges - Storefront Styles
+ */
+
+.variant-badge-overlay {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  animation: badge-appear 0.3s ease;
+}
+
+@keyframes badge-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Position variants */
+.variant-badge-top-left {
+  top: 4px;
+  left: 4px;
+}
+
+.variant-badge-top-right {
+  top: 4px;
+  right: 4px;
+}
+
+.variant-badge-bottom-left {
+  bottom: 4px;
+  left: 4px;
+}
+
+.variant-badge-bottom-right {
+  bottom: 4px;
+  right: 4px;
+}
+
+/* Ensure parent containers support absolute positioning */
+.variant-radios label,
+.product-form__input label,
+[data-variant-id] {
+  position: relative;
+}
+
+/* Badge type specific styles (fallback if inline styles fail) */
+.variant-badge-HOT {
+  background: #ff4444;
+  color: white;
+}
+
+.variant-badge-NEW {
+  background: #4caf50;
+  color: white;
+}
+
+.variant-badge-SALE {
+  background: #ff9800;
+  color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .variant-badge-overlay {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+}
