@@ -1,6 +1,6 @@
 /**
- * Variant Badges - Storefront Script
- * Displays badge overlays on product variant swatches
+ * Variant Badges - Storefront Script (Scalable Version)
+ * Only loads badges for current product
  */
 
 (function () {
@@ -15,6 +15,7 @@
   let badgeData = {};
   let appUrl = null;
   let shopDomain = null;
+  let productId = null;
 
   // Initialize when DOM is ready
   function init() {
@@ -26,7 +27,17 @@
       return;
     }
 
-    // Get app URL from meta tag (we'll add this later)
+    // Get product ID from Shopify Analytics
+    productId =
+      window.ShopifyAnalytics?.meta?.product?.id ||
+      window.ShopifyAnalytics?.meta?.product?.gid?.split("/").pop();
+
+    if (!productId) {
+      console.error("Variant Badges: Product ID not found");
+      return;
+    }
+
+    // Get app URL
     const metaTag = document.querySelector(
       'meta[name="variant-badges-app-url"]'
     );
@@ -34,18 +45,20 @@
       metaTag?.content ||
       "https://variant-badges-app-production.up.railway.app";
 
-    // Load badge data
+    console.log("✅ Variant Badges initialized:", { productId, shopDomain });
+
+    // Load badge data for this product only
     loadBadgeData();
 
     // Watch for variant changes
     observeVariantChanges();
   }
 
-  // Load badge data from API
+  // Load badge data from API (product-specific)
   async function loadBadgeData() {
     try {
       const response = await fetch(
-        `${appUrl}/api/badges/public?shop=${shopDomain}`
+        `${appUrl}/api/public/badges/product/${productId}?shop=${shopDomain}`
       );
 
       if (!response.ok) {
@@ -56,7 +69,11 @@
       const data = await response.json();
       badgeData = data.badges || {};
 
-      console.log("✅ Variant Badges loaded:", Object.keys(badgeData).length);
+      console.log(
+        "✅ Variant Badges loaded:",
+        Object.keys(badgeData).length,
+        "badges for this product"
+      );
 
       // Apply badges to current page
       applyBadges();
@@ -69,10 +86,11 @@
   function applyBadges() {
     // Find all variant option buttons/swatches
     const variantSelectors = [
-      'variant-radios input[type="radio"]', // Radio buttons
-      "variant-selects select option", // Dropdowns
-      ".product-form__input input", // Generic inputs
-      '[name^="options"]', // Any option inputs
+      'variant-radios input[type="radio"]',
+      "variant-selects select option",
+      ".product-form__input input",
+      '[name^="options"]',
+      "[data-variant-id]",
     ];
 
     variantSelectors.forEach((selector) => {
@@ -84,15 +102,6 @@
         }
       });
     });
-
-    // Also check for variant images/swatches with data attributes
-    document.querySelectorAll("[data-variant-id]").forEach((element) => {
-      const variantId = element.dataset.variantId;
-
-      if (variantId && badgeData[variantId]) {
-        addBadgeToElement(element, badgeData[variantId]);
-      }
-    });
   }
 
   // Add badge overlay to an element
@@ -100,16 +109,14 @@
     const badge = BADGE_STYLES[badgeType];
     if (!badge) return;
 
-    // Find the visual element (label, swatch, or parent)
+    // Find the visual element
     let targetElement = element;
 
     if (element.tagName === "INPUT") {
-      // For radio/checkbox, badge goes on the label
       const label = document.querySelector(`label[for="${element.id}"]`);
       targetElement = label || element.parentElement;
     } else if (element.tagName === "OPTION") {
-      // For dropdowns, we can't add visual badges, skip
-      return;
+      return; // Skip dropdowns
     }
 
     // Check if badge already exists
@@ -134,7 +141,7 @@
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       `;
 
-    // Make parent relative if needed
+    // Make parent relative
     const parentStyle = window.getComputedStyle(targetElement);
     if (parentStyle.position === "static") {
       targetElement.style.position = "relative";
@@ -143,7 +150,7 @@
     targetElement.appendChild(badgeEl);
   }
 
-  // Watch for dynamic variant changes (AJAX themes)
+  // Watch for dynamic changes
   function observeVariantChanges() {
     const observer = new MutationObserver(() => {
       applyBadges();
