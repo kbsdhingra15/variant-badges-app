@@ -42,50 +42,45 @@ router.get("/badges/product/:productId", async (req, res) => {
     const { productId } = req.params;
 
     if (!shop || !productId) {
-      return res
-        .status(400)
-        .json({ error: "Missing shop or productId parameter" });
+      return res.status(400).json({ error: "Missing parameters" });
     }
 
-    // Get selected option type from settings
+    // Get selected option type
     const { getAppSettings } = require("../database/db");
     const settings = await getAppSettings(shop);
     const selectedOption = settings.selectedOption;
 
     if (!selectedOption) {
-      // No option type selected, return empty
       res.header("Access-Control-Allow-Origin", "*");
-      res.header("Access-Control-Allow-Methods", "GET");
       res.header("Cache-Control", "public, max-age=10");
-      return res.json({ badges: {} });
+      return res.json({ badges: {}, selectedOption: null });
     }
 
     const assignments = await getBadgeAssignments(shop);
 
-    // Filter to only this product's variants AND matching selected option
+    // Filter: only badges for THIS product AND THIS option type
     const badges = {};
     assignments
-      .filter((row) => {
-        // Must match product AND option type
-        return row.product_id === productId && row.option_value; // Has option value stored
-      })
+      .filter(
+        (row) =>
+          row.product_id === productId && row.option_type === selectedOption // ← KEY FILTER
+      )
       .forEach((row) => {
         badges[row.variant_id] = row.badge_type;
       });
 
     res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET");
     res.header("Cache-Control", "public, max-age=10");
 
     console.log(
-      `📦 Product badges served for ${shop}, product ${productId}, option ${selectedOption}: ${
+      `📦 Badges for product ${productId}, option "${selectedOption}": ${
         Object.keys(badges).length
-      } badges`
+      }`
     );
 
-    res.json({ badges, selectedOption }); // Also return selected option type
+    res.json({ badges, selectedOption });
   } catch (error) {
-    console.error("❌ Error fetching product badges:", error);
+    console.error("Error fetching badges:", error);
     res.status(500).json({ error: "Failed to fetch badges" });
   }
 });

@@ -34,17 +34,21 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    // Get current selected option type from settings
+    const { getAppSettings } = require("../database/db");
+    const settings = await getAppSettings(shop);
+    const optionType = settings.selectedOption;
+
     if (badgeType) {
-      // Save or update badge
       await saveBadgeAssignment(
         shop,
         variantId,
         productId,
         badgeType,
-        optionValue
+        optionValue,
+        optionType
       );
     } else {
-      // Remove badge (badgeType is null/empty)
       await deleteBadgeAssignment(shop, variantId);
     }
 

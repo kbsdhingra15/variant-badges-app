@@ -198,20 +198,29 @@ async function saveBadgeAssignment(
   variantId,
   productId,
   badgeType,
-  optionValue
+  optionValue,
+  optionType
 ) {
   const client = await pool.connect();
   try {
     await client.query(
-      `INSERT INTO badge_assignments (shop, variant_id, product_id, badge_type, option_value, updated_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+      `INSERT INTO badge_assignments (shop, variant_id, product_id, badge_type, option_value, option_type, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
        ON CONFLICT (shop, variant_id)
        DO UPDATE SET 
          badge_type = $4,
+         option_value = $5,
+         option_type = $6,
          updated_at = NOW()`,
-      [shop, variantId, productId, badgeType, optionValue]
+      [shop, variantId, productId, badgeType, optionValue, optionType]
     );
-    console.log("✅ Badge assignment saved:", shop, variantId, badgeType);
+    console.log(
+      "✅ Badge assignment saved:",
+      shop,
+      variantId,
+      badgeType,
+      optionType
+    );
   } catch (error) {
     console.error("❌ Error saving badge assignment:", error);
     throw error;
