@@ -4,39 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
-    <script>
-      // For embedded apps, App Bridge is provided by Shopify's parent frame
-      // We need to wait for it to be injected
-      window.shopifyAppBridgeReady = new Promise((resolve) => {
-        if (window.shopify && window.shopify.AppBridge) {
-          resolve(window.shopify.AppBridge);
-        } else {
-          // Check for legacy ShopifyApp
-          if (window.ShopifyApp) {
-            window.shopify = { AppBridge: window.ShopifyApp };
-            resolve(window.ShopifyApp);
-          } else {
-            // Wait for it to be injected
-            const checkInterval = setInterval(() => {
-              if (window.shopify && window.shopify.AppBridge) {
-                clearInterval(checkInterval);
-                resolve(window.shopify.AppBridge);
-              } else if (window.ShopifyApp) {
-                clearInterval(checkInterval);
-                window.shopify = { AppBridge: window.ShopifyApp };
-                resolve(window.ShopifyApp);
-              }
-            }, 100);
-
-            // Timeout after 10 seconds
-            setTimeout(() => {
-              clearInterval(checkInterval);
-              resolve(null);
-            }, 10000);
-          }
-        }
-      });
-    </script>
     <style>
       * {
         margin: 0;
@@ -50,6 +17,45 @@
         background: #f6f6f7;
         color: #202223;
         line-height: 1.5;
+      }
+
+      /* Header */
+      .app-header {
+        background: white;
+        border-bottom: 1px solid #e1e3e5;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .app-header h1 {
+        font-size: 20px;
+        font-weight: 600;
+      }
+
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        background: white;
+        border-bottom: 1px solid #e1e3e5;
+        padding: 0 24px;
+      }
+      .tab {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        color: #6d7175;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+      .tab:hover {
+        color: #202223;
+        background: #f6f6f7;
+      }
+      .tab.active {
+        color: #008060;
+        border-bottom-color: #008060;
       }
 
       /* Main Container */
@@ -71,8 +77,8 @@
       .page-header {
         margin-bottom: 24px;
       }
-      .page-header h1 {
-        font-size: 28px;
+      .page-header h2 {
+        font-size: 24px;
         font-weight: 600;
         margin-bottom: 8px;
       }
@@ -89,18 +95,13 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         margin-bottom: 16px;
       }
-      .card h2 {
-        font-size: 20px;
+      .card h3 {
+        font-size: 18px;
         font-weight: 600;
         margin-bottom: 16px;
       }
-      .card h3 {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 12px;
-      }
 
-      /* Onboarding Banner */
+      /* Banner */
       .banner {
         background: #fff9c4;
         border: 1px solid #f9a825;
@@ -118,7 +119,7 @@
       .banner-content {
         flex: 1;
       }
-      .banner-content h3 {
+      .banner-content h4 {
         font-size: 16px;
         font-weight: 600;
         margin-bottom: 8px;
@@ -132,12 +133,6 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
-      }
-      .banner-close {
-        cursor: pointer;
-        color: #666;
-        font-size: 20px;
-        flex-shrink: 0;
       }
 
       /* Buttons */
@@ -186,13 +181,8 @@
         font-size: 14px;
         font-family: inherit;
       }
-      select:focus,
-      input[type="text"]:focus {
-        outline: none;
-        border-color: #008060;
-      }
 
-      /* Toggle Switch */
+      /* Toggle */
       .toggle {
         position: relative;
         display: inline-block;
@@ -254,10 +244,7 @@
         color: #6d7175;
       }
 
-      /* Badge Management */
-      .product-selector {
-        margin-bottom: 24px;
-      }
+      /* Badge List */
       .badge-list {
         display: flex;
         flex-direction: column;
@@ -296,7 +283,7 @@
         color: white;
       }
 
-      /* Plans Page */
+      /* Pricing Grid */
       .pricing-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -332,7 +319,7 @@
         font-size: 12px;
         font-weight: 600;
       }
-      .pricing-card h3 {
+      .pricing-card h4 {
         font-size: 24px;
         margin-bottom: 8px;
       }
@@ -363,7 +350,7 @@
         font-weight: bold;
       }
 
-      /* Help/FAQ Page */
+      /* FAQ */
       .faq-item {
         border-bottom: 1px solid #e1e3e5;
         padding: 16px 0;
@@ -393,7 +380,7 @@
         max-height: 0;
         overflow: hidden;
         transition: max-height 0.3s;
-        padding: 0 0 0 0;
+        padding: 0;
         color: #6d7175;
         font-size: 14px;
         line-height: 1.6;
@@ -402,15 +389,8 @@
         max-height: 500px;
         padding: 12px 0;
       }
-      .faq-answer code {
-        background: #f6f6f7;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-family: monospace;
-        font-size: 13px;
-      }
 
-      /* Contact Support */
+      /* Contact Grid */
       .contact-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -437,7 +417,7 @@
         margin-bottom: 12px;
       }
 
-      /* Loading States */
+      /* Loading & Messages */
       .loading {
         text-align: center;
         padding: 40px;
@@ -465,6 +445,9 @@
         .app-container {
           padding: 16px;
         }
+        .tabs {
+          overflow-x: auto;
+        }
         .pricing-grid {
           grid-template-columns: 1fr;
         }
@@ -472,13 +455,27 @@
     </style>
   </head>
   <body>
+    <!-- App Header -->
+    <div class="app-header">
+      <span style="font-size: 24px">📛</span>
+      <h1>Variant Badges</h1>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('manage')">Manage Badges</div>
+      <div class="tab" onclick="switchTab('settings')">Settings</div>
+      <div class="tab" onclick="switchTab('plans')">Plans</div>
+      <div class="tab" onclick="switchTab('help')">Help</div>
+    </div>
+
     <div class="app-container">
-      <!-- Onboarding Banner (shows on all pages until dismissed) -->
+      <!-- Onboarding Banner -->
       <div id="setup-banner" style="display: none">
         <div class="banner">
           <div class="banner-icon">⚠️</div>
           <div class="banner-content">
-            <h3>Complete Setup (30 seconds)</h3>
+            <h4>Complete Setup (30 seconds)</h4>
             <p>
               Badges are ready! Add them to your theme to make them visible to
               customers.
@@ -486,9 +483,6 @@
             <div class="banner-actions">
               <button class="btn btn-primary" onclick="openThemeEditor()">
                 🎨 Open Theme Editor
-              </button>
-              <button class="btn btn-secondary" onclick="showTutorial()">
-                📺 Watch Tutorial
               </button>
               <button class="btn btn-outline" onclick="dismissBanner()">
                 Dismiss
@@ -499,23 +493,21 @@
       </div>
 
       <!-- MANAGE BADGES VIEW -->
-      <div id="manage-view" class="view-section">
+      <div id="manage-view" class="view-section active">
         <div class="page-header">
-          <h1>📛 Manage Badges</h1>
+          <h2>Manage Badges</h2>
           <p>Assign HOT, NEW, and SALE badges to product variants</p>
         </div>
 
         <div class="card">
-          <h2>Select Product</h2>
-          <div class="product-selector">
-            <select id="product-select" onchange="loadProductBadges()">
-              <option value="">Loading products...</option>
-            </select>
-          </div>
+          <h3>Select Product</h3>
+          <select id="product-select" onchange="loadProductBadges()">
+            <option value="">Loading products...</option>
+          </select>
         </div>
 
         <div id="badges-container" class="card" style="display: none">
-          <h2>Assign Badges</h2>
+          <h3>Assign Badges</h3>
           <div id="badges-list" class="badge-list"></div>
         </div>
       </div>
@@ -523,12 +515,12 @@
       <!-- SETTINGS VIEW -->
       <div id="settings-view" class="view-section">
         <div class="page-header">
-          <h1>⚙️ Settings</h1>
+          <h2>Settings</h2>
           <p>Configure your badge display preferences</p>
         </div>
 
         <div class="card">
-          <h2>Badge Display</h2>
+          <h3>Badge Display</h3>
 
           <div class="setting-row">
             <div class="setting-info">
@@ -581,15 +573,14 @@
       <!-- PLANS VIEW -->
       <div id="plans-view" class="view-section">
         <div class="page-header">
-          <h1>💳 Plans & Pricing</h1>
+          <h2>Plans & Pricing</h2>
           <p>Choose the plan that fits your store</p>
         </div>
 
         <div class="card">
           <div class="pricing-grid">
-            <!-- Free Plan -->
             <div class="pricing-card">
-              <h3>Free</h3>
+              <h4>Free</h4>
               <div class="pricing-price">$0<span>/mo</span></div>
               <ul class="pricing-features">
                 <li>Manual badge assignment</li>
@@ -602,10 +593,9 @@
               </button>
             </div>
 
-            <!-- Pro Plan -->
             <div class="pricing-card featured">
               <div class="pricing-badge">Most Popular</div>
-              <h3>Pro</h3>
+              <h4>Pro</h4>
               <div class="pricing-price">$9<span>/mo</span></div>
               <ul class="pricing-features">
                 <li>Everything in Free</li>
@@ -623,9 +613,8 @@
               </button>
             </div>
 
-            <!-- Enterprise Plan -->
             <div class="pricing-card">
-              <h3>Enterprise</h3>
+              <h4>Enterprise</h4>
               <div class="pricing-price">$29<span>/mo</span></div>
               <ul class="pricing-features">
                 <li>Everything in Pro</li>
@@ -644,31 +633,17 @@
             </div>
           </div>
         </div>
-
-        <div class="card">
-          <h3>💡 Need help choosing?</h3>
-          <p style="margin-top: 12px">
-            Not sure which plan is right for you?
-            <a
-              href="/app/help"
-              style="color: #008060; text-decoration: none; font-weight: 600"
-              >Contact our team</a
-            >
-            and we'll help you decide.
-          </p>
-        </div>
       </div>
 
       <!-- HELP VIEW -->
       <div id="help-view" class="view-section">
         <div class="page-header">
-          <h1>❓ Help & Support</h1>
+          <h2>Help & Support</h2>
           <p>Find answers to common questions</p>
         </div>
 
-        <!-- Contact Support -->
         <div class="card">
-          <h2>Need Assistance?</h2>
+          <h3>Need Assistance?</h3>
           <div class="contact-grid">
             <div class="contact-card">
               <div class="contact-icon">💬</div>
@@ -703,9 +678,8 @@
           </div>
         </div>
 
-        <!-- FAQ Section -->
         <div class="card">
-          <h2>Frequently Asked Questions</h2>
+          <h3>Frequently Asked Questions</h3>
 
           <div class="faq-item">
             <div class="faq-question" onclick="toggleFaq(this)">
@@ -775,229 +749,55 @@
               auto-applies this)
             </div>
           </div>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span>How do I upgrade to Pro?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              Go to the Plans tab and click "Upgrade to Pro". You'll be
-              redirected to Shopify's billing page to confirm. Billing is
-              handled securely through Shopify.
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span>Will this slow down my store?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              No! Badges are cached for 5 minutes and load asynchronously. The
-              JavaScript is only 5KB minified. Most stores see no measurable
-              performance impact.
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span>Can I customize badge colors and styles?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              Custom styling is available on the Pro and Enterprise plans.
-              Contact support with your requirements and we'll help you match
-              your brand.
-            </div>
-          </div>
         </div>
       </div>
     </div>
 
     <script>
       // ============================================
-      // APP BRIDGE INITIALIZATION
+      // CONFIGURATION
       // ============================================
 
-      let appBridge = null;
       const SHOP = "{{SHOP}}";
       const API_KEY = "{{SHOPIFY_API_KEY}}";
-      const HOST = new URLSearchParams(window.location.search).get("host");
-      const CURRENT_VIEW = "{{VIEW}}";
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionToken = urlParams.get("id_token") || "";
 
-      async function initAppBridge() {
-        try {
-          console.log("⏳ Waiting for App Bridge from Shopify parent frame...");
-
-          // Wait for App Bridge to be provided by Shopify
-          const AppBridgeLib = await window.shopifyAppBridgeReady;
-
-          if (!AppBridgeLib) {
-            console.error(
-              "❌ App Bridge not provided by Shopify after 10 seconds"
-            );
-            console.error(
-              "This might be a CSP issue or the app is not properly embedded"
-            );
-            return false;
-          }
-
-          console.log("✅ App Bridge library available");
-
-          // Create app instance
-          appBridge = AppBridgeLib.createApp({
-            apiKey: API_KEY,
-            host: HOST,
-          });
-
-          console.log("✅ App Bridge initialized");
-
-          // Create Navigation Menu for left sidebar
-          const NavigationMenu =
-            AppBridgeLib.NavigationMenu || AppBridgeLib.actions?.NavigationMenu;
-
-          if (NavigationMenu) {
-            NavigationMenu.create(appBridge, {
-              items: [
-                {
-                  label: "Variant Badges",
-                  destination: `/app?shop=${SHOP}&host=${HOST}`,
-                },
-                {
-                  label: "Settings",
-                  destination: `/app/settings?shop=${SHOP}&host=${HOST}`,
-                },
-                {
-                  label: "Plans",
-                  destination: `/app/plans?shop=${SHOP}&host=${HOST}`,
-                },
-                {
-                  label: "Help",
-                  destination: `/app/help?shop=${SHOP}&host=${HOST}`,
-                },
-              ],
-            });
-            console.log("✅ Navigation menu created");
-          } else {
-            console.warn("⚠️ NavigationMenu not available");
-          }
-
-          return true;
-        } catch (error) {
-          console.error("❌ App Bridge failed:", error);
-          return false;
-        }
-      }
-
-      // Initialize when DOM is ready
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", async () => {
-          await initAppBridge();
-          console.log("✅ App ready");
-          // Now that App Bridge is ready, load initial data
-          onAppReady();
-        });
-      } else {
-        initAppBridge().then(() => {
-          console.log("✅ App ready");
-          onAppReady();
-        });
-      }
-
-      // Called after App Bridge is initialized
-      function onAppReady() {
-        // Load data based on current view
-        if (CURRENT_VIEW === "manage") {
-          loadProducts();
-        } else if (CURRENT_VIEW === "settings") {
-          loadSettings();
-        }
-
-        // Check setup status on all views
-        checkSetupStatus();
-      }
+      console.log("✅ App loaded - No App Bridge needed!");
 
       // ============================================
-      // VIEW SWITCHING
+      // TAB SWITCHING
       // ============================================
 
-      function showView(viewName) {
-        // Hide all views
+      function switchTab(tabName) {
+        // Update tab UI
+        document.querySelectorAll(".tab").forEach((tab) => {
+          tab.classList.remove("active");
+        });
+        event.target.classList.add("active");
+
+        // Update view
         document.querySelectorAll(".view-section").forEach((view) => {
           view.classList.remove("active");
         });
+        document.getElementById(`${tabName}-view`).classList.add("active");
 
-        // Show selected view
-        const targetView = document.getElementById(`${viewName}-view`);
-        if (targetView) {
-          targetView.classList.add("active");
+        // Load data for view
+        if (tabName === "manage" && !window.productsLoaded) {
+          loadProducts();
+        } else if (tabName === "settings" && !window.settingsLoaded) {
+          loadSettings();
         }
       }
 
-      // Show the current view based on server parameter
-      showView(CURRENT_VIEW);
-
       // ============================================
-      // SESSION TOKEN HELPER
+      // API CALLS (Using Session Token from URL)
       // ============================================
-
-      async function getSessionToken() {
-        // Wait for App Bridge to be initialized
-        let attempts = 0;
-        while (!appBridge && attempts < 50) {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          attempts++;
-        }
-
-        if (!appBridge) {
-          console.error(
-            "❌ App Bridge not initialized, cannot get session token"
-          );
-          // As a last resort, check if there's an id_token in the URL
-          const urlParams = new URLSearchParams(window.location.search);
-          const urlToken = urlParams.get("id_token");
-          if (urlToken) {
-            console.log("⚠️ Using session token from URL as fallback");
-            return urlToken;
-          }
-          throw new Error(
-            "App Bridge not initialized and no fallback token available"
-          );
-        }
-
-        try {
-          // Try different methods depending on App Bridge version
-          let token;
-
-          if (typeof appBridge.getSessionToken === "function") {
-            console.log("🔑 Using getSessionToken() method");
-            token = await appBridge.getSessionToken();
-          } else if (typeof appBridge.idToken === "function") {
-            console.log("🔑 Using idToken() method");
-            token = await appBridge.idToken();
-          } else if (appBridge.sessionToken) {
-            console.log("🔑 Using sessionToken property");
-            token = appBridge.sessionToken;
-          } else {
-            console.error("❌ No session token method found");
-            console.log("Available appBridge methods:", Object.keys(appBridge));
-            throw new Error("No session token method available");
-          }
-
-          console.log("✅ Got session token");
-          return token;
-        } catch (error) {
-          console.error("❌ Failed to get session token:", error);
-          throw error;
-        }
-      }
 
       async function authenticatedFetch(url, options = {}) {
-        const token = await getSessionToken();
         const headers = {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${sessionToken}`,
           ...options.headers,
         };
 
@@ -1022,7 +822,7 @@
             document.getElementById("setup-banner").style.display = "block";
           }
         } catch (error) {
-          console.error("Setup check failed:", error);
+          console.log("Setup check skipped:", error.message);
         }
       }
 
@@ -1031,20 +831,14 @@
         window.open(url, "_blank");
       }
 
-      function showTutorial() {
-        alert(
-          "Tutorial video coming soon! For now, click 'Open Theme Editor' and add the Variant Badges block."
-        );
-      }
-
       function dismissBanner() {
         document.getElementById("setup-banner").style.display = "none";
       }
 
-      // Will check setup status after App Bridge loads
+      checkSetupStatus();
 
       // ============================================
-      // BADGE MANAGEMENT (Manage View)
+      // BADGE MANAGEMENT
       // ============================================
 
       async function loadProducts() {
@@ -1063,8 +857,13 @@
             option.textContent = product.title;
             select.appendChild(option);
           });
+
+          window.productsLoaded = true;
+          console.log("✅ Products loaded");
         } catch (error) {
           console.error("Failed to load products:", error);
+          document.getElementById("product-select").innerHTML =
+            '<option value="">Error loading products</option>';
         }
       }
 
@@ -1072,7 +871,6 @@
         const productId = document.getElementById("product-select").value;
         if (!productId) return;
 
-        // Show loading state
         document.getElementById("badges-container").style.display = "block";
         document.getElementById("badges-list").innerHTML =
           '<div class="loading">Loading badges...</div>';
@@ -1153,7 +951,6 @@
 
           if (response.ok) {
             console.log("✅ Badge saved");
-            // Reload to show updated state
             loadProductBadges();
           }
         } catch (error) {
@@ -1162,8 +959,11 @@
         }
       }
 
+      // Load products on start
+      loadProducts();
+
       // ============================================
-      // SETTINGS (Settings View)
+      // SETTINGS
       // ============================================
 
       async function loadSettings() {
@@ -1177,6 +977,9 @@
             settings.enabled !== false;
           document.getElementById("option-type").value =
             settings.selectedOption || "";
+
+          window.settingsLoaded = true;
+          console.log("✅ Settings loaded");
         } catch (error) {
           console.error("Failed to load settings:", error);
         }
@@ -1211,22 +1014,21 @@
       }
 
       // ============================================
-      // PLANS (Plans View)
+      // PLANS
       // ============================================
 
       function upgradePlan(plan) {
         if (plan === "enterprise") {
-          window.location.href = `/app/help?shop=${SHOP}&host=${HOST}`;
+          switchTab("help");
         } else {
           alert(
             `Upgrade to ${plan} plan - Shopify billing integration coming soon!`
           );
-          // TODO: Implement Shopify billing API
         }
       }
 
       // ============================================
-      // HELP (Help View)
+      // HELP
       // ============================================
 
       function toggleFaq(element) {
@@ -1241,7 +1043,6 @@
         alert(
           "Live chat integration coming soon! For now, please email support@variantbadges.com"
         );
-        // TODO: Integrate with chat service (Intercom, Zendesk, etc.)
       }
     </script>
   </body>
