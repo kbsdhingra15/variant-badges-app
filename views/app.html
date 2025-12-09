@@ -983,10 +983,41 @@
       function renderBadges(data) {
         const container = document.getElementById("badges-list");
 
-        if (!data.options || data.options.length === 0) {
-          container.innerHTML =
-            '<p style="color: #6d7175;">No variants found for this product.</p>';
+        // Check if no option type selected in settings
+        if (
+          !data.selectedOption &&
+          data.message &&
+          data.message.includes("No option type selected")
+        ) {
+          container.innerHTML = `
+          <div style="background: #fff9c4; border: 1px solid #f9a825; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0 0 12px 0; font-weight: 600;">⚠️ No option type selected</p>
+            <p style="margin: 0 0 12px 0; color: #5c5c5c;">
+              Please go to <strong>Settings</strong> and select which product option (Color, Size, etc.) 
+              you want to assign badges to.
+            </p>
+            <button class="btn btn-primary" onclick="switchTab('settings'); document.getElementById('settings-view').scrollIntoView();">
+              Go to Settings
+            </button>
+          </div>
+        `;
           return;
+        }
+
+        if (!data.options || data.options.length === 0) {
+          if (data.message) {
+            container.innerHTML = `<p style="color: #6d7175;">${data.message}</p>`;
+          } else {
+            container.innerHTML =
+              '<p style="color: #6d7175;">No variants found for this product.</p>';
+          }
+          return;
+        }
+
+        // Update header to show which option we're assigning to
+        const headerEl = document.querySelector("#badges-container h3");
+        if (headerEl && data.selectedOption) {
+          headerEl.textContent = `Assign Badges to ${data.selectedOption}`;
         }
 
         let html = "";
@@ -998,10 +1029,10 @@
             <div class="badge-item-info">
               <span><strong>${option.optionValue}</strong> (${
             option.variantCount
-          } variants)</span>
+          } variant${option.variantCount > 1 ? "s" : ""})</span>
               ${
                 currentBadge !== "none"
-                  ? `<span class="badge-preview ${currentBadge}">${currentBadge}</span>`
+                  ? `<span class="badge-preview ${currentBadge}">${currentBadge.toUpperCase()}</span>`
                   : ""
               }
             </div>
