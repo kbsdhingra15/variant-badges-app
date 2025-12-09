@@ -153,6 +153,33 @@ app.get("/debug/test-token", async (req, res) => {
   }
 });
 
+// Clear invalid session (for debugging)
+app.get("/debug/clear-session", async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) return res.status(400).json({ error: "Missing shop" });
+
+    // Delete session directly from database
+    const { db } = require("./database/db");
+    const result = await db.query(
+      "DELETE FROM sessions WHERE shop = $1 RETURNING *",
+      [shop]
+    );
+
+    console.log("[DEBUG] Cleared session for:", shop);
+    console.log("[DEBUG] Deleted rows:", result.rowCount);
+
+    res.json({
+      success: true,
+      deletedRows: result.rowCount,
+      message: "Session cleared. Now reinstall the app at: /auth?shop=" + shop,
+    });
+  } catch (error) {
+    console.error("[DEBUG] Failed to clear session:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================
 // JWT TOKEN GENERATION & VALIDATION
 // ============================================
@@ -274,15 +301,32 @@ app.get("/auth/callback", async (req, res) => {
       accessToken ? accessToken.substring(0, 20) + "..." : "MISSING"
     );
 
-    await saveShopSession(shop, accessToken);
-    console.log("[SUCCESS] Token saved to database");
+    // Force delete old session first
+    try {
+      const { db } = require("./database/db");
+      await db.query("DELETE FROM sessions WHERE shop = $1", [shop]);
+      console.log("[CLEANUP] Deleted old session");
+    } catch (error) {
+      console.log(
+        "[CLEANUP] No old session to delete or error:",
+        error.message
+      );
+    }
 
-    // Verify it was saved
+    // Save new token
+    await saveShopSession(shop, accessToken);
+    console.log("[SUCCESS] New token saved to database");
+
+    // Verify it was saved correctly
     const savedSession = await getShopSession(shop);
     console.log("[VERIFY] Retrieved from DB:", savedSession ? "YES" : "NO");
     console.log(
       "[VERIFY] Has token:",
       savedSession && savedSession.accessToken ? "YES" : "NO"
+    );
+    console.log(
+      "[VERIFY] Token matches:",
+      savedSession && savedSession.accessToken === accessToken ? "YES" : "NO"
     );
 
     await new Promise((r) => setTimeout(r, 3000));
@@ -291,7 +335,7 @@ app.get("/auth/callback", async (req, res) => {
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("[ERROR] OAuth callback:", error);
-    res.status(500).send("OAuth failed");
+    res.status(500).send("OAuth failed: " + error.message);
   }
 });
 
