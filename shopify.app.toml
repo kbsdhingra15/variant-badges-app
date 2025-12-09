@@ -1,10 +1,24 @@
-# Theme App Extension Configuration
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-type = "theme"
-name = "Variant Badges Display"
+name = "variant-badges-app"
+client_id = "1636cf7a93099710fbaf876c2f2a4a4d"
+application_url = "https://variant-badges-app-production.up.railway.app"
+embedded = true
 
-[capabilities.network_access]
-purpose = "Load badge data from app backend"
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "quickstart-c559582d.myshopify.com"
 
-[extension_points.theme]
-supported_themes = ["*"]
+[access_scopes]
+scopes = "write_products,read_products,read_themes"
+
+[auth]
+redirect_urls = [
+  "https://variant-badges-app-production.up.railway.app/auth/callback"
+]
+
+[webhooks]
+api_version = "2024-10"
+
+[pos]
+embedded = false

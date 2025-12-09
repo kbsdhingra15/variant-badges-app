@@ -271,6 +271,145 @@
     </style>
   </head>
   <body>
+    <!-- Setup Status Banner - ADD THIS -->
+    <div id="setup-banner" style="display: none">
+      <div
+        style="
+          background: #fff3cd;
+          border: 1px solid #ffc107;
+          border-radius: 8px;
+          padding: 16px;
+          margin: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        "
+      >
+        <div style="display: flex; align-items: start; gap: 12px">
+          <span style="font-size: 24px">⚠️</span>
+          <div style="flex: 1">
+            <h3 style="margin: 0 0 8px 0; color: #856404">
+              Complete Setup (30 seconds)
+            </h3>
+            <p style="margin: 0 0 12px 0; color: #856404">
+              Badges are ready! Add them to your theme to make them visible to
+              customers.
+            </p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap">
+              <button id="open-theme-editor" class="btn-primary">
+                🎨 Open Theme Editor
+              </button>
+              <button id="show-tutorial" class="btn-secondary">
+                📹 Watch Tutorial
+              </button>
+              <button
+                id="dismiss-banner"
+                style="
+                  background: none;
+                  border: none;
+                  color: #856404;
+                  text-decoration: underline;
+                  cursor: pointer;
+                "
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tutorial Modal -->
+    <div
+      id="tutorial-modal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          max-width: 600px;
+          width: 90%;
+          max-height: 80vh;
+          overflow: auto;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          "
+        >
+          <h2 style="margin: 0">Setup Tutorial</h2>
+          <button
+            id="close-tutorial"
+            style="
+              background: none;
+              border: none;
+              font-size: 24px;
+              cursor: pointer;
+              color: #999;
+            "
+          >
+            ×
+          </button>
+        </div>
+
+        <div style="margin-bottom: 20px">
+          <h3>Add Variant Badges to Your Theme</h3>
+
+          <div
+            style="
+              background: #f8f9fa;
+              padding: 16px;
+              border-radius: 8px;
+              margin: 16px 0;
+            "
+          >
+            <p style="margin: 8px 0">
+              <strong>Step 1:</strong> Click "Open Theme Editor" button below
+            </p>
+            <p style="margin: 8px 0">
+              <strong>Step 2:</strong> In the left sidebar, click "Add block" or
+              "Add app block"
+            </p>
+            <p style="margin: 8px 0">
+              <strong>Step 3:</strong> Find and select "Variant Badges"
+            </p>
+            <p style="margin: 8px 0">
+              <strong>Step 4:</strong> Click "Save" in the top right corner
+            </p>
+          </div>
+
+          <p style="color: #666; font-size: 14px; margin-top: 16px">
+            💡 <strong>Tip:</strong> Once added, you can customize badge
+            position and styling in the theme editor settings.
+          </p>
+        </div>
+
+        <button
+          id="tutorial-open-editor"
+          class="btn-primary"
+          style="width: 100%"
+        >
+          Open Theme Editor Now →
+        </button>
+      </div>
+    </div>
+    <!-- End Setup Banner -->
     <div class="sidebar" id="sidebar">
       <div class="sidebar-header"><h1>🎨 Variant Badges</h1></div>
       <div class="nav-items">
@@ -486,6 +625,10 @@
           await refreshSessionToken();
           setInterval(() => refreshSessionToken(), 50000);
           console.log("✅ Token auto-refresh started");
+          console.log("✅ Token auto-refresh started");
+
+          // Check setup status after auth is ready
+          checkSetupStatus();
         }
 
         // Authenticated fetch
@@ -660,34 +803,32 @@
 
             allProducts = productsData.products || [];
 
-            // Filter products that have the selected option
-            const filteredVariants = [];
+            // Group variants by PRODUCT and OPTION VALUE (not globally!)
+            const productOptionGroups = {}; // { productId: { optionValue: [variants] } }
+
             allProducts.forEach((product) => {
-              const hasOption = product.options.some(
+              const optionIndex = product.options.findIndex(
                 (opt) => opt.name === selectedOptionType
               );
 
-              if (hasOption) {
-                product.variants.forEach((variant) => {
-                  // Find the option value for this variant
-                  let optionValue = null;
+              if (optionIndex !== -1) {
+                if (!productOptionGroups[product.id]) {
+                  productOptionGroups[product.id] = {};
+                }
 
-                  // Check which option position matches our selected type
-                  product.options.forEach((opt, index) => {
-                    if (opt.name === selectedOptionType) {
-                      // Get the corresponding option value from variant
-                      optionValue = variant[`option${index + 1}`];
-                    }
-                  });
+                product.variants.forEach((variant) => {
+                  const optionValue = variant[`option${optionIndex + 1}`];
 
                   if (optionValue) {
-                    filteredVariants.push({
+                    if (!productOptionGroups[product.id][optionValue]) {
+                      productOptionGroups[product.id][optionValue] = [];
+                    }
+
+                    productOptionGroups[product.id][optionValue].push({
                       variantId: variant.id,
                       productId: product.id,
                       productTitle: product.title,
                       productHandle: product.handle,
-                      optionValue: optionValue,
-                      variantTitle: variant.title,
                       image: product.images[0]?.src || null,
                     });
                   }
@@ -695,7 +836,32 @@
               }
             });
 
-            if (filteredVariants.length === 0) {
+            // Flatten into array and sort by product name, then option value
+            const optionGroups = [];
+            Object.entries(productOptionGroups).forEach(
+              ([productId, optionValues]) => {
+                Object.entries(optionValues).forEach(
+                  ([optionValue, variants]) => {
+                    optionGroups.push({
+                      productId,
+                      optionValue,
+                      variants,
+                      productTitle: variants[0].productTitle,
+                    });
+                  }
+                );
+              }
+            );
+
+            // Sort: Product name first, then option value
+            optionGroups.sort((a, b) => {
+              if (a.productTitle !== b.productTitle) {
+                return a.productTitle.localeCompare(b.productTitle);
+              }
+              return a.optionValue.localeCompare(b.optionValue);
+            });
+
+            if (optionGroups.length === 0) {
               document.getElementById("badges-loading").style.display = "none";
               document.getElementById("badges-empty").style.display = "block";
               return;
@@ -713,9 +879,9 @@
             currentBadges = badgesData.badges || {};
 
             // Render UI
-            renderVariantBadges(filteredVariants);
+            renderOptionBadges(optionGroups);
 
-            console.log(`✅ Loaded ${filteredVariants.length} variants`);
+            console.log(`✅ Loaded ${optionGroups.length} option groups`);
           } catch (error) {
             console.error("❌ Error loading badges:", error);
             document.getElementById("badges-loading").innerHTML =
@@ -723,62 +889,67 @@
           }
         }
 
-        function renderVariantBadges(variants) {
+        function renderOptionBadges(optionGroups) {
           const container = document.getElementById("badges-list");
           container.innerHTML = "";
           container.style.display = "block";
           document.getElementById("badges-loading").style.display = "none";
           document.getElementById("save-badges").style.display = "inline-block";
 
-          variants.forEach((variant) => {
+          optionGroups.forEach((group) => {
+            const { optionValue, variants } = group;
+            const firstVariant = variants[0];
+
+            // Check if ANY variant in this group has a badge
+            const existingBadge = variants.find(
+              (v) => currentBadges[v.variantId]
+            )?.variantId;
+            const badgeType = existingBadge ? currentBadges[existingBadge] : "";
+
             const card = document.createElement("div");
             card.className = "variant-card";
 
-            const currentBadge = currentBadges[variant.variantId] || "";
-
             card.innerHTML = `
-              ${
-                variant.image
-                  ? `<img src="${variant.image}" alt="${variant.productTitle}" class="variant-image" />`
-                  : '<div class="variant-image"></div>'
-              }
-              <div class="variant-info">
-                <div class="variant-title">${variant.productTitle}</div>
-                <div class="variant-subtitle">Variant: ${
-                  variant.optionValue
-                } - ${variant.variantTitle}</div>
-              </div>
-              <div class="variant-actions">
-                <select class="variant-badge-select" data-variant-id="${
-                  variant.variantId
-                }" 
-                        data-product-id="${
-                          variant.productId
-                        }" data-option-value="${variant.optionValue}">
-                  <option value="">No Badge</option>
-                  <option value="HOT" ${
-                    currentBadge === "HOT" ? "selected" : ""
-                  }>🔥 HOT</option>
-                  <option value="NEW" ${
-                    currentBadge === "NEW" ? "selected" : ""
-                  }>✨ NEW</option>
-                  <option value="SALE" ${
-                    currentBadge === "SALE" ? "selected" : ""
-                  }>💰 SALE</option>
-                </select>
-                <a href="https://${shopParam.replace(
-                  ".myshopify.com",
-                  ""
-                )}.myshopify.com/products/${variant.productHandle}" 
-                   target="_blank" class="preview-link">
-                  Preview →
-                </a>
-              </div>
-            `;
+      ${
+        firstVariant.image
+          ? `<img src="${firstVariant.image}" alt="${firstVariant.productTitle}" class="variant-image" />`
+          : '<div class="variant-image" style="width:60px;height:60px;background:#f0f0f0;border-radius:8px;"></div>'
+      }
+      <div class="variant-info">
+        <div class="variant-title">${firstVariant.productTitle}</div>
+        <div class="variant-subtitle">${selectedOptionType}: ${optionValue} (${
+              variants.length
+            } variant${variants.length > 1 ? "s" : ""})</div>
+      </div>
+      <div class="variant-actions">
+        <select class="variant-badge-select" data-option-value="${optionValue}" 
+                data-variant-ids="${variants.map((v) => v.variantId).join(",")}"
+                data-product-ids="${variants
+                  .map((v) => v.productId)
+                  .join(",")}">
+          <option value="">No Badge</option>
+          <option value="HOT" ${
+            badgeType === "HOT" ? "selected" : ""
+          }>🔥 HOT</option>
+          <option value="NEW" ${
+            badgeType === "NEW" ? "selected" : ""
+          }>✨ NEW</option>
+          <option value="SALE" ${
+            badgeType === "SALE" ? "selected" : ""
+          }>💰 SALE</option>
+        </select>
+        <a href="https://${shopParam.replace(
+          ".myshopify.com",
+          ""
+        )}.myshopify.com/products/${firstVariant.productHandle}" 
+           target="_blank" class="preview-link">
+          Preview →
+        </a>
+      </div>
+    `;
 
             container.appendChild(card);
 
-            // Track changes
             const select = card.querySelector(".variant-badge-select");
             select.addEventListener("change", () => {
               unsavedChanges = true;
@@ -807,23 +978,26 @@
               const savePromises = [];
 
               selects.forEach((select) => {
-                const variantId = select.dataset.variantId;
-                const productId = select.dataset.productId;
                 const optionValue = select.dataset.optionValue;
                 const badgeType = select.value || null;
+                const variantIds = select.dataset.variantIds.split(",");
+                const productIds = select.dataset.productIds.split(",");
 
-                savePromises.push(
-                  authenticatedFetch(`${APP_URL}/api/badges`, {
-                    method: "POST",
-                    body: JSON.stringify({
-                      shop: shopParam,
-                      variantId,
-                      productId,
-                      badgeType,
-                      optionValue,
-                    }),
-                  })
-                );
+                // Save badge for ALL variants with this option value
+                variantIds.forEach((variantId, index) => {
+                  savePromises.push(
+                    authenticatedFetch(`${APP_URL}/api/badges`, {
+                      method: "POST",
+                      body: JSON.stringify({
+                        shop: shopParam,
+                        variantId,
+                        productId: productIds[index],
+                        badgeType,
+                        optionValue,
+                      }),
+                    })
+                  );
+                });
               });
 
               await Promise.all(savePromises);
@@ -843,14 +1017,85 @@
               button.textContent = "Save All Badges";
             }
           });
+        // Setup status check functions
+        let setupStatus = { enabled: false };
+        let editorLink = "";
+
+        async function checkSetupStatus() {
+          try {
+            const response = await authenticatedFetch(
+              `${APP_URL}/api/setup/status?shop=${shopParam}`
+            );
+
+            if (!response.ok) throw new Error("Failed to check status");
+
+            setupStatus = await response.json();
+            console.log("✅ Setup status:", setupStatus);
+
+            if (!setupStatus.enabled) {
+              document.getElementById("setup-banner").style.display = "block";
+              await getEditorLink();
+            }
+          } catch (error) {
+            console.error("Error checking setup:", error);
+          }
+        }
+
+        async function getEditorLink() {
+          try {
+            const response = await authenticatedFetch(
+              `${APP_URL}/api/setup/editor-link?shop=${shopParam}`
+            );
+
+            if (!response.ok) throw new Error("Failed to get link");
+
+            const data = await response.json();
+            editorLink = data.editorUrl;
+          } catch (error) {
+            console.error("Error getting editor link:", error);
+          }
+        }
+
+        // Setup banner event listeners
+        document
+          .getElementById("open-theme-editor")
+          ?.addEventListener("click", () => {
+            if (editorLink) window.open(editorLink, "_blank");
+          });
+
+        document
+          .getElementById("show-tutorial")
+          ?.addEventListener("click", () => {
+            document.getElementById("tutorial-modal").style.display = "flex";
+          });
+
+        document
+          .getElementById("close-tutorial")
+          ?.addEventListener("click", () => {
+            document.getElementById("tutorial-modal").style.display = "none";
+          });
+
+        document
+          .getElementById("tutorial-open-editor")
+          ?.addEventListener("click", () => {
+            if (editorLink) {
+              window.open(editorLink, "_blank");
+              document.getElementById("tutorial-modal").style.display = "none";
+            }
+          });
+
+        document
+          .getElementById("dismiss-banner")
+          ?.addEventListener("click", () => {
+            document.getElementById("setup-banner").style.display = "none";
+          });
         // Initialize
         startTokenRefresh().then(() => {
           setTimeout(() => {
             console.log("🚀 INITIALIZATION STARTING");
             loadSettings();
-            console.log("🚀 About to call loadProductOptions");
             loadProductOptions();
-            console.log("🚀 loadProductOptions called");
+            checkSetupStatus();
           }, 500);
         });
       });

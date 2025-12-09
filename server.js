@@ -14,6 +14,7 @@ const badgesRouter = require("./routes/badges");
 const settingsRouter = require("./routes/settings");
 const publicRouter = require("./routes/public");
 const authRouter = require("./routes/auth");
+const setupRouter = require("./routes/setup");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -119,6 +120,7 @@ app.use("/api/public", publicRouter);
 app.use("/api/products", validateSessionToken(shopify), productsRouter);
 app.use("/api/badges", validateSessionToken(shopify), badgesRouter);
 app.use("/api/settings", validateSessionToken(shopify), settingsRouter);
+app.use("/api/setup", validateSessionToken(shopify), setupRouter);
 
 app.get("/app", async (req, res) => {
   try {

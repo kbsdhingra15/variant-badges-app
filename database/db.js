@@ -285,33 +285,6 @@ async function getBadgeAssignments(shop) {
   return result.rows;
 }
 
-async function saveBadgeAssignment(
-  shop,
-  variantId,
-  productId,
-  badgeType,
-  optionValue
-) {
-  const query = `
-    INSERT INTO badge_assignments (shop, variant_id, product_id, badge_type, option_value, updated_at)
-    VALUES ($1, $2, $3, $4, $5, NOW())
-    ON CONFLICT (shop, variant_id) 
-    DO UPDATE SET 
-      badge_type = $4,
-      option_value = $5,
-      updated_at = NOW()
-    RETURNING *
-  `;
-  const result = await pool.query(query, [
-    shop,
-    variantId,
-    productId,
-    badgeType,
-    optionValue,
-  ]);
-  return result.rows[0];
-}
-
 async function deleteBadgeAssignment(shop, variantId) {
   const query = `DELETE FROM badge_assignments WHERE shop = $1 AND variant_id = $2`;
   await pool.query(query, [shop, variantId]);

@@ -1,27 +1,30 @@
 {% comment %}
-  Variant Badges Block
-  Displays badge overlays on product variant swatches
+  Variant Badges Display Block
+  Automatically displays badges on product variant options
 {% endcomment %}
 
-<div id="variant-badges-container" data-product-id="{{ product.id }}">
-  <!-- Badges will be injected here by JavaScript -->
+{{ 'variant-badges.css' | asset_url | stylesheet_tag }}
+
+<div 
+  class="variant-badges-container" 
+  data-product-id="{{ product.id }}"
+  data-enabled="{{ block.settings.enabled }}"
+  data-position="{{ block.settings.badge_position }}"
+>
+  <meta name="variant-badges-app-url" content="{{ shop.metafields.variant_badges.app_url | default: 'https://variant-badges-app-production.up.railway.app' }}">
 </div>
 
 <script src="{{ 'variant-badges.js' | asset_url }}" defer></script>
 
-<style>
-  {{ 'variant-badges.css' | asset_url | stylesheet_tag }}
-</style>
-
 {% schema %}
 {
   "name": "Variant Badges",
-  "target": "section",
+  "target": "body",
   "settings": [
     {
       "type": "checkbox",
-      "id": "show_badges",
-      "label": "Show badges on variants",
+      "id": "enabled",
+      "label": "Enable badges",
       "default": true
     },
     {
@@ -29,10 +32,10 @@
       "id": "badge_position",
       "label": "Badge position",
       "options": [
-        { "label": "Top Left", "value": "top-left" },
-        { "label": "Top Right", "value": "top-right" },
-        { "label": "Bottom Left", "value": "bottom-left" },
-        { "label": "Bottom Right", "value": "bottom-right" }
+        { "label": "Top right", "value": "top-right" },
+        { "label": "Top left", "value": "top-left" },
+        { "label": "Bottom right", "value": "bottom-right" },
+        { "label": "Bottom left", "value": "bottom-left" }
       ],
       "default": "top-right"
     }

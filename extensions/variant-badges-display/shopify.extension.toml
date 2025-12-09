@@ -1,0 +1,26 @@
+api_version = "2024-10"
+
+[[extensions]]
+uid = "90dba2be-1dc9-d8e4-be0a-1ab557ac86682c7bdbdf"
+type = "theme"
+name = "Variant Badges"
+handle = "variant-badges-display"
+
+[extensions.settings]
+[[extensions.settings.fields]]
+  id = "enabled"
+  name = "Enable badges"
+  type = "boolean"
+  default = true
+
+[[extensions.settings.fields]]
+  id = "badge_position"
+  name = "Badge position"
+  type = "select"
+  default = "top-right"
+  options = [
+    { label = "Top right", value = "top-right" },
+    { label = "Top left", value = "top-left" },
+    { label = "Bottom right", value = "bottom-right" },
+    { label = "Bottom left", value = "bottom-left" }
+  ]
