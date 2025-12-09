@@ -4,7 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
-    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
+    <script>
+      // For embedded apps, App Bridge is provided by Shopify's parent frame
+      // We need to wait for it to be injected
+      window.shopifyAppBridgeReady = new Promise((resolve) => {
+        if (window.shopify && window.shopify.AppBridge) {
+          resolve(window.shopify.AppBridge);
+        } else {
+          // Check for legacy ShopifyApp
+          if (window.ShopifyApp) {
+            window.shopify = { AppBridge: window.ShopifyApp };
+            resolve(window.ShopifyApp);
+          } else {
+            // Wait for it to be injected
+            const checkInterval = setInterval(() => {
+              if (window.shopify && window.shopify.AppBridge) {
+                clearInterval(checkInterval);
+                resolve(window.shopify.AppBridge);
+              } else if (window.ShopifyApp) {
+                clearInterval(checkInterval);
+                window.shopify = { AppBridge: window.ShopifyApp };
+                resolve(window.ShopifyApp);
+              }
+            }, 100);
+
+            // Timeout after 10 seconds
+            setTimeout(() => {
+              clearInterval(checkInterval);
+              resolve(null);
+            }, 10000);
+          }
+        }
+      });
+    </script>
     <style>
       * {
         margin: 0;
@@ -796,23 +828,25 @@
 
       async function initAppBridge() {
         try {
-          // Wait for App Bridge library to load from unpkg
-          let attempts = 0;
-          while (!window.AppBridge && attempts < 100) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            attempts++;
-          }
+          console.log("⏳ Waiting for App Bridge from Shopify parent frame...");
 
-          if (!window.AppBridge) {
-            console.error("❌ App Bridge library not loaded after 10 seconds");
-            console.error("window.AppBridge is:", window.AppBridge);
+          // Wait for App Bridge to be provided by Shopify
+          const AppBridgeLib = await window.shopifyAppBridgeReady;
+
+          if (!AppBridgeLib) {
+            console.error(
+              "❌ App Bridge not provided by Shopify after 10 seconds"
+            );
+            console.error(
+              "This might be a CSP issue or the app is not properly embedded"
+            );
             return false;
           }
 
-          console.log("✅ App Bridge 3 library loaded");
+          console.log("✅ App Bridge library available");
 
-          // Create app instance using App Bridge 3 from unpkg
-          appBridge = window.AppBridge.createApp({
+          // Create app instance
+          appBridge = AppBridgeLib.createApp({
             apiKey: API_KEY,
             host: HOST,
           });
@@ -820,28 +854,35 @@
           console.log("✅ App Bridge initialized");
 
           // Create Navigation Menu for left sidebar
-          window.AppBridge.actions.NavigationMenu.create(appBridge, {
-            items: [
-              {
-                label: "Variant Badges",
-                destination: `/app?shop=${SHOP}&host=${HOST}`,
-              },
-              {
-                label: "Settings",
-                destination: `/app/settings?shop=${SHOP}&host=${HOST}`,
-              },
-              {
-                label: "Plans",
-                destination: `/app/plans?shop=${SHOP}&host=${HOST}`,
-              },
-              {
-                label: "Help",
-                destination: `/app/help?shop=${SHOP}&host=${HOST}`,
-              },
-            ],
-          });
+          const NavigationMenu =
+            AppBridgeLib.NavigationMenu || AppBridgeLib.actions?.NavigationMenu;
 
-          console.log("✅ Navigation menu created");
+          if (NavigationMenu) {
+            NavigationMenu.create(appBridge, {
+              items: [
+                {
+                  label: "Variant Badges",
+                  destination: `/app?shop=${SHOP}&host=${HOST}`,
+                },
+                {
+                  label: "Settings",
+                  destination: `/app/settings?shop=${SHOP}&host=${HOST}`,
+                },
+                {
+                  label: "Plans",
+                  destination: `/app/plans?shop=${SHOP}&host=${HOST}`,
+                },
+                {
+                  label: "Help",
+                  destination: `/app/help?shop=${SHOP}&host=${HOST}`,
+                },
+              ],
+            });
+            console.log("✅ Navigation menu created");
+          } else {
+            console.warn("⚠️ NavigationMenu not available");
+          }
+
           return true;
         } catch (error) {
           console.error("❌ App Bridge failed:", error);
@@ -910,17 +951,37 @@
         }
 
         if (!appBridge) {
-          throw new Error("App Bridge not initialized");
+          console.error(
+            "❌ App Bridge not initialized, cannot get session token"
+          );
+          // As a last resort, check if there's an id_token in the URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlToken = urlParams.get("id_token");
+          if (urlToken) {
+            console.log("⚠️ Using session token from URL as fallback");
+            return urlToken;
+          }
+          throw new Error(
+            "App Bridge not initialized and no fallback token available"
+          );
         }
 
         try {
-          // App Bridge 3 from unpkg uses getSessionToken()
+          // Try different methods depending on App Bridge version
           let token;
+
           if (typeof appBridge.getSessionToken === "function") {
+            console.log("🔑 Using getSessionToken() method");
             token = await appBridge.getSessionToken();
           } else if (typeof appBridge.idToken === "function") {
+            console.log("🔑 Using idToken() method");
             token = await appBridge.idToken();
+          } else if (appBridge.sessionToken) {
+            console.log("🔑 Using sessionToken property");
+            token = appBridge.sessionToken;
           } else {
+            console.error("❌ No session token method found");
+            console.log("Available appBridge methods:", Object.keys(appBridge));
             throw new Error("No session token method available");
           }
 
