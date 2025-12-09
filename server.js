@@ -73,6 +73,34 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Debug endpoint to check database session
+app.get("/debug/session", async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) return res.status(400).json({ error: "Missing shop" });
+
+    const session = await getShopSession(shop);
+
+    res.json({
+      shop,
+      hasSession: !!session,
+      hasAccessToken: !!(session && session.accessToken),
+      tokenPreview:
+        session && session.accessToken
+          ? session.accessToken.substring(0, 20) + "..."
+          : null,
+      sessionData: session
+        ? {
+            shop: session.shop,
+            hasToken: !!session.accessToken,
+          }
+        : null,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================
 // JWT TOKEN GENERATION & VALIDATION
 // ============================================
@@ -165,16 +193,35 @@ app.get("/auth", async (req, res) => {
 
 app.get("/auth/callback", async (req, res) => {
   try {
-    console.log("[OAuth] Callback");
+    console.log("[OAuth] Callback received");
     const callback = await shopify.auth.callback({
       rawRequest: req,
       rawResponse: res,
     });
-    console.log("[SUCCESS] OAuth for:", callback.session.shop);
-    await saveShopSession(callback.session.shop, callback.session.accessToken);
-    console.log("[SUCCESS] Token saved");
+
+    const shop = callback.session.shop;
+    const accessToken = callback.session.accessToken;
+
+    console.log("[SUCCESS] OAuth for:", shop);
+    console.log("[Token] Length:", accessToken ? accessToken.length : 0);
+    console.log(
+      "[Token] Preview:",
+      accessToken ? accessToken.substring(0, 20) + "..." : "MISSING"
+    );
+
+    await saveShopSession(shop, accessToken);
+    console.log("[SUCCESS] Token saved to database");
+
+    // Verify it was saved
+    const savedSession = await getShopSession(shop);
+    console.log("[VERIFY] Retrieved from DB:", savedSession ? "YES" : "NO");
+    console.log(
+      "[VERIFY] Has token:",
+      savedSession && savedSession.accessToken ? "YES" : "NO"
+    );
+
     await new Promise((r) => setTimeout(r, 3000));
-    const redirectUrl = `https://${callback.session.shop}/admin/apps/variant-badges`;
+    const redirectUrl = `https://${shop}/admin/apps/variant-badges`;
     console.log("[Redirect]", redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
