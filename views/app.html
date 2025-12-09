@@ -760,10 +760,11 @@
 
       const SHOP = "{{SHOP}}";
       const API_KEY = "{{SHOPIFY_API_KEY}}";
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionToken = urlParams.get("id_token") || "";
 
-      console.log("✅ App loaded - No App Bridge needed!");
+      let sessionToken = null;
+      let tokenExpiry = null;
+
+      console.log("✅ App loaded - Secure JWT authentication");
 
       // ============================================
       // TAB SWITCHING
@@ -791,21 +792,88 @@
       }
 
       // ============================================
-      // API CALLS (Using Session Token from URL)
+      // JWT TOKEN MANAGEMENT
       // ============================================
 
-      async function authenticatedFetch(url, options = {}) {
-        const headers = {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionToken}`,
-          ...options.headers,
-        };
+      /**
+       * Fetch a fresh session token from the server
+       * Token is valid for 8 hours
+       */
+      async function getSessionToken(force = false) {
+        // Return cached token if still valid
+        if (!force && sessionToken && tokenExpiry && Date.now() < tokenExpiry) {
+          return sessionToken;
+        }
 
-        return fetch(url, {
-          ...options,
-          headers,
-        });
+        try {
+          console.log("🔑 Fetching session token...");
+          const response = await fetch(`/auth/token?shop=${SHOP}`);
+
+          if (!response.ok) {
+            const error = await response.json();
+            console.error("❌ Token fetch failed:", error);
+
+            // If not authenticated, redirect to OAuth
+            if (response.status === 401 && error.redirect) {
+              window.top.location.href = error.redirect;
+              return null;
+            }
+
+            throw new Error(`Token fetch failed: ${response.status}`);
+          }
+
+          const data = await response.json();
+          sessionToken = data.token;
+          tokenExpiry = Date.now() + data.expiresIn * 1000 - 60 * 1000; // Expire 1 min early
+
+          console.log("✅ Session token obtained");
+          return sessionToken;
+        } catch (error) {
+          console.error("❌ Failed to get session token:", error);
+          throw error;
+        }
       }
+
+      /**
+       * Make authenticated API calls with automatic token refresh
+       */
+      async function authenticatedFetch(url, options = {}, retryCount = 0) {
+        try {
+          // Get valid token
+          const token = await getSessionToken();
+          if (!token) {
+            throw new Error("No session token available");
+          }
+
+          // Add Authorization header
+          const headers = {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            ...options.headers,
+          };
+
+          const response = await fetch(url, {
+            ...options,
+            headers,
+          });
+
+          // If 401 and we haven't retried, get fresh token and retry
+          if (response.status === 401 && retryCount === 0) {
+            console.log("🔄 Token expired, refreshing...");
+            await getSessionToken(true); // Force refresh
+            return authenticatedFetch(url, options, retryCount + 1); // Retry once
+          }
+
+          return response;
+        } catch (error) {
+          console.error("❌ Authenticated fetch failed:", error);
+          throw error;
+        }
+      }
+
+      // ============================================
+      // API CALLS
+      // ============================================
 
       // ============================================
       // ONBOARDING BANNER
@@ -816,6 +884,12 @@
           const response = await authenticatedFetch(
             `/api/setup/status?shop=${SHOP}`
           );
+
+          if (!response.ok) {
+            console.log("Setup check returned:", response.status);
+            return;
+          }
+
           const data = await response.json();
 
           if (!data.enabled) {
@@ -843,13 +917,26 @@
 
       async function loadProducts() {
         try {
-          const response = await authenticatedFetch(
-            `/api/products/list?shop=${SHOP}`
-          );
+          const response = await authenticatedFetch(`/api/products/list`);
+
+          if (!response.ok) {
+            console.error("Failed to load products, status:", response.status);
+            const select = document.getElementById("product-select");
+            select.innerHTML =
+              '<option value="">Error loading products - check console</option>';
+            return;
+          }
+
           const products = await response.json();
 
           const select = document.getElementById("product-select");
           select.innerHTML = '<option value="">Select a product...</option>';
+
+          if (!products || !Array.isArray(products)) {
+            console.error("Invalid products response:", products);
+            select.innerHTML = '<option value="">No products found</option>';
+            return;
+          }
 
           products.forEach((product) => {
             const option = document.createElement("option");
@@ -859,7 +946,7 @@
           });
 
           window.productsLoaded = true;
-          console.log("✅ Products loaded");
+          console.log("✅ Products loaded:", products.length);
         } catch (error) {
           console.error("Failed to load products:", error);
           document.getElementById("product-select").innerHTML =
@@ -877,10 +964,14 @@
 
         try {
           const response = await authenticatedFetch(
-            `/api/badges?shop=${SHOP}&productId=${productId}`
+            `/api/badges?productId=${productId}`
           );
-          const data = await response.json();
 
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const data = await response.json();
           renderBadges(data);
         } catch (error) {
           console.error("Failed to load badges:", error);
@@ -942,7 +1033,6 @@
           const response = await authenticatedFetch("/api/badges", {
             method: "POST",
             body: JSON.stringify({
-              shop: SHOP,
               productId,
               optionValue,
               badgeType,
@@ -952,6 +1042,8 @@
           if (response.ok) {
             console.log("✅ Badge saved");
             loadProductBadges();
+          } else {
+            throw new Error(`HTTP ${response.status}`);
           }
         } catch (error) {
           console.error("Failed to save badge:", error);
@@ -968,9 +1060,13 @@
 
       async function loadSettings() {
         try {
-          const response = await authenticatedFetch(
-            `/api/settings?shop=${SHOP}`
-          );
+          const response = await authenticatedFetch(`/api/settings`);
+
+          if (!response.ok) {
+            console.error("Failed to load settings, status:", response.status);
+            return;
+          }
+
           const settings = await response.json();
 
           document.getElementById("enable-display").checked =
@@ -998,7 +1094,6 @@
           const response = await authenticatedFetch("/api/settings", {
             method: "POST",
             body: JSON.stringify({
-              shop: SHOP,
               enabled,
               selectedOption,
             }),
@@ -1006,6 +1101,8 @@
 
           if (response.ok) {
             alert("✅ Settings saved!");
+          } else {
+            throw new Error(`HTTP ${response.status}`);
           }
         } catch (error) {
           console.error("Failed to save settings:", error);

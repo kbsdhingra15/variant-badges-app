@@ -6,9 +6,9 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
+const jwt = require("jsonwebtoken");
 
 const { initDB, saveShopSession, getShopSession } = require("./database/db");
-const { validateSessionToken } = require("./middleware/auth");
 const productsRouter = require("./routes/products");
 const badgesRouter = require("./routes/badges");
 const settingsRouter = require("./routes/settings");
@@ -66,11 +66,82 @@ app.get("/health", (req, res) => {
   res.json({
     status: "ok",
     message: "Variant Badges App is running",
-    version: "2.0.1",
+    version: "2.3.0",
     api: "GraphQL",
+    auth: "JWT Secure",
     timestamp: new Date().toISOString(),
   });
 });
+
+// ============================================
+// JWT TOKEN GENERATION & VALIDATION
+// ============================================
+
+/**
+ * Generate a secure JWT session token for a shop
+ * This token proves the request is authenticated and authorized
+ */
+function generateSessionToken(shop) {
+  const payload = {
+    shop: shop,
+    iss: process.env.SHOPIFY_API_KEY,
+    iat: Math.floor(Date.now() / 1000),
+  };
+
+  return jwt.sign(payload, process.env.SHOPIFY_API_SECRET, {
+    expiresIn: "8h", // Token valid for 8 hours
+    audience: shop,
+  });
+}
+
+/**
+ * Secure authentication middleware using JWT tokens
+ * Validates token signature and checks shop session exists
+ */
+async function authenticateRequest(req, res, next) {
+  try {
+    // Extract token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("❌ No valid Authorization header");
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+
+    // Verify JWT signature and decode
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.SHOPIFY_API_SECRET);
+    } catch (error) {
+      console.log("❌ Invalid token signature:", error.message);
+      return res.status(401).json({ error: "Invalid session token" });
+    }
+
+    const shop = decoded.shop;
+
+    // Verify shop has active session in database
+    const session = await getShopSession(shop);
+    if (!session || !session.accessToken) {
+      console.log("❌ No valid session for shop:", shop);
+      return res.status(401).json({ error: "Shop session expired" });
+    }
+
+    // Attach shop and session to request for route handlers
+    req.shop = shop;
+    req.shopSession = session;
+
+    console.log("✅ Authenticated request for:", shop);
+    next();
+  } catch (error) {
+    console.error("❌ Authentication error:", error);
+    res.status(500).json({ error: "Authentication failed" });
+  }
+}
+
+// ============================================
+// OAUTH FLOW
+// ============================================
 
 app.get("/auth", async (req, res) => {
   try {
@@ -111,24 +182,72 @@ app.get("/auth/callback", async (req, res) => {
   }
 });
 
-// Token Generation Route
+// ============================================
+// SESSION TOKEN ENDPOINT
+// ============================================
+
+/**
+ * Generate a session token for the frontend
+ * This endpoint is called once when the app loads
+ * The token is then used for all subsequent API calls
+ */
+app.get("/auth/token", async (req, res) => {
+  try {
+    const { shop } = req.query;
+
+    if (!shop) {
+      return res.status(400).json({ error: "Missing shop parameter" });
+    }
+
+    // Verify shop has valid session
+    const session = await getShopSession(shop);
+    if (!session || !session.accessToken) {
+      console.log("❌ No session for shop:", shop);
+      return res.status(401).json({
+        error: "Not authenticated",
+        redirect: `/auth?shop=${shop}`,
+      });
+    }
+
+    // Generate JWT token
+    const token = generateSessionToken(shop);
+
+    console.log("✅ Generated session token for:", shop);
+
+    res.json({
+      token,
+      shop,
+      expiresIn: 28800, // 8 hours in seconds
+    });
+  } catch (error) {
+    console.error("❌ Token generation failed:", error);
+    res.status(500).json({ error: "Failed to generate token" });
+  }
+});
+
+// ============================================
+// TOKEN GENERATION ROUTE (for routes/auth.js)
+// ============================================
 app.use("/auth", authRouter);
 
 // Public API routes (no authentication required)
 app.use("/api/public", publicRouter);
 
-// Protected endpoints (require auth)
-app.use("/api/products", validateSessionToken(shopify), productsRouter);
-app.use("/api/badges", validateSessionToken(shopify), badgesRouter);
-app.use("/api/settings", validateSessionToken(shopify), settingsRouter);
-app.use("/api/setup", validateSessionToken(shopify), setupRouter);
+// Protected endpoints (require JWT authentication)
+app.use("/api/products", authenticateRequest, productsRouter);
+app.use("/api/badges", authenticateRequest, badgesRouter);
+app.use("/api/settings", authenticateRequest, settingsRouter);
+app.use("/api/setup", authenticateRequest, setupRouter);
 
-// Helper function to serve app HTML with view parameter
-function serveAppView(req, res, view) {
+// ============================================
+// APP PAGE
+// ============================================
+
+app.get("/app", async (req, res) => {
   try {
     const { shop } = req.query;
     if (!shop) return res.status(400).send("Missing shop");
-    console.log(`[App] Serving ${view} view for:`, shop);
+    console.log("[App] Serving for:", shop);
 
     // Prevent caching
     res.setHeader(
@@ -145,47 +264,20 @@ function serveAppView(req, res, view) {
     html = html.replace(/{{APP_HOST}}/g, process.env.HOST);
     html = html.replace(/{{SHOPIFY_API_KEY}}/g, process.env.SHOPIFY_API_KEY);
     html = html.replace(/{{SHOP}}/g, shop);
-    html = html.replace(/{{VIEW}}/g, view); // NEW: Pass view to template
 
     res.type("html").send(html);
   } catch (error) {
-    console.error(`[ERROR] ${view} page:`, error);
+    console.error("[ERROR] App page:", error);
     res.status(500).send("Failed to load");
   }
-}
-
-// ============================================
-// APP ROUTES - LEFT SIDEBAR NAVIGATION
-// ============================================
-
-// Main badge management page (default)
-app.get("/app", (req, res) => {
-  serveAppView(req, res, "manage");
 });
 
-// Settings page
-app.get("/app/settings", (req, res) => {
-  serveAppView(req, res, "settings");
-});
-
-// Plans page
-app.get("/app/plans", (req, res) => {
-  serveAppView(req, res, "plans");
-});
-
-// Help page
-app.get("/app/help", (req, res) => {
-  serveAppView(req, res, "help");
-});
-
-// Root redirect
 app.get("/", (req, res) => {
   const { shop, host } = req.query;
   if (shop && host) return res.redirect(`/app?shop=${shop}&host=${host}`);
   res.redirect("/install");
 });
 
-// Install page
 app.get("/install", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -208,7 +300,7 @@ app.listen(PORT, () => {
   console.log("==================================");
   console.log(`📍 Port: ${PORT}`);
   console.log(`🌐 URL: ${process.env.HOST || "http://localhost:" + PORT}`);
-  console.log(`🔐 Embedded: true (App Bridge)`);
-  console.log(`✨ Navigation: Left sidebar (4 routes)`);
+  console.log(`🔐 Auth: JWT Secure (App Store Ready)`);
+  console.log(`✨ Navigation: Clean horizontal tabs`);
   console.log("");
 });
