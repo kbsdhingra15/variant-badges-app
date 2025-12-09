@@ -794,44 +794,53 @@
       const HOST = new URLSearchParams(window.location.search).get("host");
       const CURRENT_VIEW = "{{VIEW}}";
 
-      function initAppBridge() {
+      async function initAppBridge() {
         try {
-          if (!window.ShopifyApp || !window.ShopifyApp.createApp) {
-            console.error("❌ App Bridge not loaded");
+          // Wait for App Bridge library to load (with retry)
+          let attempts = 0;
+          while (!window.ShopifyApp && attempts < 50) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            attempts++;
+          }
+
+          if (!window.ShopifyApp) {
+            console.error("❌ App Bridge library not loaded after 5 seconds");
             return false;
           }
 
+          console.log("✅ ShopifyApp found");
+
+          // Create app instance
           appBridge = window.ShopifyApp.createApp({
             apiKey: API_KEY,
             host: HOST,
+            forceRedirect: true,
           });
 
           console.log("✅ App Bridge initialized");
 
           // Create Navigation Menu - THIS ADDS LEFT SIDEBAR LINKS
-          const navigationMenu = window.ShopifyApp.NavigationMenu.create(
-            appBridge,
-            {
-              items: [
-                {
-                  label: "Variant Badges",
-                  destination: `/app?shop=${SHOP}&host=${HOST}`,
-                },
-                {
-                  label: "Settings",
-                  destination: `/app/settings?shop=${SHOP}&host=${HOST}`,
-                },
-                {
-                  label: "Plans",
-                  destination: `/app/plans?shop=${SHOP}&host=${HOST}`,
-                },
-                {
-                  label: "Help",
-                  destination: `/app/help?shop=${SHOP}&host=${HOST}`,
-                },
-              ],
-            }
-          );
+          const NavigationMenu = window.ShopifyApp.NavigationMenu;
+          NavigationMenu.create(appBridge, {
+            items: [
+              {
+                label: "Variant Badges",
+                destination: `/app?shop=${SHOP}&host=${HOST}`,
+              },
+              {
+                label: "Settings",
+                destination: `/app/settings?shop=${SHOP}&host=${HOST}`,
+              },
+              {
+                label: "Plans",
+                destination: `/app/plans?shop=${SHOP}&host=${HOST}`,
+              },
+              {
+                label: "Help",
+                destination: `/app/help?shop=${SHOP}&host=${HOST}`,
+              },
+            ],
+          });
 
           console.log("✅ Navigation menu created");
           return true;
@@ -841,11 +850,17 @@
         }
       }
 
-      // Initialize on load
+      // Initialize when DOM is ready
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", initAppBridge);
+        document.addEventListener("DOMContentLoaded", () => {
+          initAppBridge().then(() => {
+            console.log("✅ App ready");
+          });
+        });
       } else {
-        initAppBridge();
+        initAppBridge().then(() => {
+          console.log("✅ App ready");
+        });
       }
 
       // ============================================
@@ -873,8 +888,9 @@
       // ============================================
 
       async function getSessionToken() {
+        // Wait for App Bridge to be initialized
         let attempts = 0;
-        while (!appBridge && attempts < 20) {
+        while (!appBridge && attempts < 50) {
           await new Promise((resolve) => setTimeout(resolve, 100));
           attempts++;
         }
@@ -883,7 +899,15 @@
           throw new Error("App Bridge not initialized");
         }
 
-        return await appBridge.getSessionToken();
+        try {
+          // Get session token using App Bridge 2 API
+          const token = await appBridge.getSessionToken();
+          console.log("✅ Got session token");
+          return token;
+        } catch (error) {
+          console.error("❌ Failed to get session token:", error);
+          throw error;
+        }
       }
 
       async function authenticatedFetch(url, options = {}) {
@@ -934,8 +958,7 @@
         document.getElementById("setup-banner").style.display = "none";
       }
 
-      // Check setup status on page load
-      checkSetupStatus();
+      // Will check setup status after App Bridge loads
 
       // ============================================
       // BADGE MANAGEMENT (Manage View)
