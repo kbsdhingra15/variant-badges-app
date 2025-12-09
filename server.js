@@ -101,6 +101,58 @@ app.get("/debug/session", async (req, res) => {
   }
 });
 
+// Test if token actually works with Shopify API
+app.get("/debug/test-token", async (req, res) => {
+  try {
+    const { shop } = req.query;
+    if (!shop) return res.status(400).json({ error: "Missing shop" });
+
+    const session = await getShopSession(shop);
+    if (!session || !session.accessToken) {
+      return res.status(401).json({ error: "No session found" });
+    }
+
+    console.log("[DEBUG] Testing token for:", shop);
+    console.log(
+      "[DEBUG] Token preview:",
+      session.accessToken.substring(0, 20) + "..."
+    );
+
+    // Try to make a simple API call to Shopify
+    const client = new shopify.clients.Graphql({
+      session: {
+        shop: shop,
+        accessToken: session.accessToken,
+      },
+    });
+
+    const response = await client.query({
+      data: `{
+        shop {
+          name
+          email
+        }
+      }`,
+    });
+
+    console.log("[DEBUG] API call successful!");
+
+    res.json({
+      success: true,
+      shopName: response.body.data.shop.name,
+      shopEmail: response.body.data.shop.email,
+      message: "✅ Token is valid and working with Shopify API!",
+    });
+  } catch (error) {
+    console.error("[DEBUG] API call failed:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: error.response ? error.response.errors : null,
+    });
+  }
+});
+
 // ============================================
 // JWT TOKEN GENERATION & VALIDATION
 // ============================================
@@ -155,12 +207,25 @@ async function authenticateRequest(req, res, next) {
       return res.status(401).json({ error: "Shop session expired" });
     }
 
+    // Format session to match what Shopify SDK routes expect
+    const formattedSession = {
+      shop: shop,
+      accessToken: session.accessToken,
+      state: "online",
+      isOnline: false,
+      scope: process.env.SCOPES,
+    };
+
     // Attach shop and session to request for route handlers
     req.shop = shop;
-    req.shopifySession = session; // Changed from shopSession to match routes
-    req.shopSession = session; // Keep both for compatibility
+    req.shopifySession = formattedSession; // Formatted for Shopify SDK
+    req.shopSession = session; // Raw session from database
 
     console.log("✅ Authenticated request for:", shop);
+    console.log(
+      "   Token preview:",
+      session.accessToken.substring(0, 20) + "..."
+    );
     next();
   } catch (error) {
     console.error("❌ Authentication error:", error);
