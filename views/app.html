@@ -4,28 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
-    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
-    <script>
-      // Wait for App Bridge to load, then expose it globally
-      (function checkAppBridge() {
-        if (window.shopify && window.shopify.AppBridge) {
-          console.log("✅ App Bridge 3 library loaded");
-        } else if (window.ShopifyApp) {
-          // Old App Bridge detected, create compatibility layer
-          console.log(
-            "⚠️ Old App Bridge detected, creating compatibility layer"
-          );
-          window.shopify = window.shopify || {};
-          window.shopify.AppBridge = {
-            createApp: window.ShopifyApp.createApp,
-            actions: window.ShopifyApp,
-          };
-        } else {
-          // Library not loaded yet, try again
-          setTimeout(checkAppBridge, 50);
-        }
-      })();
-    </script>
+    <script src="https://unpkg.com/@shopify/app-bridge@3"></script>
     <style>
       * {
         margin: 0;
@@ -817,31 +796,31 @@
 
       async function initAppBridge() {
         try {
-          // Wait for App Bridge library to load (with retry - up to 10 seconds)
+          // Wait for App Bridge library to load from unpkg
           let attempts = 0;
-          while (!window.shopify?.AppBridge && attempts < 100) {
+          while (!window.AppBridge && attempts < 100) {
             await new Promise((resolve) => setTimeout(resolve, 100));
             attempts++;
           }
 
-          if (!window.shopify?.AppBridge) {
+          if (!window.AppBridge) {
             console.error("❌ App Bridge library not loaded after 10 seconds");
-            console.error("Available:", Object.keys(window));
+            console.error("window.AppBridge is:", window.AppBridge);
             return false;
           }
 
-          console.log("✅ App Bridge library loaded");
+          console.log("✅ App Bridge 3 library loaded");
 
-          // Create app instance using App Bridge 3 API
-          appBridge = window.shopify.AppBridge.createApp({
+          // Create app instance using App Bridge 3 from unpkg
+          appBridge = window.AppBridge.createApp({
             apiKey: API_KEY,
             host: HOST,
           });
 
           console.log("✅ App Bridge initialized");
 
-          // Create Navigation Menu - THIS ADDS LEFT SIDEBAR LINKS
-          window.shopify.AppBridge.actions.NavigationMenu.create(appBridge, {
+          // Create Navigation Menu for left sidebar
+          window.AppBridge.actions.NavigationMenu.create(appBridge, {
             items: [
               {
                 label: "Variant Badges",
@@ -935,8 +914,16 @@
         }
 
         try {
-          // Use App Bridge 3 idToken() API
-          const token = await appBridge.idToken();
+          // App Bridge 3 from unpkg uses getSessionToken()
+          let token;
+          if (typeof appBridge.getSessionToken === "function") {
+            token = await appBridge.getSessionToken();
+          } else if (typeof appBridge.idToken === "function") {
+            token = await appBridge.idToken();
+          } else {
+            throw new Error("No session token method available");
+          }
+
           console.log("✅ Got session token");
           return token;
         } catch (error) {
