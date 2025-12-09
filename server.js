@@ -129,7 +129,8 @@ async function authenticateRequest(req, res, next) {
 
     // Attach shop and session to request for route handlers
     req.shop = shop;
-    req.shopSession = session;
+    req.shopifySession = session; // Changed from shopSession to match routes
+    req.shopSession = session; // Keep both for compatibility
 
     console.log("✅ Authenticated request for:", shop);
     next();
