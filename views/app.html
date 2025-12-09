@@ -4,78 +4,43 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
     <style>
-      /* Copy all your existing styles from current app.html */
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
       }
+
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
+          "Helvetica Neue", Arial, sans-serif;
         background: #f6f6f7;
         color: #202223;
-        display: flex;
-        height: 100vh;
-        overflow: hidden;
+        line-height: 1.5;
       }
-      .sidebar {
-        width: 240px;
-        background: white;
-        border-right: 1px solid #e1e3e5;
-        display: flex;
-        flex-direction: column;
-      }
-      .sidebar-header {
-        padding: 20px;
-        border-bottom: 1px solid #e1e3e5;
-      }
-      .sidebar-header h1 {
-        font-size: 20px;
-        font-weight: 600;
-      }
-      .nav-items {
-        flex: 1;
-        padding: 16px 0;
-      }
-      .nav-item {
-        padding: 12px 20px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        color: #6d7175;
-        transition: all 0.2s;
-        border-left: 3px solid transparent;
-      }
-      .nav-item:hover {
-        background: #f6f6f7;
-        color: #202223;
-      }
-      .nav-item.active {
-        background: #f1f2f3;
-        color: #202223;
-        border-left-color: #008060;
-        font-weight: 500;
-      }
-      .main-content {
-        flex: 1;
-        overflow-y: auto;
+
+      /* Main Container */
+      .app-container {
+        max-width: 1200px;
+        margin: 0 auto;
         padding: 24px;
       }
-      .page {
+
+      /* View Sections */
+      .view-section {
         display: none;
-        max-width: 1000px;
       }
-      .page.active {
+      .view-section.active {
         display: block;
       }
+
+      /* Page Headers */
       .page-header {
         margin-bottom: 24px;
       }
-      .page-header h2 {
-        font-size: 24px;
+      .page-header h1 {
+        font-size: 28px;
         font-weight: 600;
         margin-bottom: 8px;
       }
@@ -83,6 +48,8 @@
         color: #6d7175;
         font-size: 14px;
       }
+
+      /* Cards */
       .card {
         background: white;
         border-radius: 8px;
@@ -90,35 +57,113 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
         margin-bottom: 16px;
       }
-      .card h3 {
-        font-size: 16px;
+      .card h2 {
+        font-size: 20px;
         font-weight: 600;
         margin-bottom: 16px;
       }
-      .setting-row {
+      .card h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      /* Onboarding Banner */
+      .banner {
+        background: #fff9c4;
+        border: 1px solid #f9a825;
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin-bottom: 24px;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 16px 0;
-        border-bottom: 1px solid #e1e3e5;
+        align-items: flex-start;
+        gap: 12px;
       }
-      .setting-row:last-child {
-        border-bottom: none;
+      .banner-icon {
+        font-size: 24px;
+        flex-shrink: 0;
       }
-      .setting-info {
+      .banner-content {
         flex: 1;
       }
-      .setting-info h4 {
+      .banner-content h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .banner-content p {
+        font-size: 14px;
+        color: #5c5c5c;
+        margin-bottom: 12px;
+      }
+      .banner-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .banner-close {
+        cursor: pointer;
+        color: #666;
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-block;
+        padding: 10px 16px;
+        border-radius: 6px;
         font-size: 14px;
         font-weight: 500;
-        margin-bottom: 4px;
+        cursor: pointer;
+        border: none;
+        text-decoration: none;
+        transition: all 0.2s;
       }
-      .setting-info p {
-        font-size: 13px;
-        color: #6d7175;
+      .btn-primary {
+        background: #008060;
+        color: white;
       }
+      .btn-primary:hover {
+        background: #006e52;
+      }
+      .btn-secondary {
+        background: white;
+        color: #202223;
+        border: 1px solid #c9cccf;
+      }
+      .btn-secondary:hover {
+        background: #f6f6f7;
+      }
+      .btn-outline {
+        background: transparent;
+        color: #008060;
+        border: 1px solid #008060;
+      }
+      .btn-outline:hover {
+        background: #f0fdf9;
+      }
+
+      /* Form Elements */
+      select,
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #c9cccf;
+        border-radius: 6px;
+        font-size: 14px;
+        font-family: inherit;
+      }
+      select:focus,
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #008060;
+      }
+
+      /* Toggle Switch */
       .toggle {
         position: relative;
+        display: inline-block;
         width: 44px;
         height: 24px;
       }
@@ -155,391 +200,315 @@
       .toggle input:checked + .toggle-slider:before {
         transform: translateX(20px);
       }
-      select {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #c9cccf;
-        border-radius: 4px;
-        font-size: 14px;
-        background: white;
-        cursor: pointer;
+
+      /* Settings Row */
+      .setting-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid #e1e3e5;
       }
-      select:focus {
-        outline: none;
-        border-color: #008060;
+      .setting-row:last-child {
+        border-bottom: none;
       }
-      .btn {
-        padding: 12px 24px;
-        background: #008060;
-        color: white;
-        border: none;
-        border-radius: 4px;
+      .setting-info h4 {
         font-size: 14px;
         font-weight: 500;
-        cursor: pointer;
-        transition: background 0.2s;
+        margin-bottom: 4px;
       }
-      .btn:hover {
-        background: #006e52;
+      .setting-info p {
+        font-size: 13px;
+        color: #6d7175;
       }
-      .btn:disabled {
-        background: #c9cccf;
-        cursor: not-allowed;
+
+      /* Badge Management */
+      .product-selector {
+        margin-bottom: 24px;
       }
-      .premium-badge {
-        display: inline-block;
-        background: #ffc107;
-        color: #663c00;
+      .badge-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .badge-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        background: #f6f6f7;
+        border-radius: 6px;
+      }
+      .badge-item-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .badge-preview {
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 11px;
         font-weight: 600;
         text-transform: uppercase;
-        margin-left: 8px;
       }
-      .status-message {
-        margin-top: 12px;
-        font-size: 14px;
-        font-weight: 500;
+      .badge-preview.hot {
+        background: #ff4444;
+        color: white;
       }
-      /* Product Variant Card */
-      .variant-card {
-        display: flex;
-        align-items: center;
-        gap: 16px;
-        padding: 16px;
-        border: 1px solid #e1e3e5;
-        border-radius: 8px;
-        margin-bottom: 12px;
-        transition: all 0.2s;
+      .badge-preview.new {
+        background: #4caf50;
+        color: white;
+      }
+      .badge-preview.sale {
+        background: #ff9800;
+        color: white;
       }
 
-      .variant-card:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      /* Plans Page */
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 24px;
       }
-
-      .variant-image {
-        width: 60px;
-        height: 60px;
-        object-fit: cover;
-        border-radius: 4px;
-        background: #f6f6f7;
+      .pricing-card {
+        background: white;
+        border: 2px solid #e1e3e5;
+        border-radius: 12px;
+        padding: 24px;
+        text-align: center;
+        transition: all 0.3s;
       }
-
-      .variant-info {
-        flex: 1;
+      .pricing-card:hover {
+        border-color: #008060;
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
       }
-
-      .variant-title {
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 4px;
-        color: #202223;
+      .pricing-card.featured {
+        border-color: #008060;
+        position: relative;
       }
-
-      .variant-subtitle {
-        font-size: 13px;
+      .pricing-badge {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #008060;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .pricing-card h3 {
+        font-size: 24px;
+        margin-bottom: 8px;
+      }
+      .pricing-price {
+        font-size: 48px;
+        font-weight: 700;
+        color: #008060;
+        margin: 16px 0;
+      }
+      .pricing-price span {
+        font-size: 24px;
         color: #6d7175;
       }
-
-      .variant-actions {
+      .pricing-features {
+        list-style: none;
+        margin: 24px 0;
+        text-align: left;
+      }
+      .pricing-features li {
+        padding: 8px 0;
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
       }
-
-      .variant-badge-select {
-        width: 160px;
-        padding: 8px 12px;
-        border: 1px solid #c9cccf;
-        border-radius: 4px;
-        font-size: 14px;
-      }
-
-      .preview-link {
+      .pricing-features li:before {
+        content: "✓";
         color: #008060;
-        text-decoration: none;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
+        font-weight: bold;
       }
 
-      .preview-link:hover {
-        text-decoration: underline;
+      /* Help/FAQ Page */
+      .faq-item {
+        border-bottom: 1px solid #e1e3e5;
+        padding: 16px 0;
+      }
+      .faq-item:last-child {
+        border-bottom: none;
+      }
+      .faq-question {
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+      }
+      .faq-question:hover {
+        color: #008060;
+      }
+      .faq-icon {
+        transition: transform 0.3s;
+      }
+      .faq-icon.open {
+        transform: rotate(180deg);
+      }
+      .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s;
+        padding: 0 0 0 0;
+        color: #6d7175;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      .faq-answer.open {
+        max-height: 500px;
+        padding: 12px 0;
+      }
+      .faq-answer code {
+        background: #f6f6f7;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-family: monospace;
+        font-size: 13px;
+      }
+
+      /* Contact Support */
+      .contact-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .contact-card {
+        background: #f6f6f7;
+        padding: 20px;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .contact-icon {
+        font-size: 32px;
+        margin-bottom: 12px;
+      }
+      .contact-card h4 {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+      .contact-card p {
+        font-size: 14px;
+        color: #6d7175;
+        margin-bottom: 12px;
+      }
+
+      /* Loading States */
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #6d7175;
+      }
+      .error {
+        background: #ffebee;
+        border: 1px solid #ef5350;
+        color: #c62828;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+      }
+      .success {
+        background: #e8f5e9;
+        border: 1px solid #66bb6a;
+        color: #2e7d32;
+        padding: 12px 16px;
+        border-radius: 6px;
+        margin-bottom: 16px;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        .app-container {
+          padding: 16px;
+        }
+        .pricing-grid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
-    <!-- Setup Status Banner - ADD THIS -->
-    <div id="setup-banner" style="display: none">
-      <div
-        style="
-          background: #fff3cd;
-          border: 1px solid #ffc107;
-          border-radius: 8px;
-          padding: 16px;
-          margin: 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        "
-      >
-        <div style="display: flex; align-items: start; gap: 12px">
-          <span style="font-size: 24px">⚠️</span>
-          <div style="flex: 1">
-            <h3 style="margin: 0 0 8px 0; color: #856404">
-              Complete Setup (30 seconds)
-            </h3>
-            <p style="margin: 0 0 12px 0; color: #856404">
+    <div class="app-container">
+      <!-- Onboarding Banner (shows on all pages until dismissed) -->
+      <div id="setup-banner" style="display: none">
+        <div class="banner">
+          <div class="banner-icon">⚠️</div>
+          <div class="banner-content">
+            <h3>Complete Setup (30 seconds)</h3>
+            <p>
               Badges are ready! Add them to your theme to make them visible to
               customers.
             </p>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap">
-              <button id="open-theme-editor" class="btn-primary">
+            <div class="banner-actions">
+              <button class="btn btn-primary" onclick="openThemeEditor()">
                 🎨 Open Theme Editor
               </button>
-              <button id="show-tutorial" class="btn-secondary">
-                📹 Watch Tutorial
+              <button class="btn btn-secondary" onclick="showTutorial()">
+                📺 Watch Tutorial
               </button>
-              <button
-                id="dismiss-banner"
-                style="
-                  background: none;
-                  border: none;
-                  color: #856404;
-                  text-decoration: underline;
-                  cursor: pointer;
-                "
-              >
+              <button class="btn btn-outline" onclick="dismissBanner()">
                 Dismiss
               </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Tutorial Modal -->
-    <div
-      id="tutorial-modal"
-      style="
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 9999;
-        align-items: center;
-        justify-content: center;
-      "
-    >
-      <div
-        style="
-          background: white;
-          border-radius: 12px;
-          padding: 24px;
-          max-width: 600px;
-          width: 90%;
-          max-height: 80vh;
-          overflow: auto;
-        "
-      >
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-          "
-        >
-          <h2 style="margin: 0">Setup Tutorial</h2>
-          <button
-            id="close-tutorial"
-            style="
-              background: none;
-              border: none;
-              font-size: 24px;
-              cursor: pointer;
-              color: #999;
-            "
-          >
-            ×
-          </button>
-        </div>
-
-        <div style="margin-bottom: 20px">
-          <h3>Add Variant Badges to Your Theme</h3>
-
-          <div
-            style="
-              background: #f8f9fa;
-              padding: 16px;
-              border-radius: 8px;
-              margin: 16px 0;
-            "
-          >
-            <p style="margin: 8px 0">
-              <strong>Step 1:</strong> Click "Open Theme Editor" button below
-            </p>
-            <p style="margin: 8px 0">
-              <strong>Step 2:</strong> In the left sidebar, click "Add block" or
-              "Add app block"
-            </p>
-            <p style="margin: 8px 0">
-              <strong>Step 3:</strong> Find and select "Variant Badges"
-            </p>
-            <p style="margin: 8px 0">
-              <strong>Step 4:</strong> Click "Save" in the top right corner
-            </p>
-          </div>
-
-          <p style="color: #666; font-size: 14px; margin-top: 16px">
-            💡 <strong>Tip:</strong> Once added, you can customize badge
-            position and styling in the theme editor settings.
-          </p>
-        </div>
-
-        <button
-          id="tutorial-open-editor"
-          class="btn-primary"
-          style="width: 100%"
-        >
-          Open Theme Editor Now →
-        </button>
-      </div>
-    </div>
-    <!-- End Setup Banner -->
-    <div class="sidebar" id="sidebar">
-      <div class="sidebar-header"><h1>🎨 Variant Badges</h1></div>
-      <div class="nav-items">
-        <div class="nav-item" data-page="badges">
-          <span>🎨</span><span>Variant Badges</span>
-        </div>
-        <div class="nav-item" data-page="plans">
-          <span>📊</span><span>Plans</span>
-        </div>
-        <div class="nav-item active" data-page="settings">
-          <span>⚙️</span><span>Settings</span>
-        </div>
-        <div class="nav-item" data-page="help">
-          <span>❓</span><span>Help</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="main-content">
-      <!-- Variant Badges Page -->
-      <div id="badges-page" class="page">
+      <!-- MANAGE BADGES VIEW -->
+      <div id="manage-view" class="view-section">
         <div class="page-header">
-          <h2>Variant Badges</h2>
-          <p>Assign badges to specific product variants</p>
+          <h1>📛 Manage Badges</h1>
+          <p>Assign HOT, NEW, and SALE badges to product variants</p>
         </div>
 
-        <div
-          class="card"
-          id="badges-settings-notice"
-          style="
-            background: #fef3cd;
-            border-left: 4px solid #ffc107;
-            margin-bottom: 16px;
-            display: none;
-          "
-        >
-          <p style="margin: 0; color: #663c00">
-            ⚠️ Please select an option type in
-            <a
-              href="#"
-              onclick="document.querySelector('[data-page=settings]').click(); return false;"
-              style="color: #663c00; text-decoration: underline"
-              >Settings</a
-            >
-            first.
-          </p>
+        <div class="card">
+          <h2>Select Product</h2>
+          <div class="product-selector">
+            <select id="product-select" onchange="loadProductBadges()">
+              <option value="">Loading products...</option>
+            </select>
+          </div>
         </div>
 
-        <div class="card" id="badges-content">
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 24px;
-            "
-          >
-            <div>
-              <h3 style="margin: 0">Badge Assignments</h3>
-              <p
-                style="margin: 4px 0 0 0; font-size: 13px; color: #6d7175"
-                id="badges-option-type"
-              >
-                Loading...
-              </p>
-            </div>
-            <button class="btn" id="save-badges" style="display: none">
-              Save All Badges
-            </button>
-          </div>
-
-          <div
-            id="badges-loading"
-            style="text-align: center; padding: 40px; color: #6d7175"
-          >
-            <p>Loading products and variants...</p>
-          </div>
-
-          <div id="badges-list" style="display: none">
-            <!-- Product variants will be inserted here -->
-          </div>
-
-          <div
-            id="badges-empty"
-            style="
-              display: none;
-              text-align: center;
-              padding: 40px;
-              color: #6d7175;
-            "
-          >
-            <p>
-              No products found with the selected option type. Add products with
-              variants to your store.
-            </p>
-          </div>
-
-          <div
-            id="badges-save-status"
-            class="status-message"
-            style="margin-top: 16px"
-          ></div>
+        <div id="badges-container" class="card" style="display: none">
+          <h2>Assign Badges</h2>
+          <div id="badges-list" class="badge-list"></div>
         </div>
       </div>
 
-      <div id="plans-page" class="page">
+      <!-- SETTINGS VIEW -->
+      <div id="settings-view" class="view-section">
         <div class="page-header">
-          <h2>Plans</h2>
-          <p>Choose the plan that works for you</p>
-        </div>
-        <div class="card"><p>Coming soon: Premium features</p></div>
-      </div>
-
-      <div id="settings-page" class="page active">
-        <div class="page-header">
-          <h2>Settings</h2>
+          <h1>⚙️ Settings</h1>
           <p>Configure your badge display preferences</p>
         </div>
+
         <div class="card">
-          <h3>Badge Display</h3>
+          <h2>Badge Display</h2>
+
           <div class="setting-row">
             <div class="setting-info">
               <h4>Enable Badge Display</h4>
               <p>Badges appear on variant swatches when enabled</p>
             </div>
             <label class="toggle">
-              <input type="checkbox" id="badge-display-enabled" checked />
+              <input type="checkbox" id="enable-display" checked />
               <span class="toggle-slider"></span>
             </label>
           </div>
+
           <div class="setting-row">
             <div class="setting-info">
               <h4>Select variant type you want to apply badges to:</h4>
@@ -548,557 +517,636 @@
                 badges
               </p>
             </div>
-            <div style="width: 300px">
-              <select id="selected-option">
-                <option value="">Loading options...</option>
-              </select>
-            </div>
+            <select id="option-type" style="width: 200px">
+              <option value="">Select an option type...</option>
+              <option value="Color">Color</option>
+              <option value="Size">Size</option>
+              <option value="Style">Style</option>
+              <option value="Material">Material</option>
+            </select>
           </div>
+
           <div class="setting-row">
             <div class="setting-info">
-              <h4>
-                Automatically display SALE badge on discounted variants
-                <span class="premium-badge">Premium</span>
-              </h4>
-              <p>Premium feature - SALE badges override manual selections</p>
+              <h4>Automatically display SALE badge on discounted variants</h4>
+              <p style="color: #f9a825">
+                <strong>🔒 PREMIUM</strong> - SALE badges override manual
+                selections
+              </p>
             </div>
             <label class="toggle">
-              <input type="checkbox" id="auto-sale-enabled" disabled />
+              <input type="checkbox" id="auto-sale" disabled />
               <span class="toggle-slider"></span>
             </label>
           </div>
-          <div style="margin-top: 24px">
-            <button class="btn" id="save-settings">Save Settings</button>
-            <span id="save-status" class="status-message"></span>
-          </div>
+
+          <button class="btn btn-primary" onclick="saveSettings()">
+            Save Settings
+          </button>
         </div>
       </div>
 
-      <div id="help-page" class="page">
+      <!-- PLANS VIEW -->
+      <div id="plans-view" class="view-section">
         <div class="page-header">
-          <h2>Help</h2>
-          <p>Get support and documentation</p>
+          <h1>💳 Plans & Pricing</h1>
+          <p>Choose the plan that fits your store</p>
         </div>
+
         <div class="card">
-          <p>Need help? Contact support@variantbadges.com</p>
+          <div class="pricing-grid">
+            <!-- Free Plan -->
+            <div class="pricing-card">
+              <h3>Free</h3>
+              <div class="pricing-price">$0<span>/mo</span></div>
+              <ul class="pricing-features">
+                <li>Manual badge assignment</li>
+                <li>HOT and NEW badges</li>
+                <li>Up to 50 products</li>
+                <li>Email support</li>
+              </ul>
+              <button class="btn btn-outline" style="width: 100%">
+                Current Plan
+              </button>
+            </div>
+
+            <!-- Pro Plan -->
+            <div class="pricing-card featured">
+              <div class="pricing-badge">Most Popular</div>
+              <h3>Pro</h3>
+              <div class="pricing-price">$9<span>/mo</span></div>
+              <ul class="pricing-features">
+                <li>Everything in Free</li>
+                <li>Auto SALE badge on discounts</li>
+                <li>Unlimited products</li>
+                <li>Priority support</li>
+                <li>Custom badge styles</li>
+              </ul>
+              <button
+                class="btn btn-primary"
+                style="width: 100%"
+                onclick="upgradePlan('pro')"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
+
+            <!-- Enterprise Plan -->
+            <div class="pricing-card">
+              <h3>Enterprise</h3>
+              <div class="pricing-price">$29<span>/mo</span></div>
+              <ul class="pricing-features">
+                <li>Everything in Pro</li>
+                <li>Custom badge text</li>
+                <li>A/B testing</li>
+                <li>Analytics dashboard</li>
+                <li>Dedicated account manager</li>
+              </ul>
+              <button
+                class="btn btn-outline"
+                style="width: 100%"
+                onclick="upgradePlan('enterprise')"
+              >
+                Contact Sales
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>💡 Need help choosing?</h3>
+          <p style="margin-top: 12px">
+            Not sure which plan is right for you?
+            <a
+              href="/app/help"
+              style="color: #008060; text-decoration: none; font-weight: 600"
+              >Contact our team</a
+            >
+            and we'll help you decide.
+          </p>
+        </div>
+      </div>
+
+      <!-- HELP VIEW -->
+      <div id="help-view" class="view-section">
+        <div class="page-header">
+          <h1>❓ Help & Support</h1>
+          <p>Find answers to common questions</p>
+        </div>
+
+        <!-- Contact Support -->
+        <div class="card">
+          <h2>Need Assistance?</h2>
+          <div class="contact-grid">
+            <div class="contact-card">
+              <div class="contact-icon">💬</div>
+              <h4>Live Chat</h4>
+              <p>Get instant help from our support team</p>
+              <button class="btn btn-primary" onclick="openLiveChat()">
+                Start Chat
+              </button>
+            </div>
+            <div class="contact-card">
+              <div class="contact-icon">📧</div>
+              <h4>Email Support</h4>
+              <p>Send us a detailed message</p>
+              <button
+                class="btn btn-secondary"
+                onclick="window.location.href='mailto:support@variantbadges.com'"
+              >
+                Email Us
+              </button>
+            </div>
+            <div class="contact-card">
+              <div class="contact-icon">📚</div>
+              <h4>Documentation</h4>
+              <p>Browse our knowledge base</p>
+              <button
+                class="btn btn-secondary"
+                onclick="window.open('https://docs.variantbadges.com', '_blank')"
+              >
+                View Docs
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="card">
+          <h2>Frequently Asked Questions</h2>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>How do I add badges to my theme?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              1. Click "Open Theme Editor" from the banner<br />
+              2. In the left sidebar, click "Add section" or "Add block"<br />
+              3. Find "Variant Badges Display" under Apps<br />
+              4. Drag it into your product template<br />
+              5. Click "Save" - badges will now appear on your store!
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>How do badges work with multiple options?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              If your product has Color, Size, and Material options, go to
+              Settings and select which option type should display badges. For
+              example, if you choose "Color", badges will appear on color
+              swatches (Black, Red, Blue) but not on size selectors.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Can I assign badges to all variants at once?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              Yes! When you assign a badge to "Black", it automatically applies
+              to ALL Black variants (Small, Medium, Large, XL). This saves you
+              from clicking dozens of times.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Why aren't my badges showing on the storefront?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              Common issues:<br />
+              1. App block not added to theme (check the banner)<br />
+              2. Badge display is disabled in Settings<br />
+              3. Wrong option type selected (badges on Color but you chose
+              Size)<br />
+              4. Cache - try clearing browser cache or incognito mode
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span
+                >What's the difference between HOT, NEW, and SALE badges?</span
+              >
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              <strong>HOT</strong> (red) - Trending or popular items<br />
+              <strong>NEW</strong> (green) - Recently added products<br />
+              <strong>SALE</strong> (orange) - Discounted items (Pro plan
+              auto-applies this)
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>How do I upgrade to Pro?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              Go to the Plans tab and click "Upgrade to Pro". You'll be
+              redirected to Shopify's billing page to confirm. Billing is
+              handled securely through Shopify.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Will this slow down my store?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              No! Badges are cached for 5 minutes and load asynchronously. The
+              JavaScript is only 5KB minified. Most stores see no measurable
+              performance impact.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Can I customize badge colors and styles?</span>
+              <span class="faq-icon">▼</span>
+            </div>
+            <div class="faq-answer">
+              Custom styling is available on the Pro and Enterprise plans.
+              Contact support with your requirements and we'll help you match
+              your brand.
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", function () {
-        const urlParams = new URLSearchParams(window.location.search);
-        const shopParam = urlParams.get("shop") || "{{SHOP}}";
-        // Use current origin - works in both dev and production
-        const APP_URL = window.location.origin;
-        let currentToken = null;
+      // ============================================
+      // APP BRIDGE INITIALIZATION
+      // ============================================
 
-        console.log("🚀 App Initializing... Shop:", shopParam);
+      let appBridge = null;
+      const SHOP = "{{SHOP}}";
+      const API_KEY = "{{SHOPIFY_API_KEY}}";
+      const HOST = new URLSearchParams(window.location.search).get("host");
+      const CURRENT_VIEW = "{{VIEW}}";
 
-        // Get fresh session token from backend
-        async function refreshSessionToken() {
-          try {
-            console.log("🔄 Refreshing token...");
-            const response = await fetch(
-              `${APP_URL}/auth/token?shop=${shopParam}`
-            );
-            if (!response.ok) {
-              const data = await response.json();
-              if (data.needsAuth) {
-                window.location.href = `${APP_URL}/auth?shop=${shopParam}`;
-                return null;
-              }
-              throw new Error(`HTTP ${response.status}`);
-            }
-            const data = await response.json();
-            currentToken = data.token;
-            console.log("✅ Token refreshed");
-            return currentToken;
-          } catch (error) {
-            console.error("❌ Token refresh failed:", error);
-            return null;
+      function initAppBridge() {
+        try {
+          if (!window.ShopifyApp || !window.ShopifyApp.createApp) {
+            console.error("❌ App Bridge not loaded");
+            return false;
           }
-        }
 
-        // Auto-refresh every 50 seconds
-        async function startTokenRefresh() {
-          await refreshSessionToken();
-          setInterval(() => refreshSessionToken(), 50000);
-          console.log("✅ Token auto-refresh started");
-          console.log("✅ Token auto-refresh started");
-
-          // Check setup status after auth is ready
-          checkSetupStatus();
-        }
-
-        // Authenticated fetch
-        async function authenticatedFetch(url, options = {}) {
-          if (!currentToken) await refreshSessionToken();
-          if (!currentToken) throw new Error("No token");
-          return fetch(url, {
-            ...options,
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${currentToken}`,
-              ...options.headers,
-            },
+          appBridge = window.ShopifyApp.createApp({
+            apiKey: API_KEY,
+            host: HOST,
           });
-        }
 
-        // Navigation
-        document.querySelectorAll(".nav-item").forEach((item) => {
-          item.addEventListener("click", () => {
-            document
-              .querySelectorAll(".nav-item")
-              .forEach((i) => i.classList.remove("active"));
-            document
-              .querySelectorAll(".page")
-              .forEach((p) => p.classList.remove("active"));
-            item.classList.add("active");
-            const pageId = item.getAttribute("data-page") + "-page";
-            document.getElementById(pageId).classList.add("active");
+          console.log("✅ App Bridge initialized");
 
-            // Load badges page when clicked
-            if (item.getAttribute("data-page") === "badges") {
-              loadBadgesPage();
-            }
-          });
-        });
-
-        // Load settings
-        async function loadSettings() {
-          try {
-            const response = await authenticatedFetch(
-              `${APP_URL}/api/settings?shop=${shopParam}`
-            );
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            document.getElementById("badge-display-enabled").checked =
-              data.badgeDisplayEnabled !== false;
-            document.getElementById("auto-sale-enabled").checked =
-              data.autoSaleEnabled || false;
-            if (data.selectedOption)
-              document.getElementById("selected-option").value =
-                data.selectedOption;
-            console.log("✅ Settings loaded");
-          } catch (error) {
-            console.error("❌ Settings error:", error);
-          }
-        }
-
-        // Load product options
-        async function loadProductOptions() {
-          console.log("🔍 loadProductOptions STARTED");
-          console.log("   APP_URL:", APP_URL);
-          console.log("   shopParam:", shopParam);
-          try {
-            const response = await authenticatedFetch(
-              `${APP_URL}/api/products/options?shop=${shopParam}`
-            );
-            console.log("🔍 Response received:", response.status);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            const dropdown = document.getElementById("selected-option");
-            dropdown.innerHTML =
-              '<option value="">Select an option type...</option>';
-            if (data.options && data.options.length > 0) {
-              data.options.forEach((opt) => {
-                const el = document.createElement("option");
-                el.value = opt;
-                el.textContent = opt;
-                dropdown.appendChild(el);
-              });
-              console.log(`✅ Loaded ${data.options.length} options`);
-            }
-          } catch (error) {
-            console.error("❌ Options error:", error);
-          }
-        }
-
-        // Save settings
-        document
-          .getElementById("save-settings")
-          .addEventListener("click", async () => {
-            const button = document.getElementById("save-settings");
-            const status = document.getElementById("save-status");
-            button.disabled = true;
-            button.textContent = "Saving...";
-            try {
-              const response = await authenticatedFetch(
-                `${APP_URL}/api/settings`,
+          // Create Navigation Menu - THIS ADDS LEFT SIDEBAR LINKS
+          const navigationMenu = window.ShopifyApp.NavigationMenu.create(
+            appBridge,
+            {
+              items: [
                 {
-                  method: "POST",
-                  body: JSON.stringify({
-                    shop: shopParam,
-                    selectedOption:
-                      document.getElementById("selected-option").value,
-                    badgeDisplayEnabled: document.getElementById(
-                      "badge-display-enabled"
-                    ).checked,
-                    autoSaleEnabled:
-                      document.getElementById("auto-sale-enabled").checked,
-                  }),
-                }
-              );
-              if (!response.ok) throw new Error(`HTTP ${response.status}`);
-              status.textContent = "✓ Saved!";
-              status.style.color = "#008060";
-              setTimeout(() => (status.textContent = ""), 3000);
-            } catch (error) {
-              status.textContent = "✗ Error";
-              status.style.color = "#d82c0d";
-            } finally {
-              button.disabled = false;
-              button.textContent = "Save Settings";
+                  label: "Variant Badges",
+                  destination: `/app?shop=${SHOP}&host=${HOST}`,
+                },
+                {
+                  label: "Settings",
+                  destination: `/app/settings?shop=${SHOP}&host=${HOST}`,
+                },
+                {
+                  label: "Plans",
+                  destination: `/app/plans?shop=${SHOP}&host=${HOST}`,
+                },
+                {
+                  label: "Help",
+                  destination: `/app/help?shop=${SHOP}&host=${HOST}`,
+                },
+              ],
             }
-          });
+          );
 
-        // ============================================
-        // BADGES PAGE FUNCTIONALITY
-        // ============================================
-
-        let selectedOptionType = null;
-        let allProducts = [];
-        let currentBadges = {};
-        let unsavedChanges = false;
-
-        async function loadBadgesPage() {
-          console.log("📥 Loading badges page...");
-
-          try {
-            // Get selected option type from settings
-            const settingsResponse = await authenticatedFetch(
-              `${APP_URL}/api/settings?shop=${shopParam}`
-            );
-
-            if (!settingsResponse.ok)
-              throw new Error(`HTTP ${settingsResponse.status}`);
-            const settings = await settingsResponse.json();
-
-            selectedOptionType = settings.selectedOption;
-
-            if (!selectedOptionType) {
-              document.getElementById("badges-settings-notice").style.display =
-                "block";
-              document.getElementById("badges-content").style.display = "none";
-              document.getElementById("badges-loading").style.display = "none";
-              return;
-            }
-
-            document.getElementById("badges-settings-notice").style.display =
-              "none";
-            document.getElementById("badges-content").style.display = "block";
-            document.getElementById(
-              "badges-option-type"
-            ).textContent = `Assigning badges to: ${selectedOptionType} variants`;
-
-            // Load all products with variants
-            const productsResponse = await authenticatedFetch(
-              `${APP_URL}/api/products?shop=${shopParam}`
-            );
-
-            if (!productsResponse.ok)
-              throw new Error(`HTTP ${productsResponse.status}`);
-            const productsData = await productsResponse.json();
-
-            allProducts = productsData.products || [];
-
-            // Group variants by PRODUCT and OPTION VALUE (not globally!)
-            const productOptionGroups = {}; // { productId: { optionValue: [variants] } }
-
-            allProducts.forEach((product) => {
-              const optionIndex = product.options.findIndex(
-                (opt) => opt.name === selectedOptionType
-              );
-
-              if (optionIndex !== -1) {
-                if (!productOptionGroups[product.id]) {
-                  productOptionGroups[product.id] = {};
-                }
-
-                product.variants.forEach((variant) => {
-                  const optionValue = variant[`option${optionIndex + 1}`];
-
-                  if (optionValue) {
-                    if (!productOptionGroups[product.id][optionValue]) {
-                      productOptionGroups[product.id][optionValue] = [];
-                    }
-
-                    productOptionGroups[product.id][optionValue].push({
-                      variantId: variant.id,
-                      productId: product.id,
-                      productTitle: product.title,
-                      productHandle: product.handle,
-                      image: product.images[0]?.src || null,
-                    });
-                  }
-                });
-              }
-            });
-
-            // Flatten into array and sort by product name, then option value
-            const optionGroups = [];
-            Object.entries(productOptionGroups).forEach(
-              ([productId, optionValues]) => {
-                Object.entries(optionValues).forEach(
-                  ([optionValue, variants]) => {
-                    optionGroups.push({
-                      productId,
-                      optionValue,
-                      variants,
-                      productTitle: variants[0].productTitle,
-                    });
-                  }
-                );
-              }
-            );
-
-            // Sort: Product name first, then option value
-            optionGroups.sort((a, b) => {
-              if (a.productTitle !== b.productTitle) {
-                return a.productTitle.localeCompare(b.productTitle);
-              }
-              return a.optionValue.localeCompare(b.optionValue);
-            });
-
-            if (optionGroups.length === 0) {
-              document.getElementById("badges-loading").style.display = "none";
-              document.getElementById("badges-empty").style.display = "block";
-              return;
-            }
-
-            // Load existing badge assignments
-            const badgesResponse = await authenticatedFetch(
-              `${APP_URL}/api/badges?shop=${shopParam}`
-            );
-
-            if (!badgesResponse.ok)
-              throw new Error(`HTTP ${badgesResponse.status}`);
-            const badgesData = await badgesResponse.json();
-
-            currentBadges = badgesData.badges || {};
-
-            // Render UI
-            renderOptionBadges(optionGroups);
-
-            console.log(`✅ Loaded ${optionGroups.length} option groups`);
-          } catch (error) {
-            console.error("❌ Error loading badges:", error);
-            document.getElementById("badges-loading").innerHTML =
-              '<p style="color: #d82c0d;">Error loading products. Please try again.</p>';
-          }
+          console.log("✅ Navigation menu created");
+          return true;
+        } catch (error) {
+          console.error("❌ App Bridge failed:", error);
+          return false;
         }
-
-        function renderOptionBadges(optionGroups) {
-          const container = document.getElementById("badges-list");
-          container.innerHTML = "";
-          container.style.display = "block";
-          document.getElementById("badges-loading").style.display = "none";
-          document.getElementById("save-badges").style.display = "inline-block";
-
-          optionGroups.forEach((group) => {
-            const { optionValue, variants } = group;
-            const firstVariant = variants[0];
-
-            // Check if ANY variant in this group has a badge
-            const existingBadge = variants.find(
-              (v) => currentBadges[v.variantId]
-            )?.variantId;
-            const badgeType = existingBadge ? currentBadges[existingBadge] : "";
-
-            const card = document.createElement("div");
-            card.className = "variant-card";
-
-            card.innerHTML = `
-      ${
-        firstVariant.image
-          ? `<img src="${firstVariant.image}" alt="${firstVariant.productTitle}" class="variant-image" />`
-          : '<div class="variant-image" style="width:60px;height:60px;background:#f0f0f0;border-radius:8px;"></div>'
       }
-      <div class="variant-info">
-        <div class="variant-title">${firstVariant.productTitle}</div>
-        <div class="variant-subtitle">${selectedOptionType}: ${optionValue} (${
-              variants.length
-            } variant${variants.length > 1 ? "s" : ""})</div>
-      </div>
-      <div class="variant-actions">
-        <select class="variant-badge-select" data-option-value="${optionValue}" 
-                data-variant-ids="${variants.map((v) => v.variantId).join(",")}"
-                data-product-ids="${variants
-                  .map((v) => v.productId)
-                  .join(",")}">
-          <option value="">No Badge</option>
-          <option value="HOT" ${
-            badgeType === "HOT" ? "selected" : ""
-          }>🔥 HOT</option>
-          <option value="NEW" ${
-            badgeType === "NEW" ? "selected" : ""
-          }>✨ NEW</option>
-          <option value="SALE" ${
-            badgeType === "SALE" ? "selected" : ""
-          }>💰 SALE</option>
-        </select>
-        <a href="https://${shopParam.replace(
-          ".myshopify.com",
-          ""
-        )}.myshopify.com/products/${firstVariant.productHandle}" 
-           target="_blank" class="preview-link">
-          Preview →
-        </a>
-      </div>
-    `;
 
-            container.appendChild(card);
+      // Initialize on load
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAppBridge);
+      } else {
+        initAppBridge();
+      }
 
-            const select = card.querySelector(".variant-badge-select");
-            select.addEventListener("change", () => {
-              unsavedChanges = true;
-              document.getElementById("badges-save-status").textContent =
-                "⚠️ Unsaved changes";
-              document.getElementById("badges-save-status").style.color =
-                "#ffc107";
-            });
-          });
-        }
+      // ============================================
+      // VIEW SWITCHING
+      // ============================================
 
-        document
-          .getElementById("save-badges")
-          .addEventListener("click", async () => {
-            const button = document.getElementById("save-badges");
-            const status = document.getElementById("badges-save-status");
-
-            button.disabled = true;
-            button.textContent = "Saving...";
-            status.textContent = "";
-
-            try {
-              const selects = document.querySelectorAll(
-                ".variant-badge-select"
-              );
-              const savePromises = [];
-
-              selects.forEach((select) => {
-                const optionValue = select.dataset.optionValue;
-                const badgeType = select.value || null;
-                const variantIds = select.dataset.variantIds.split(",");
-                const productIds = select.dataset.productIds.split(",");
-
-                // Save badge for ALL variants with this option value
-                variantIds.forEach((variantId, index) => {
-                  savePromises.push(
-                    authenticatedFetch(`${APP_URL}/api/badges`, {
-                      method: "POST",
-                      body: JSON.stringify({
-                        shop: shopParam,
-                        variantId,
-                        productId: productIds[index],
-                        badgeType,
-                        optionValue,
-                      }),
-                    })
-                  );
-                });
-              });
-
-              await Promise.all(savePromises);
-
-              unsavedChanges = false;
-              status.textContent = "✓ All badges saved successfully!";
-              status.style.color = "#008060";
-              setTimeout(() => (status.textContent = ""), 3000);
-
-              console.log("✅ All badges saved");
-            } catch (error) {
-              status.textContent = "✗ Error saving badges";
-              status.style.color = "#d82c0d";
-              console.error("❌ Error saving badges:", error);
-            } finally {
-              button.disabled = false;
-              button.textContent = "Save All Badges";
-            }
-          });
-        // Setup status check functions
-        let setupStatus = { enabled: false };
-        let editorLink = "";
-
-        async function checkSetupStatus() {
-          try {
-            const response = await authenticatedFetch(
-              `${APP_URL}/api/setup/status?shop=${shopParam}`
-            );
-
-            if (!response.ok) throw new Error("Failed to check status");
-
-            setupStatus = await response.json();
-            console.log("✅ Setup status:", setupStatus);
-
-            if (!setupStatus.enabled) {
-              document.getElementById("setup-banner").style.display = "block";
-              await getEditorLink();
-            }
-          } catch (error) {
-            console.error("Error checking setup:", error);
-          }
-        }
-
-        async function getEditorLink() {
-          try {
-            const response = await authenticatedFetch(
-              `${APP_URL}/api/setup/editor-link?shop=${shopParam}`
-            );
-
-            if (!response.ok) throw new Error("Failed to get link");
-
-            const data = await response.json();
-            editorLink = data.editorUrl;
-          } catch (error) {
-            console.error("Error getting editor link:", error);
-          }
-        }
-
-        // Setup banner event listeners
-        document
-          .getElementById("open-theme-editor")
-          ?.addEventListener("click", () => {
-            if (editorLink) window.open(editorLink, "_blank");
-          });
-
-        document
-          .getElementById("show-tutorial")
-          ?.addEventListener("click", () => {
-            document.getElementById("tutorial-modal").style.display = "flex";
-          });
-
-        document
-          .getElementById("close-tutorial")
-          ?.addEventListener("click", () => {
-            document.getElementById("tutorial-modal").style.display = "none";
-          });
-
-        document
-          .getElementById("tutorial-open-editor")
-          ?.addEventListener("click", () => {
-            if (editorLink) {
-              window.open(editorLink, "_blank");
-              document.getElementById("tutorial-modal").style.display = "none";
-            }
-          });
-
-        document
-          .getElementById("dismiss-banner")
-          ?.addEventListener("click", () => {
-            document.getElementById("setup-banner").style.display = "none";
-          });
-        // Initialize
-        startTokenRefresh().then(() => {
-          setTimeout(() => {
-            console.log("🚀 INITIALIZATION STARTING");
-            loadSettings();
-            loadProductOptions();
-            checkSetupStatus();
-          }, 500);
+      function showView(viewName) {
+        // Hide all views
+        document.querySelectorAll(".view-section").forEach((view) => {
+          view.classList.remove("active");
         });
-      });
+
+        // Show selected view
+        const targetView = document.getElementById(`${viewName}-view`);
+        if (targetView) {
+          targetView.classList.add("active");
+        }
+      }
+
+      // Show the current view based on server parameter
+      showView(CURRENT_VIEW);
+
+      // ============================================
+      // SESSION TOKEN HELPER
+      // ============================================
+
+      async function getSessionToken() {
+        let attempts = 0;
+        while (!appBridge && attempts < 20) {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          attempts++;
+        }
+
+        if (!appBridge) {
+          throw new Error("App Bridge not initialized");
+        }
+
+        return await appBridge.getSessionToken();
+      }
+
+      async function authenticatedFetch(url, options = {}) {
+        const token = await getSessionToken();
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          ...options.headers,
+        };
+
+        return fetch(url, {
+          ...options,
+          headers,
+        });
+      }
+
+      // ============================================
+      // ONBOARDING BANNER
+      // ============================================
+
+      async function checkSetupStatus() {
+        try {
+          const response = await authenticatedFetch(
+            `/api/setup/status?shop=${SHOP}`
+          );
+          const data = await response.json();
+
+          if (!data.enabled) {
+            document.getElementById("setup-banner").style.display = "block";
+          }
+        } catch (error) {
+          console.error("Setup check failed:", error);
+        }
+      }
+
+      function openThemeEditor() {
+        const url = `https://${SHOP}/admin/themes/current/editor?context=apps`;
+        window.open(url, "_blank");
+      }
+
+      function showTutorial() {
+        alert(
+          "Tutorial video coming soon! For now, click 'Open Theme Editor' and add the Variant Badges block."
+        );
+      }
+
+      function dismissBanner() {
+        document.getElementById("setup-banner").style.display = "none";
+      }
+
+      // Check setup status on page load
+      checkSetupStatus();
+
+      // ============================================
+      // BADGE MANAGEMENT (Manage View)
+      // ============================================
+
+      async function loadProducts() {
+        try {
+          const response = await authenticatedFetch(
+            `/api/products/list?shop=${SHOP}`
+          );
+          const products = await response.json();
+
+          const select = document.getElementById("product-select");
+          select.innerHTML = '<option value="">Select a product...</option>';
+
+          products.forEach((product) => {
+            const option = document.createElement("option");
+            option.value = product.id;
+            option.textContent = product.title;
+            select.appendChild(option);
+          });
+        } catch (error) {
+          console.error("Failed to load products:", error);
+        }
+      }
+
+      async function loadProductBadges() {
+        const productId = document.getElementById("product-select").value;
+        if (!productId) return;
+
+        // Show loading state
+        document.getElementById("badges-container").style.display = "block";
+        document.getElementById("badges-list").innerHTML =
+          '<div class="loading">Loading badges...</div>';
+
+        try {
+          const response = await authenticatedFetch(
+            `/api/badges?shop=${SHOP}&productId=${productId}`
+          );
+          const data = await response.json();
+
+          renderBadges(data);
+        } catch (error) {
+          console.error("Failed to load badges:", error);
+          document.getElementById("badges-list").innerHTML =
+            '<div class="error">Failed to load badges</div>';
+        }
+      }
+
+      function renderBadges(data) {
+        const container = document.getElementById("badges-list");
+
+        if (!data.options || data.options.length === 0) {
+          container.innerHTML =
+            '<p style="color: #6d7175;">No variants found for this product.</p>';
+          return;
+        }
+
+        let html = "";
+        data.options.forEach((option) => {
+          const currentBadge = option.badge || "none";
+
+          html += `
+          <div class="badge-item">
+            <div class="badge-item-info">
+              <span><strong>${option.optionValue}</strong> (${
+            option.variantCount
+          } variants)</span>
+              ${
+                currentBadge !== "none"
+                  ? `<span class="badge-preview ${currentBadge}">${currentBadge}</span>`
+                  : ""
+              }
+            </div>
+            <select onchange="saveBadge('${option.optionValue}', this.value)">
+              <option value="none" ${
+                currentBadge === "none" ? "selected" : ""
+              }>No Badge</option>
+              <option value="hot" ${
+                currentBadge === "hot" ? "selected" : ""
+              }>HOT</option>
+              <option value="new" ${
+                currentBadge === "new" ? "selected" : ""
+              }>NEW</option>
+              <option value="sale" ${
+                currentBadge === "sale" ? "selected" : ""
+              }>SALE</option>
+            </select>
+          </div>
+        `;
+        });
+
+        container.innerHTML = html;
+      }
+
+      async function saveBadge(optionValue, badgeType) {
+        const productId = document.getElementById("product-select").value;
+
+        try {
+          const response = await authenticatedFetch("/api/badges", {
+            method: "POST",
+            body: JSON.stringify({
+              shop: SHOP,
+              productId,
+              optionValue,
+              badgeType,
+            }),
+          });
+
+          if (response.ok) {
+            console.log("✅ Badge saved");
+            // Reload to show updated state
+            loadProductBadges();
+          }
+        } catch (error) {
+          console.error("Failed to save badge:", error);
+          alert("Failed to save badge");
+        }
+      }
+
+      // Load products if on manage view
+      if (CURRENT_VIEW === "manage") {
+        loadProducts();
+      }
+
+      // ============================================
+      // SETTINGS (Settings View)
+      // ============================================
+
+      async function loadSettings() {
+        try {
+          const response = await authenticatedFetch(
+            `/api/settings?shop=${SHOP}`
+          );
+          const settings = await response.json();
+
+          document.getElementById("enable-display").checked =
+            settings.enabled !== false;
+          document.getElementById("option-type").value =
+            settings.selectedOption || "";
+        } catch (error) {
+          console.error("Failed to load settings:", error);
+        }
+      }
+
+      async function saveSettings() {
+        const enabled = document.getElementById("enable-display").checked;
+        const selectedOption = document.getElementById("option-type").value;
+
+        if (!selectedOption) {
+          alert("Please select an option type");
+          return;
+        }
+
+        try {
+          const response = await authenticatedFetch("/api/settings", {
+            method: "POST",
+            body: JSON.stringify({
+              shop: SHOP,
+              enabled,
+              selectedOption,
+            }),
+          });
+
+          if (response.ok) {
+            alert("✅ Settings saved!");
+          }
+        } catch (error) {
+          console.error("Failed to save settings:", error);
+          alert("Failed to save settings");
+        }
+      }
+
+      // Load settings if on settings view
+      if (CURRENT_VIEW === "settings") {
+        loadSettings();
+      }
+
+      // ============================================
+      // PLANS (Plans View)
+      // ============================================
+
+      function upgradePlan(plan) {
+        if (plan === "enterprise") {
+          window.location.href = `/app/help?shop=${SHOP}&host=${HOST}`;
+        } else {
+          alert(
+            `Upgrade to ${plan} plan - Shopify billing integration coming soon!`
+          );
+          // TODO: Implement Shopify billing API
+        }
+      }
+
+      // ============================================
+      // HELP (Help View)
+      // ============================================
+
+      function toggleFaq(element) {
+        const answer = element.nextElementSibling;
+        const icon = element.querySelector(".faq-icon");
+
+        answer.classList.toggle("open");
+        icon.classList.toggle("open");
+      }
+
+      function openLiveChat() {
+        alert(
+          "Live chat integration coming soon! For now, please email support@variantbadges.com"
+        );
+        // TODO: Integrate with chat service (Intercom, Zendesk, etc.)
+      }
     </script>
   </body>
 </html>

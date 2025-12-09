@@ -44,6 +44,7 @@ app.use(
 );
 
 app.use(express.json());
+
 // CORS headers for embedded app
 app.use((req, res, next) => {
   const origin = req.headers.origin;
@@ -58,6 +59,7 @@ app.use((req, res, next) => {
   }
   next();
 });
+
 app.use(cookieParser());
 
 app.get("/health", (req, res) => {
@@ -110,7 +112,6 @@ app.get("/auth/callback", async (req, res) => {
 });
 
 // Token Generation Route
-// ================================
 app.use("/auth", authRouter);
 
 // Public API routes (no authentication required)
@@ -122,11 +123,12 @@ app.use("/api/badges", validateSessionToken(shopify), badgesRouter);
 app.use("/api/settings", validateSessionToken(shopify), settingsRouter);
 app.use("/api/setup", validateSessionToken(shopify), setupRouter);
 
-app.get("/app", async (req, res) => {
+// Helper function to serve app HTML with view parameter
+function serveAppView(req, res, view) {
   try {
     const { shop } = req.query;
     if (!shop) return res.status(400).send("Missing shop");
-    console.log("[App] Serving for:", shop);
+    console.log(`[App] Serving ${view} view for:`, shop);
 
     // Prevent caching
     res.setHeader(
@@ -136,26 +138,54 @@ app.get("/app", async (req, res) => {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
 
-    // Always serve the app - let frontend handle auth check
-    console.log("[SUCCESS] Serving app");
     const htmlPath = path.join(__dirname, "views", "app.html");
     let html = fs.readFileSync(htmlPath, "utf8");
+
+    // Replace template variables
     html = html.replace(/{{APP_HOST}}/g, process.env.HOST);
     html = html.replace(/{{SHOPIFY_API_KEY}}/g, process.env.SHOPIFY_API_KEY);
-    html = html.replace(/{{SHOP}}/g, shop); // ADD THIS LINE
+    html = html.replace(/{{SHOP}}/g, shop);
+    html = html.replace(/{{VIEW}}/g, view); // NEW: Pass view to template
+
     res.type("html").send(html);
   } catch (error) {
-    console.error("[ERROR] App page:", error);
+    console.error(`[ERROR] ${view} page:`, error);
     res.status(500).send("Failed to load");
   }
+}
+
+// ============================================
+// APP ROUTES - LEFT SIDEBAR NAVIGATION
+// ============================================
+
+// Main badge management page (default)
+app.get("/app", (req, res) => {
+  serveAppView(req, res, "manage");
 });
 
+// Settings page
+app.get("/app/settings", (req, res) => {
+  serveAppView(req, res, "settings");
+});
+
+// Plans page
+app.get("/app/plans", (req, res) => {
+  serveAppView(req, res, "plans");
+});
+
+// Help page
+app.get("/app/help", (req, res) => {
+  serveAppView(req, res, "help");
+});
+
+// Root redirect
 app.get("/", (req, res) => {
   const { shop, host } = req.query;
   if (shop && host) return res.redirect(`/app?shop=${shop}&host=${host}`);
   res.redirect("/install");
 });
 
+// Install page
 app.get("/install", (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -173,6 +203,12 @@ app.get("/install", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log("Server started on port:", PORT);
-  console.log("URL:", process.env.HOST);
+  console.log("");
+  console.log("🚀 Variant Badges App Server Started");
+  console.log("==================================");
+  console.log(`📍 Port: ${PORT}`);
+  console.log(`🌐 URL: ${process.env.HOST || "http://localhost:" + PORT}`);
+  console.log(`🔐 Embedded: true (App Bridge)`);
+  console.log(`✨ Navigation: Left sidebar (4 routes)`);
+  console.log("");
 });
