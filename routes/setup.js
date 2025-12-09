@@ -5,10 +5,12 @@ const { getShopSession } = require("../database/db");
 // Check if theme extension is installed/enabled
 router.get("/status", async (req, res) => {
   try {
-    const { shop } = req.query;
+    const shop = req.shop; // From middleware, not req.query
 
-    // Get session from database
-    const session = await getShopSession(shop);
+    console.log("🔍 Checking setup status for:", shop);
+
+    // Get session from database (already have it in req.shopifySession, but keeping this for compatibility)
+    const session = req.shopifySession || (await getShopSession(shop));
     if (!session || !session.accessToken) {
       return res.status(401).json({ error: "No session found" });
     }
@@ -95,10 +97,12 @@ router.get("/status", async (req, res) => {
 // Get deep link to theme editor
 router.get("/editor-link", async (req, res) => {
   try {
-    const { shop } = req.query;
+    const shop = req.shop; // From middleware, not req.query
 
-    // Get session from database
-    const session = await getShopSession(shop);
+    console.log("🔗 Getting editor link for:", shop);
+
+    // Get session from req.shopifySession (already have it from middleware)
+    const session = req.shopifySession || (await getShopSession(shop));
     if (!session || !session.accessToken) {
       return res.status(401).json({ error: "No session found" });
     }
@@ -126,6 +130,8 @@ router.get("/editor-link", async (req, res) => {
 
     // Build deep link to theme editor
     const editorUrl = `https://${shop}/admin/themes/${activeTheme.id}/editor?context=apps`;
+
+    console.log("✅ Editor link generated");
 
     res.json({
       editorUrl,

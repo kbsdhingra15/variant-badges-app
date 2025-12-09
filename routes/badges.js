@@ -9,7 +9,7 @@ const {
 // Get all badge assignments for shop
 router.get("/", async (req, res) => {
   try {
-    const shop = req.query.shop;
+    const shop = req.shop; // From middleware, not req.query
     const assignments = await getBadgeAssignments(shop);
 
     // Format: { "variant_id": "badge_type" }
@@ -28,11 +28,21 @@ router.get("/", async (req, res) => {
 // Save badge assignment for a variant
 router.post("/", async (req, res) => {
   try {
-    const { shop, variantId, productId, badgeType, optionValue } = req.body;
+    const shop = req.shop; // From middleware, not req.body
+    const { variantId, productId, badgeType, optionValue } = req.body;
 
-    if (!shop || !variantId || !productId) {
+    if (!variantId || !productId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+
+    console.log(
+      "💾 Saving badge for shop:",
+      shop,
+      "variant:",
+      variantId,
+      "badge:",
+      badgeType
+    );
 
     // Get current selected option type from settings
     const { getAppSettings } = require("../database/db");
@@ -52,6 +62,7 @@ router.post("/", async (req, res) => {
       await deleteBadgeAssignment(shop, variantId);
     }
 
+    console.log("✅ Badge saved successfully");
     res.json({ success: true });
   } catch (error) {
     console.error("Error saving badge:", error);
@@ -62,13 +73,18 @@ router.post("/", async (req, res) => {
 // Delete badge assignment
 router.delete("/", async (req, res) => {
   try {
-    const { shop, variantId } = req.query;
+    const shop = req.shop; // From middleware, not req.query
+    const { variantId } = req.query;
 
-    if (!shop || !variantId) {
+    if (!variantId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    console.log("🗑️ Deleting badge for shop:", shop, "variant:", variantId);
+
     await deleteBadgeAssignment(shop, variantId);
+
+    console.log("✅ Badge deleted successfully");
     res.json({ success: true });
   } catch (error) {
     console.error("Error deleting badge:", error);

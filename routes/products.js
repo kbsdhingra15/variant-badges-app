@@ -50,10 +50,91 @@ const PRODUCTS_QUERY = `
   }
 `;
 
-// GET /api/products - Fetch products using GraphQL
+// GET /api/products/list - Fetch products list (simple format for dropdown)
+router.get("/list", async (req, res) => {
+  try {
+    const shop = req.shop; // From middleware
+    const { accessToken } = req.shopifySession;
+
+    console.log("📦 Fetching product: list");
+
+    // Simple GraphQL query for product list
+    const simpleQuery = `
+      {
+        products(first: 50) {
+          edges {
+            node {
+              id
+              title
+            }
+          }
+        }
+      }
+    `;
+
+    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+
+    const response = await fetch(graphqlUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify({
+        query: simpleQuery,
+      }),
+    });
+
+    if (response.status === 401) {
+      console.log("❌ Shopify returned 401 - access token invalid for:", shop);
+      return res.status(401).json({
+        error: "Shop not authenticated",
+        needsAuth: true,
+      });
+    }
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ GraphQL request failed:", response.status, errorText);
+      return res.status(response.status).json({
+        error: "Failed to fetch products from Shopify",
+        details: errorText,
+      });
+    }
+
+    const result = await response.json();
+
+    if (result.errors) {
+      console.error("❌ GraphQL errors:", result.errors);
+      return res.status(500).json({
+        error: "GraphQL query errors",
+        details: result.errors,
+      });
+    }
+
+    // Transform to simple list
+    const products = result.data.products.edges.map((edge) => ({
+      id: edge.node.id.replace("gid://shopify/Product/", ""),
+      title: edge.node.title,
+    }));
+
+    console.log("✅ Products list fetched:", products.length);
+    res.json(products);
+  } catch (error) {
+    console.error("❌ Error fetching product list:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message,
+    });
+  }
+});
+
+// GET /api/products - Fetch products using GraphQL (detailed)
 router.get("/", async (req, res) => {
   try {
-    const { shop, accessToken } = req.shopifySession;
+    const shop = req.shop; // From middleware
+    const { accessToken } = req.shopifySession;
+
     console.log("📦 Fetching products via GraphQL for shop:", shop);
 
     // Make GraphQL request to Shopify
@@ -168,7 +249,9 @@ router.get("/", async (req, res) => {
 // Get all unique product option names (Color, Size, Material, etc.)
 router.get("/options", async (req, res) => {
   try {
-    const { shop, accessToken } = req.shopifySession; // ← Use middleware session
+    const shop = req.shop; // From middleware
+    const { accessToken } = req.shopifySession;
+
     console.log("📋 Fetching product options for:", shop);
 
     // GraphQL query to get all products and their options
@@ -215,10 +298,11 @@ router.get("/options", async (req, res) => {
   }
 });
 
-// GET /api/products/:id - Get a single product (for Phase 2)
+// GET /api/products/:id - Get a single product
 router.get("/:id", async (req, res) => {
   try {
-    const { shop, accessToken } = req.shopifySession;
+    const shop = req.shop; // From middleware
+    const { accessToken } = req.shopifySession;
     const productId = req.params.id;
 
     console.log("📦 Fetching product:", productId);
