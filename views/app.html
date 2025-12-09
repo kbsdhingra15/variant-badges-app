@@ -283,6 +283,39 @@
         color: white;
       }
 
+      /* Banner */
+      .banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 16px;
+        background: #fff9c4;
+        border: 1px solid #f9a825;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+      .banner-icon {
+        font-size: 24px;
+        flex-shrink: 0;
+      }
+      .banner-content {
+        flex: 1;
+      }
+      .banner-content h4 {
+        margin: 0 0 8px 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .banner-content p {
+        margin: 0 0 16px 0;
+        color: #5c5c5c;
+        line-height: 1.5;
+      }
+      .banner-actions {
+        display: flex;
+        gap: 12px;
+      }
+
       /* Pricing Grid */
       .pricing-grid {
         display: grid;
@@ -499,16 +532,44 @@
           <p>Assign HOT, NEW, and SALE badges to product variants</p>
         </div>
 
-        <div class="card">
-          <h3>Select Product</h3>
-          <select id="product-select" onchange="loadProductBadges()">
-            <option value="">Loading products...</option>
-          </select>
+        <!-- No option selected warning -->
+        <div id="no-option-warning" style="display: none">
+          <div class="banner">
+            <div class="banner-icon">⚠️</div>
+            <div class="banner-content">
+              <h4>Select Option Type First</h4>
+              <p>
+                Please go to Settings and select which product option (Color,
+                Size, etc.) you want to assign badges to.
+              </p>
+              <div class="banner-actions">
+                <button class="btn btn-primary" onclick="switchTab('settings')">
+                  ⚙️ Go to Settings
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div id="badges-container" class="card" style="display: none">
-          <h3>Assign Badges</h3>
-          <div id="badges-list" class="badge-list"></div>
+        <!-- Products list -->
+        <div id="products-list-container" style="display: none">
+          <div class="card">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+              "
+            >
+              <h3 id="badge-assignments-title">Badge Assignments</h3>
+              <div
+                style="color: #6d7175; font-size: 14px"
+                id="option-type-label"
+              ></div>
+            </div>
+            <div id="products-list" class="badge-list"></div>
+          </div>
         </div>
       </div>
 
@@ -917,150 +978,146 @@
 
       async function loadProducts() {
         try {
-          const response = await authenticatedFetch(`/api/products/list`);
+          console.log("📦 Loading all products with badge assignments...");
 
-          if (!response.ok) {
-            console.error("Failed to load products, status:", response.status);
-            const select = document.getElementById("product-select");
-            select.innerHTML =
-              '<option value="">Error loading products - check console</option>';
+          // First, check if option type is selected
+          const settingsResponse = await authenticatedFetch(`/api/settings`);
+          if (!settingsResponse.ok) {
+            throw new Error("Failed to load settings");
+          }
+
+          const settings = await settingsResponse.json();
+          const selectedOption = settings.selectedOption;
+
+          if (!selectedOption) {
+            // Show warning
+            document.getElementById("no-option-warning").style.display =
+              "block";
+            document.getElementById("products-list-container").style.display =
+              "none";
+            window.productsLoaded = true;
             return;
           }
 
-          const products = await response.json();
+          // Hide warning, show products list
+          document.getElementById("no-option-warning").style.display = "none";
+          document.getElementById("products-list-container").style.display =
+            "block";
+          document.getElementById(
+            "option-type-label"
+          ).textContent = `Assigning badges to: ${selectedOption} variants`;
 
-          const select = document.getElementById("product-select");
-          select.innerHTML = '<option value="">Select a product...</option>';
+          // Show loading state
+          document.getElementById("products-list").innerHTML =
+            '<div class="loading">Loading products...</div>';
 
-          if (!products || !Array.isArray(products)) {
-            console.error("Invalid products response:", products);
-            select.innerHTML = '<option value="">No products found</option>';
-            return;
-          }
-
-          products.forEach((product) => {
-            const option = document.createElement("option");
-            option.value = product.id;
-            option.textContent = product.title;
-            select.appendChild(option);
-          });
-
-          window.productsLoaded = true;
-          console.log("✅ Products loaded:", products.length);
-        } catch (error) {
-          console.error("Failed to load products:", error);
-          document.getElementById("product-select").innerHTML =
-            '<option value="">Error loading products</option>';
-        }
-      }
-
-      async function loadProductBadges() {
-        const productId = document.getElementById("product-select").value;
-        if (!productId) return;
-
-        document.getElementById("badges-container").style.display = "block";
-        document.getElementById("badges-list").innerHTML =
-          '<div class="loading">Loading badges...</div>';
-
-        try {
-          const response = await authenticatedFetch(
-            `/api/badges?productId=${productId}`
-          );
+          // Fetch all products with their badge assignments
+          const response = await authenticatedFetch(`/api/badges/all-products`);
 
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
           }
 
           const data = await response.json();
-          renderBadges(data);
+          renderAllProducts(data);
+
+          window.productsLoaded = true;
+          console.log(
+            "✅ Products loaded:",
+            data.products ? data.products.length : 0
+          );
         } catch (error) {
-          console.error("Failed to load badges:", error);
-          document.getElementById("badges-list").innerHTML =
-            '<div class="error">Failed to load badges</div>';
+          console.error("Failed to load products:", error);
+          document.getElementById("products-list").innerHTML =
+            '<div class="error">Failed to load products. Please try again.</div>';
         }
       }
 
-      function renderBadges(data) {
-        const container = document.getElementById("badges-list");
+      function renderAllProducts(data) {
+        const container = document.getElementById("products-list");
 
-        // Check if no option type selected in settings
-        if (
-          !data.selectedOption &&
-          data.message &&
-          data.message.includes("No option type selected")
-        ) {
-          container.innerHTML = `
-          <div style="background: #fff9c4; border: 1px solid #f9a825; border-radius: 8px; padding: 16px; margin: 16px 0;">
-            <p style="margin: 0 0 12px 0; font-weight: 600;">⚠️ No option type selected</p>
-            <p style="margin: 0 0 12px 0; color: #5c5c5c;">
-              Please go to <strong>Settings</strong> and select which product option (Color, Size, etc.) 
-              you want to assign badges to.
-            </p>
-            <button class="btn btn-primary" onclick="switchTab('settings'); document.getElementById('settings-view').scrollIntoView();">
-              Go to Settings
-            </button>
-          </div>
-        `;
+        if (!data.products || data.products.length === 0) {
+          container.innerHTML =
+            '<p style="color: #6d7175;">No products found with the selected option type.</p>';
           return;
-        }
-
-        if (!data.options || data.options.length === 0) {
-          if (data.message) {
-            container.innerHTML = `<p style="color: #6d7175;">${data.message}</p>`;
-          } else {
-            container.innerHTML =
-              '<p style="color: #6d7175;">No variants found for this product.</p>';
-          }
-          return;
-        }
-
-        // Update header to show which option we're assigning to
-        const headerEl = document.querySelector("#badges-container h3");
-        if (headerEl && data.selectedOption) {
-          headerEl.textContent = `Assign Badges to ${data.selectedOption}`;
         }
 
         let html = "";
-        data.options.forEach((option) => {
-          const currentBadge = option.badge || "none";
 
-          html += `
-          <div class="badge-item">
-            <div class="badge-item-info">
-              <span><strong>${option.optionValue}</strong> (${
-            option.variantCount
-          } variant${option.variantCount > 1 ? "s" : ""})</span>
-              ${
-                currentBadge !== "none"
-                  ? `<span class="badge-preview ${currentBadge}">${currentBadge.toUpperCase()}</span>`
-                  : ""
-              }
+        data.products.forEach((product) => {
+          product.options.forEach((option) => {
+            const currentBadge = option.badge || "none";
+            const productUrl = `https://${data.shop}/products/${product.handle}`;
+
+            html += `
+            <div class="badge-item" style="padding: 16px;">
+              <div style="display: flex; align-items: center; gap: 16px; flex: 1;">
+                <!-- Product Image -->
+                <div style="flex-shrink: 0;">
+                  <img src="${
+                    option.imageUrl ||
+                    product.imageUrl ||
+                    "https://via.placeholder.com/60"
+                  }" 
+                       alt="${product.title}" 
+                       style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #e1e3e5;">
+                </div>
+                
+                <!-- Product Info -->
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    ${product.title}
+                  </div>
+                  <div style="color: #6d7175; font-size: 13px;">
+                    ${data.selectedOption}: <strong>${
+              option.optionValue
+            }</strong> (${option.variantCount} variant${
+              option.variantCount > 1 ? "s" : ""
+            })
+                  </div>
+                  ${
+                    currentBadge !== "none"
+                      ? `<span class="badge-preview ${currentBadge}" style="margin-top: 6px; display: inline-block;">${currentBadge.toUpperCase()}</span>`
+                      : ""
+                  }
+                </div>
+              </div>
+              
+              <!-- Badge Dropdown & Preview -->
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <select onchange="saveBadge('${product.id}', '${
+              option.optionValue
+            }', this.value)" 
+                        style="width: 150px;">
+                  <option value="none" ${
+                    currentBadge === "none" ? "selected" : ""
+                  }>No Badge</option>
+                  <option value="hot" ${
+                    currentBadge === "hot" ? "selected" : ""
+                  }>🔥 HOT</option>
+                  <option value="new" ${
+                    currentBadge === "new" ? "selected" : ""
+                  }>✨ NEW</option>
+                  <option value="sale" ${
+                    currentBadge === "sale" ? "selected" : ""
+                  }>💰 SALE</option>
+                </select>
+                <a href="${productUrl}" target="_blank" class="btn btn-secondary" style="padding: 8px 12px; font-size: 13px; text-decoration: none;">
+                  Preview →
+                </a>
+              </div>
             </div>
-            <select onchange="saveBadge('${option.optionValue}', this.value)">
-              <option value="none" ${
-                currentBadge === "none" ? "selected" : ""
-              }>No Badge</option>
-              <option value="hot" ${
-                currentBadge === "hot" ? "selected" : ""
-              }>HOT</option>
-              <option value="new" ${
-                currentBadge === "new" ? "selected" : ""
-              }>NEW</option>
-              <option value="sale" ${
-                currentBadge === "sale" ? "selected" : ""
-              }>SALE</option>
-            </select>
-          </div>
-        `;
+          `;
+          });
         });
 
         container.innerHTML = html;
       }
 
-      async function saveBadge(optionValue, badgeType) {
-        const productId = document.getElementById("product-select").value;
-
+      async function saveBadge(productId, optionValue, badgeType) {
         try {
+          console.log("💾 Saving badge:", productId, optionValue, badgeType);
+
           const response = await authenticatedFetch("/api/badges", {
             method: "POST",
             body: JSON.stringify({
@@ -1072,13 +1129,14 @@
 
           if (response.ok) {
             console.log("✅ Badge saved");
-            loadProductBadges();
+            // Refresh the products list to show updated badges
+            loadProducts();
           } else {
             throw new Error(`HTTP ${response.status}`);
           }
         } catch (error) {
           console.error("Failed to save badge:", error);
-          alert("Failed to save badge");
+          alert("Failed to save badge. Please try again.");
         }
       }
 

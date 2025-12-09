@@ -6,6 +6,184 @@ const {
   deleteBadgeAssignment,
 } = require("../database/db");
 
+// Get all products with badge assignments (for main UI)
+router.get("/all-products", async (req, res) => {
+  try {
+    const shop = req.shop;
+    const { accessToken } = req.shopifySession;
+
+    console.log("📊 Getting all products with badge assignments");
+
+    // Get selected option type from settings
+    const { getAppSettings } = require("../database/db");
+    const settings = await getAppSettings(shop);
+    const selectedOption = settings.selectedOption;
+
+    if (!selectedOption) {
+      return res.json({
+        products: [],
+        selectedOption: null,
+        message: "No option type selected in settings",
+      });
+    }
+
+    console.log("   Selected option:", selectedOption);
+
+    // Fetch all products from Shopify
+    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const query = `
+      {
+        products(first: 50) {
+          edges {
+            node {
+              id
+              title
+              handle
+              featuredImage {
+                url
+              }
+              options {
+                name
+                values
+              }
+              variants(first: 100) {
+                edges {
+                  node {
+                    id
+                    selectedOptions {
+                      name
+                      value
+                    }
+                    image {
+                      url
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const response = await fetch(graphqlUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify({ query }),
+    });
+
+    const result = await response.json();
+
+    if (result.errors) {
+      console.error("GraphQL errors:", result.errors);
+      return res.status(500).json({ error: "GraphQL errors" });
+    }
+
+    // Get all badge assignments
+    const assignments = await getBadgeAssignments(shop);
+    const badgeLookup = {};
+    assignments.forEach((a) => {
+      badgeLookup[a.variant_id] = a.badge_type;
+    });
+
+    // Process each product
+    const productsWithOptions = [];
+
+    result.data.products.edges.forEach((edge) => {
+      const product = edge.node;
+      const productId = product.id.replace("gid://shopify/Product/", "");
+
+      // Check if product has the selected option
+      const selectedOptionData = product.options.find(
+        (opt) => opt.name === selectedOption
+      );
+
+      if (!selectedOptionData) {
+        return; // Skip products without this option
+      }
+
+      // Group variants by option value
+      const optionGroups = {};
+
+      product.variants.edges.forEach((vEdge) => {
+        const variant = vEdge.node;
+        const variantId = variant.id.replace(
+          "gid://shopify/ProductVariant/",
+          ""
+        );
+
+        const selectedOpt = variant.selectedOptions.find(
+          (opt) => opt.name === selectedOption
+        );
+
+        if (selectedOpt) {
+          const optionValue = selectedOpt.value;
+
+          if (!optionGroups[optionValue]) {
+            optionGroups[optionValue] = {
+              optionValue,
+              variantIds: [],
+              imageUrl: variant.image ? variant.image.url : null,
+              badges: new Set(),
+            };
+          }
+
+          optionGroups[optionValue].variantIds.push(variantId);
+
+          // Set image if we don't have one yet
+          if (!optionGroups[optionValue].imageUrl && variant.image) {
+            optionGroups[optionValue].imageUrl = variant.image.url;
+          }
+
+          if (badgeLookup[variantId]) {
+            optionGroups[optionValue].badges.add(badgeLookup[variantId]);
+          }
+        }
+      });
+
+      // Convert to array
+      const options = Object.values(optionGroups).map((group) => {
+        const badge =
+          group.badges.size === 1 ? Array.from(group.badges)[0] : "none";
+
+        return {
+          optionValue: group.optionValue,
+          variantCount: group.variantIds.length,
+          variantIds: group.variantIds,
+          imageUrl: group.imageUrl,
+          badge: badge,
+        };
+      });
+
+      if (options.length > 0) {
+        productsWithOptions.push({
+          id: productId,
+          title: product.title,
+          handle: product.handle,
+          imageUrl: product.featuredImage ? product.featuredImage.url : null,
+          options: options,
+        });
+      }
+    });
+
+    console.log(
+      `✅ Loaded ${productsWithOptions.length} products with ${selectedOption} options`
+    );
+
+    res.json({
+      products: productsWithOptions,
+      selectedOption,
+      shop,
+    });
+  } catch (error) {
+    console.error("Error getting all products:", error);
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+
 // Get all badge assignments for shop
 router.get("/", async (req, res) => {
   try {
