@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
     <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
+    <script>
+      // Wait for App Bridge to load, then expose it globally
+      (function checkAppBridge() {
+        if (window.shopify && window.shopify.AppBridge) {
+          console.log("✅ App Bridge 3 library loaded");
+        } else if (window.ShopifyApp) {
+          // Old App Bridge detected, create compatibility layer
+          console.log(
+            "⚠️ Old App Bridge detected, creating compatibility layer"
+          );
+          window.shopify = window.shopify || {};
+          window.shopify.AppBridge = {
+            createApp: window.ShopifyApp.createApp,
+            actions: window.ShopifyApp,
+          };
+        } else {
+          // Library not loaded yet, try again
+          setTimeout(checkAppBridge, 50);
+        }
+      })();
+    </script>
     <style>
       * {
         margin: 0;
@@ -796,32 +817,31 @@
 
       async function initAppBridge() {
         try {
-          // Wait for App Bridge library to load (with retry)
+          // Wait for App Bridge library to load (with retry - up to 10 seconds)
           let attempts = 0;
-          while (!window.ShopifyApp && attempts < 50) {
+          while (!window.shopify?.AppBridge && attempts < 100) {
             await new Promise((resolve) => setTimeout(resolve, 100));
             attempts++;
           }
 
-          if (!window.ShopifyApp) {
-            console.error("❌ App Bridge library not loaded after 5 seconds");
+          if (!window.shopify?.AppBridge) {
+            console.error("❌ App Bridge library not loaded after 10 seconds");
+            console.error("Available:", Object.keys(window));
             return false;
           }
 
-          console.log("✅ ShopifyApp found");
+          console.log("✅ App Bridge library loaded");
 
-          // Create app instance
-          appBridge = window.ShopifyApp.createApp({
+          // Create app instance using App Bridge 3 API
+          appBridge = window.shopify.AppBridge.createApp({
             apiKey: API_KEY,
             host: HOST,
-            forceRedirect: true,
           });
 
           console.log("✅ App Bridge initialized");
 
           // Create Navigation Menu - THIS ADDS LEFT SIDEBAR LINKS
-          const NavigationMenu = window.ShopifyApp.NavigationMenu;
-          NavigationMenu.create(appBridge, {
+          window.shopify.AppBridge.actions.NavigationMenu.create(appBridge, {
             items: [
               {
                 label: "Variant Badges",
@@ -852,15 +872,30 @@
 
       // Initialize when DOM is ready
       if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => {
-          initAppBridge().then(() => {
-            console.log("✅ App ready");
-          });
+        document.addEventListener("DOMContentLoaded", async () => {
+          await initAppBridge();
+          console.log("✅ App ready");
+          // Now that App Bridge is ready, load initial data
+          onAppReady();
         });
       } else {
         initAppBridge().then(() => {
           console.log("✅ App ready");
+          onAppReady();
         });
+      }
+
+      // Called after App Bridge is initialized
+      function onAppReady() {
+        // Load data based on current view
+        if (CURRENT_VIEW === "manage") {
+          loadProducts();
+        } else if (CURRENT_VIEW === "settings") {
+          loadSettings();
+        }
+
+        // Check setup status on all views
+        checkSetupStatus();
       }
 
       // ============================================
@@ -900,8 +935,8 @@
         }
 
         try {
-          // Get session token using App Bridge 2 API
-          const token = await appBridge.getSessionToken();
+          // Use App Bridge 3 idToken() API
+          const token = await appBridge.idToken();
           console.log("✅ Got session token");
           return token;
         } catch (error) {
@@ -1079,11 +1114,6 @@
         }
       }
 
-      // Load products if on manage view
-      if (CURRENT_VIEW === "manage") {
-        loadProducts();
-      }
-
       // ============================================
       // SETTINGS (Settings View)
       // ============================================
@@ -1130,11 +1160,6 @@
           console.error("Failed to save settings:", error);
           alert("Failed to save settings");
         }
-      }
-
-      // Load settings if on settings view
-      if (CURRENT_VIEW === "settings") {
-        loadSettings();
       }
 
       // ============================================
