@@ -1,3 +1,4 @@
+const { pool } = require("./database/db");
 require("dotenv").config();
 const express = require("express");
 const { shopifyApi } = require("@shopify/shopify-api");
@@ -336,11 +337,11 @@ app.get("/auth/callback", async (req, res) => {
     console.log("✅ Token verified successfully");
 
     // Delete old session if exists
-    await db.deleteSession(shop);
+    await pool.query("DELETE FROM sessions WHERE shop = $1", [shop]);
     console.log("✅ Deleted old session (if existed)");
 
     // Save new session
-    const saved = await db.saveSession(shop, accessToken);
+    const saved = await db.saveShopSession(shop, accessToken);
 
     if (!saved) {
       console.error("❌ Failed to save session to database");
@@ -350,7 +351,7 @@ app.get("/auth/callback", async (req, res) => {
     console.log("✅ Session saved successfully");
 
     // Verify it was saved
-    const retrieved = await db.getSession(shop);
+    const retrieved = await db.getShopSession(shop);
     if (!retrieved) {
       console.error("❌ Session not found after save");
       return res.status(500).send("Session verification failed");
