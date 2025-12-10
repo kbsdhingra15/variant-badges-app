@@ -845,7 +845,9 @@
         document.getElementById(`${tabName}-view`).classList.add("active");
 
         // Load data for view
-        if (tabName === "manage" && !window.productsLoaded) {
+        if (tabName === "manage") {
+          // Always reload products when switching to this tab (settings may have changed)
+          console.log("🔄 Loading products for Manage Badges tab");
           loadProducts();
         } else if (tabName === "settings" && !window.settingsLoaded) {
           loadSettings();
