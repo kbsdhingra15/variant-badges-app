@@ -7,6 +7,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
+const db = require("./database/db");
 
 const { initDB, saveShopSession, getShopSession } = require("./database/db");
 const productsRouter = require("./routes/products");
