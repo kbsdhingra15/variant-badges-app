@@ -285,56 +285,85 @@ app.get("/auth", async (req, res) => {
 
 app.get("/auth/callback", async (req, res) => {
   try {
-    console.log("[OAuth] Callback received");
-    const callback = await shopify.auth.callback({
-      rawRequest: req,
-      rawResponse: res,
-    });
+    const { shop, code } = req.query;
 
-    const shop = callback.session.shop;
-    const accessToken = callback.session.accessToken;
-
-    console.log("[SUCCESS] OAuth for:", shop);
-    console.log("[Token] Length:", accessToken ? accessToken.length : 0);
-    console.log(
-      "[Token] Preview:",
-      accessToken ? accessToken.substring(0, 20) + "..." : "MISSING"
-    );
-
-    // Force delete old session first
-    try {
-      const { db } = require("./database/db");
-      await db.query("DELETE FROM sessions WHERE shop = $1", [shop]);
-      console.log("[CLEANUP] Deleted old session");
-    } catch (error) {
-      console.log(
-        "[CLEANUP] No old session to delete or error:",
-        error.message
-      );
+    if (!shop || !code) {
+      return res.status(400).send("Missing shop or code");
     }
 
-    // Save new token
-    await saveShopSession(shop, accessToken);
-    console.log("[SUCCESS] New token saved to database");
+    console.log("✅ OAuth callback received for:", shop);
 
-    // Verify it was saved correctly
-    const savedSession = await getShopSession(shop);
-    console.log("[VERIFY] Retrieved from DB:", savedSession ? "YES" : "NO");
-    console.log(
-      "[VERIFY] Has token:",
-      savedSession && savedSession.accessToken ? "YES" : "NO"
-    );
-    console.log(
-      "[VERIFY] Token matches:",
-      savedSession && savedSession.accessToken === accessToken ? "YES" : "NO"
+    // Exchange code for access token
+    const tokenResponse = await fetch(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_id: process.env.SHOPIFY_API_KEY,
+          client_secret: process.env.SHOPIFY_API_SECRET,
+          code: code,
+        }),
+      }
     );
 
-    await new Promise((r) => setTimeout(r, 3000));
-    const redirectUrl = `https://${shop}/admin/apps/variant-badges`;
-    console.log("[Redirect]", redirectUrl);
+    if (!tokenResponse.ok) {
+      console.error("❌ Token exchange failed:", await tokenResponse.text());
+      return res.status(500).send("OAuth token exchange failed");
+    }
+
+    const tokenData = await tokenResponse.json();
+    const accessToken = tokenData.access_token;
+
+    console.log("✅ Access token received");
+
+    // CRITICAL: Verify token works before saving
+    const testResponse = await fetch(
+      `https://${shop}/admin/api/2024-10/shop.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      }
+    );
+
+    if (!testResponse.ok) {
+      console.error("❌ Token verification failed:", testResponse.status);
+      return res.status(500).send("Token is invalid");
+    }
+
+    console.log("✅ Token verified successfully");
+
+    // Delete old session if exists
+    await db.deleteSession(shop);
+    console.log("✅ Deleted old session (if existed)");
+
+    // Save new session
+    const saved = await db.saveSession(shop, accessToken);
+
+    if (!saved) {
+      console.error("❌ Failed to save session to database");
+      return res.status(500).send("Database save failed");
+    }
+
+    console.log("✅ Session saved successfully");
+
+    // Verify it was saved
+    const retrieved = await db.getSession(shop);
+    if (!retrieved) {
+      console.error("❌ Session not found after save");
+      return res.status(500).send("Session verification failed");
+    }
+
+    console.log("✅ Session verified in database");
+
+    // Redirect to embedded app
+    const host = req.query.host;
+    const redirectUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_APP_HANDLE}`;
+
     res.redirect(redirectUrl);
   } catch (error) {
-    console.error("[ERROR] OAuth callback:", error);
+    console.error("❌ OAuth callback error:", error);
     res.status(500).send("OAuth failed: " + error.message);
   }
 });
