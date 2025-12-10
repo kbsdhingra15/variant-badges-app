@@ -1049,6 +1049,15 @@
         data.products.forEach((product) => {
           product.options.forEach((option) => {
             const currentBadge = option.badge || "none";
+            const currentBadge = option.badge || "none";
+            console.log(
+              "DEBUG: Rendering",
+              option.optionValue,
+              "- Badge from API:",
+              option.badge,
+              "- Using:",
+              currentBadge
+            );
             const productUrl = `https://${data.shop}/products/${product.handle}`;
 
             html += `
