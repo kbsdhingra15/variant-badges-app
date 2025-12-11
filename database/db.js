@@ -8,7 +8,6 @@ const pool = new Pool({
       ? { rejectUnauthorized: false }
       : false,
 });
-const { Pool } = require("pg");
 // Database connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
