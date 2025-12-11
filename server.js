@@ -394,10 +394,57 @@ app.get("/auth/callback", async (req, res) => {
       console.error("⚠️ Webhook registration error:", webhookError);
       // Don't fail OAuth if webhook fails
     }
-
-    // Redirect to embedded app
-    const redirectUrl = `https://variant-badges-app-production.up.railway.app/app?shop=${shop}`;
-    res.redirect(redirectUrl);
+    // Show success page
+    const shopSlug = shop.replace(".myshopify.com", "");
+    res.send(`
+  <!DOCTYPE html>
+  <html>
+    <head>
+      <title>Installation Complete</title>
+      <style>
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          max-width: 500px;
+          margin: 100px auto;
+          text-align: center;
+          padding: 40px;
+          background: #f6f6f7;
+        }
+        .card {
+          background: white;
+          border-radius: 8px;
+          padding: 40px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 { color: #008060; margin-bottom: 16px; }
+        p { color: #6d7175; line-height: 1.6; margin-bottom: 24px; }
+        .button {
+          display: inline-block;
+          background: #008060;
+          color: white;
+          padding: 12px 24px;
+          border-radius: 4px;
+          text-decoration: none;
+          font-weight: 500;
+        }
+        .button:hover { background: #006e52; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h1>✅ Installation Complete!</h1>
+        <p>Variant Badges has been successfully installed.</p>
+        <p>Click the button below to open your app and start assigning badges.</p>
+        <a href="https://admin.shopify.com/store/${shopSlug}" class="button">
+          Open Shopify Admin
+        </a>
+        <p style="margin-top: 24px; font-size: 14px; color: #999;">
+          Then click "Variant Badges" in your apps sidebar
+        </p>
+      </div>
+    </body>
+  </html>
+`);
   } catch (error) {
     console.error("❌ OAuth callback error:", error);
     res.status(500).send("OAuth failed: " + error.message);
