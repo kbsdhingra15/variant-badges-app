@@ -101,9 +101,10 @@ async function saveShopSession(shop, accessToken) {
       [shop, accessToken]
     );
     console.log("✅ Shop session saved:", shop);
+    return true;
   } catch (error) {
     console.error("❌ Error saving shop session:", error);
-    throw error;
+    return false;
   } finally {
     client.release();
   }
