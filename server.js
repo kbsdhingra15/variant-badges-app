@@ -434,13 +434,10 @@ app.get("/auth/callback", async (req, res) => {
       <div class="card">
         <h1>✅ Installation Complete!</h1>
         <p>Variant Badges has been successfully installed.</p>
-        <p>Click the button below to open your app and start assigning badges.</p>
+        <p>Click the button below to return to admin and then click "Variant Badges" in your apps sidebar to start assigning badges.</p>
         <a href="https://admin.shopify.com/store/${shopSlug}" class="button">
           Open Shopify Admin
         </a>
-        <p style="margin-top: 24px; font-size: 14px; color: #999;">
-          Then click "Variant Badges" in your apps sidebar
-        </p>
       </div>
     </body>
   </html>
