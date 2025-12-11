@@ -1,13 +1,4 @@
 const { Pool } = require("pg");
-
-// Database connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl:
-    process.env.NODE_ENV === "production"
-      ? { rejectUnauthorized: false }
-      : false,
-});
 // Database connection pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
