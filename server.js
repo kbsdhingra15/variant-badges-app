@@ -395,9 +395,8 @@ app.get("/auth/callback", async (req, res) => {
       // Don't fail OAuth if webhook fails
     }
 
-    // Redirect to embedded app
-    const appHandle = process.env.SHOPIFY_APP_HANDLE || "variant-badges-app-14";
-    const redirectUrl = `https://${shop}/admin/apps/${appHandle}`;
+    // Redirect to apps page which auto-opens the app
+    const redirectUrl = `https://${shop}/admin/apps`;
 
     res.redirect(redirectUrl);
   } catch (error) {
