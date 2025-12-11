@@ -481,7 +481,17 @@ app.get("/install", (req, res) => {
     </html>
   `);
 });
-
+// TEMPORARY - Remove after testing
+app.get("/admin/clear-all-sessions", async (req, res) => {
+  try {
+    const result = await pool.query("DELETE FROM shops");
+    res.send(
+      `✅ Cleared ${result.rowCount} sessions. Database is clean. Now uninstall and reinstall the app.`
+    );
+  } catch (error) {
+    res.status(500).send("Error: " + error.message);
+  }
+});
 app.listen(PORT, () => {
   console.log("");
   console.log("🚀 Variant Badges App Server Started");
