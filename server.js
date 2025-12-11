@@ -395,9 +395,8 @@ app.get("/auth/callback", async (req, res) => {
       // Don't fail OAuth if webhook fails
     }
 
-    // Redirect to apps page which auto-opens the app
-    const host = Buffer.from(`${shop}/admin`).toString("base64");
-    const redirectUrl = `https://${shop}/admin/apps?shop=${shop}&host=${host}`;
+    // Redirect to embedded app
+    const redirectUrl = `https://variant-badges-app-production.up.railway.app/app?shop=${shop}`;
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ OAuth callback error:", error);
