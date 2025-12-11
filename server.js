@@ -284,7 +284,6 @@ app.get("/auth", async (req, res) => {
     res.status(500).send("OAuth failed: " + error.message);
   }
 });
-
 app.get("/auth/callback", async (req, res) => {
   try {
     const { shop, code } = req.query;
@@ -337,7 +336,7 @@ app.get("/auth/callback", async (req, res) => {
     console.log("✅ Token verified successfully");
 
     // Delete old session if exists
-    await pool.query("DELETE FROM sessions WHERE shop = $1", [shop]);
+    await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
     console.log("✅ Deleted old session (if existed)");
 
     // Save new session
@@ -359,9 +358,46 @@ app.get("/auth/callback", async (req, res) => {
 
     console.log("✅ Session verified in database");
 
+    // AUTO-REGISTER UNINSTALL WEBHOOK
+    try {
+      const webhookResponse = await fetch(
+        `https://${shop}/admin/api/2024-10/webhooks.json`,
+        {
+          method: "POST",
+          headers: {
+            "X-Shopify-Access-Token": accessToken,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            webhook: {
+              topic: "app/uninstalled",
+              address: `${
+                process.env.HOST ||
+                "https://variant-badges-app-production.up.railway.app"
+              }/webhooks/app/uninstalled`,
+              format: "json",
+            },
+          }),
+        }
+      );
+
+      if (webhookResponse.ok) {
+        console.log("✅ Uninstall webhook registered");
+      } else {
+        const webhookError = await webhookResponse.json();
+        console.log(
+          "⚠️ Webhook registration failed (might already exist):",
+          webhookError
+        );
+      }
+    } catch (webhookError) {
+      console.error("⚠️ Webhook registration error:", webhookError);
+      // Don't fail OAuth if webhook fails
+    }
+
     // Redirect to embedded app
-    const host = req.query.host;
-    const redirectUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_APP_HANDLE}`;
+    const appHandle = process.env.SHOPIFY_APP_HANDLE || "variant-badges-app-14";
+    const redirectUrl = `https://${shop}/admin/apps/${appHandle}`;
 
     res.redirect(redirectUrl);
   } catch (error) {
@@ -481,54 +517,8 @@ app.get("/install", (req, res) => {
     </html>
   `);
 });
-// TEMPORARY - Register webhook once, then remove
-app.get("/admin/register-webhook", async (req, res) => {
-  try {
-    const shop = "quickstart-c559582d.myshopify.com";
 
-    // Get session
-    const session = await db.getShopSession(shop);
-    if (!session) {
-      return res.status(400).send("No session found. Install app first.");
-    }
-
-    // Register webhook
-    const response = await fetch(
-      `https://${shop}/admin/api/2024-10/webhooks.json`,
-      {
-        method: "POST",
-        headers: {
-          "X-Shopify-Access-Token": session.access_token,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          webhook: {
-            topic: "app/uninstalled",
-            address:
-              "https://variant-badges-app-production.up.railway.app/webhooks/app/uninstalled",
-            format: "json",
-          },
-        }),
-      }
-    );
-
-    const data = await response.json();
-
-    if (response.ok) {
-      res.send(
-        "✅ Webhook registered successfully! " + JSON.stringify(data, null, 2)
-      );
-    } else {
-      res
-        .status(500)
-        .send(
-          "❌ Failed to register webhook: " + JSON.stringify(data, null, 2)
-        );
-    }
-  } catch (error) {
-    res.status(500).send("Error: " + error.message);
-  }
-});
+// Webhook handler for app uninstall
 app.post(
   "/webhooks/app/uninstalled",
   express.raw({ type: "application/json" }),
@@ -548,6 +538,7 @@ app.post(
     }
   }
 );
+
 app.listen(PORT, () => {
   console.log("");
   console.log("🚀 Variant Badges App Server Started");
