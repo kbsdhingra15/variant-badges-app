@@ -481,17 +481,73 @@ app.get("/install", (req, res) => {
     </html>
   `);
 });
-// TEMPORARY - Remove after testing
-app.get("/admin/clear-all-sessions", async (req, res) => {
+// TEMPORARY - Register webhook once, then remove
+app.get("/admin/register-webhook", async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM shops");
-    res.send(
-      `✅ Cleared ${result.rowCount} sessions. Database is clean. Now uninstall and reinstall the app.`
+    const shop = "quickstart-c559582d.myshopify.com";
+
+    // Get session
+    const session = await db.getShopSession(shop);
+    if (!session) {
+      return res.status(400).send("No session found. Install app first.");
+    }
+
+    // Register webhook
+    const response = await fetch(
+      `https://${shop}/admin/api/2024-10/webhooks.json`,
+      {
+        method: "POST",
+        headers: {
+          "X-Shopify-Access-Token": session.access_token,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          webhook: {
+            topic: "app/uninstalled",
+            address:
+              "https://variant-badges-app-production.up.railway.app/webhooks/app/uninstalled",
+            format: "json",
+          },
+        }),
+      }
     );
+
+    const data = await response.json();
+
+    if (response.ok) {
+      res.send(
+        "✅ Webhook registered successfully! " + JSON.stringify(data, null, 2)
+      );
+    } else {
+      res
+        .status(500)
+        .send(
+          "❌ Failed to register webhook: " + JSON.stringify(data, null, 2)
+        );
+    }
   } catch (error) {
     res.status(500).send("Error: " + error.message);
   }
 });
+app.post(
+  "/webhooks/app/uninstalled",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const shop = req.get("X-Shopify-Shop-Domain");
+      console.log("🗑️ App uninstalled webhook received for:", shop);
+
+      // Delete session from database
+      await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
+      console.log("✅ Session deleted for:", shop);
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("❌ Uninstall webhook error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
 app.listen(PORT, () => {
   console.log("");
   console.log("🚀 Variant Badges App Server Started");
