@@ -8,7 +8,39 @@ const pool = new Pool({
       ? { rejectUnauthorized: false }
       : false,
 });
+const { Pool } = require("pg");
+// Database connection pool
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: false }
+      : false,
+});
+// Auto-run migrations on startup
+async function runMigrations() {
+  try {
+    // Create sessions table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        shop VARCHAR(255) PRIMARY KEY,
+        access_token TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_sessions_shop ON sessions(shop);
+    `);
+
+    console.log("✅ Sessions table ready");
+  } catch (error) {
+    console.error("❌ Migration error:", error);
+  }
+}
+// Call it immediately
+runMigrations();
 // Initialize database tables
 async function initDB() {
   const client = await pool.connect();
