@@ -396,8 +396,8 @@ app.get("/auth/callback", async (req, res) => {
     }
 
     // Redirect to apps page which auto-opens the app
-    const redirectUrl = `https://${shop}/admin/apps`;
-
+    const host = Buffer.from(`${shop}/admin`).toString("base64");
+    const redirectUrl = `https://${shop}/admin/apps?shop=${shop}&host=${host}`;
     res.redirect(redirectUrl);
   } catch (error) {
     console.error("❌ OAuth callback error:", error);
