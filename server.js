@@ -588,7 +588,75 @@ app.post(
     }
   }
 );
+// GDPR Webhook: Customer data request
+app.post(
+  "/webhooks/customers/data_request",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const shop = req.get("X-Shopify-Shop-Domain");
+      const body = JSON.parse(req.body.toString());
 
+      console.log("📋 GDPR: Customer data request for:", shop);
+      console.log("   Customer ID:", body.customer?.id);
+
+      // We don't store any customer personal data
+      res.status(200).json({
+        message: "No customer data stored",
+        data: {},
+      });
+    } catch (error) {
+      console.error("❌ Customer data request error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
+
+// GDPR Webhook: Customer redact (delete customer data)
+app.post(
+  "/webhooks/customers/redact",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const shop = req.get("X-Shopify-Shop-Domain");
+      const body = JSON.parse(req.body.toString());
+
+      console.log("🗑️ GDPR: Customer redact for:", shop);
+      console.log("   Customer ID:", body.customer?.id);
+
+      // We don't store customer data, nothing to delete
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("❌ Customer redact error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
+
+// GDPR Webhook: Shop redact (delete all shop data)
+app.post(
+  "/webhooks/shop/redact",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      const shop = req.get("X-Shopify-Shop-Domain");
+
+      console.log("🗑️ GDPR: Shop redact for:", shop);
+
+      // Delete all shop data (same as uninstall)
+      await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
+      await pool.query("DELETE FROM app_settings WHERE shop = $1", [shop]);
+      await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
+
+      console.log("✅ All shop data deleted for:", shop);
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("❌ Shop redact error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
 app.listen(PORT, () => {
   console.log("");
   console.log("🚀 Variant Badges App Server Started");
