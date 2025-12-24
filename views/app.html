@@ -1159,6 +1159,30 @@
 
       async function loadSettings() {
         try {
+          // Load available options first
+          const optionsResponse = await authenticatedFetch(
+            "/api/products/options"
+          );
+          if (optionsResponse.ok) {
+            const optionsData = await optionsResponse.json();
+            const optionSelect = document.getElementById("option-type");
+
+            // Clear existing options except the placeholder
+            optionSelect.innerHTML =
+              '<option value="">Select option type...</option>';
+
+            // Add fetched options
+            optionsData.options.forEach((optionName) => {
+              const opt = document.createElement("option");
+              opt.value = optionName;
+              opt.textContent = optionName;
+              optionSelect.appendChild(opt);
+            });
+
+            console.log("✅ Loaded option types:", optionsData.options);
+          }
+
+          // Then load saved settings
           const response = await authenticatedFetch(`/api/settings`);
 
           if (!response.ok) {

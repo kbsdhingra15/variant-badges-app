@@ -573,6 +573,14 @@ app.post(
       await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
       console.log("✅ Session deleted for:", shop);
 
+      // DELETE SETTINGS TOO
+      await pool.query("DELETE FROM app_settings WHERE shop = $1", [shop]);
+      console.log("✅ Settings deleted for:", shop);
+
+      // DELETE BADGE ASSIGNMENTS TOO
+      await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
+      console.log("✅ Badge assignments deleted for:", shop);
+
       res.status(200).send("OK");
     } catch (error) {
       console.error("❌ Uninstall webhook error:", error);
