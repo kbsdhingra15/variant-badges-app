@@ -358,28 +358,44 @@ app.get("/auth/callback", async (req, res) => {
 
     console.log("✅ Session verified in database");
 
-    // AUTO-REGISTER UNINSTALL WEBHOOK
-    try {
-      const webhookResponse = await fetch(
-        `https://${shop}/admin/api/2024-10/webhooks.json`,
-        {
-          method: "POST",
-          headers: {
-            "X-Shopify-Access-Token": accessToken,
-            "Content-Type": "application/json",
+// AUTO-REGISTER ALL WEBHOOKS (including GDPR)
+const webhooks = [
+  { topic: "app/uninstalled", path: "/webhooks/app/uninstalled" },
+  { topic: "customers/data_request", path: "/webhooks/customers/data_request" },
+  { topic: "customers/redact", path: "/webhooks/customers/redact" },
+  { topic: "shop/redact", path: "/webhooks/shop/redact" }
+];
+
+for (const webhook of webhooks) {
+  try {
+    const webhookResponse = await fetch(
+      `https://${shop}/admin/api/2024-10/webhooks.json`,
+      {
+        method: "POST",
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          webhook: {
+            topic: webhook.topic,
+            address: `${process.env.HOST || "https://variant-badges-app-production.up.railway.app"}${webhook.path}`,
+            format: "json",
           },
-          body: JSON.stringify({
-            webhook: {
-              topic: "app/uninstalled",
-              address: `${
-                process.env.HOST ||
-                "https://variant-badges-app-production.up.railway.app"
-              }/webhooks/app/uninstalled`,
-              format: "json",
-            },
-          }),
-        }
-      );
+        }),
+      }
+    );
+
+    if (webhookResponse.ok) {
+      console.log(`✅ Registered webhook: ${webhook.topic}`);
+    } else {
+      const error = await webhookResponse.json();
+      console.log(`⚠️ Webhook ${webhook.topic} failed:`, error.errors);
+    }
+  } catch (webhookError) {
+    console.error(`⚠️ Webhook ${webhook.topic} error:`, webhookError);
+  }
+}
 
       if (webhookResponse.ok) {
         console.log("✅ Uninstall webhook registered");
