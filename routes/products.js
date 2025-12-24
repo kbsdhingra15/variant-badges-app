@@ -284,11 +284,15 @@ router.get("/options", async (req, res) => {
     const result = await response.json();
 
     // Extract unique option names
+    // Extract unique option names (exclude "Title" for single-variant products)
     const optionsSet = new Set();
     result.data.products.edges.forEach((edge) => {
       edge.node.options.forEach((option) => {
-        console.log("  📌 Found option:", option.name); // ADD THIS
-        optionsSet.add(option.name);
+        console.log("  📌 Found option:", option.name);
+        // Only add if NOT "Title" (Shopify's default for products without options)
+        if (option.name !== "Title") {
+          optionsSet.add(option.name);
+        }
       });
     });
     const finalOptions = Array.from(optionsSet).sort();

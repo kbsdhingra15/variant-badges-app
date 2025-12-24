@@ -18,7 +18,14 @@ router.get("/all-products", async (req, res) => {
     const { getAppSettings } = require("../database/db");
     const settings = await getAppSettings(shop);
     const selectedOption = settings.selectedOption;
-
+    // Don't show products if "Title" is selected (single-variant products)
+    if (selectedOption === "Title") {
+      return res.json({
+        products: [],
+        selectedOption: "Title",
+        message: "Title option not supported (single-variant products)",
+      });
+    }
     if (!selectedOption) {
       return res.json({
         products: [],
