@@ -523,6 +523,62 @@
           max-width: 100% !important;
         }
       }
+      /* Portrait mode specific fixes */
+      @media (max-width: 430px) and (orientation: portrait) {
+        /* More padding for portrait */
+        .container {
+          padding: 16px !important;
+        }
+
+        /* Card spacing */
+        .product-card {
+          padding: 16px !important;
+          margin-bottom: 16px !important;
+        }
+
+        /* Product title - more breathing room */
+        .product-title {
+          font-size: 16px !important;
+          line-height: 1.5 !important;
+          margin-bottom: 12px !important;
+        }
+
+        /* Product info text */
+        .product-info {
+          font-size: 14px !important;
+          line-height: 1.6 !important;
+          margin-bottom: 8px !important;
+        }
+
+        /* Dropdown and buttons - more spacing */
+        .badge-select {
+          padding: 12px !important;
+          font-size: 16px !important;
+          margin-bottom: 12px !important;
+        }
+
+        .preview-btn {
+          padding: 12px 20px !important;
+          font-size: 16px !important;
+        }
+
+        /* Product image - smaller but with spacing */
+        .product-image {
+          max-width: 80px !important;
+          margin-right: 16px !important;
+          margin-bottom: 8px !important;
+        }
+
+        /* Add spacing between elements */
+        .product-actions > * {
+          margin-bottom: 8px !important;
+        }
+
+        /* Last element shouldn't have bottom margin */
+        .product-actions > *:last-child {
+          margin-bottom: 0 !important;
+        }
+      }
     </style>
   </head>
   <body>
