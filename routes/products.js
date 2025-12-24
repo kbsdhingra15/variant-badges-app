@@ -293,7 +293,7 @@ router.get("/options", async (req, res) => {
     });
     const finalOptions = Array.from(optionsSet).sort();
     console.log("✅ Final unique options:", finalOptions); // ADD THIS
-    res.json({ options: Array.from(optionsSet).sort() });
+    res.json({ options: finalOptions });
   } catch (error) {
     console.error("Error fetching product options:", error);
     res.status(500).json({ error: "Failed to fetch options" });
