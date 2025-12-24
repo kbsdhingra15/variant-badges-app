@@ -287,10 +287,12 @@ router.get("/options", async (req, res) => {
     const optionsSet = new Set();
     result.data.products.edges.forEach((edge) => {
       edge.node.options.forEach((option) => {
+        console.log("  📌 Found option:", option.name); // ADD THIS
         optionsSet.add(option.name);
       });
     });
-
+    const finalOptions = Array.from(optionsSet).sort();
+    console.log("✅ Final unique options:", finalOptions); // ADD THIS
     res.json({ options: Array.from(optionsSet).sort() });
   } catch (error) {
     console.error("Error fetching product options:", error);
