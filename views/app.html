@@ -485,6 +485,41 @@
           grid-template-columns: 1fr;
         }
       }
+      /* Mobile responsiveness */
+      @media (max-width: 768px) {
+        .product-card {
+          flex-direction: column !important;
+        }
+
+        .product-actions {
+          width: 100% !important;
+          margin-top: 10px !important;
+        }
+
+        .badge-select {
+          width: 100% !important;
+          margin-bottom: 10px !important;
+        }
+
+        .preview-btn {
+          width: 100% !important;
+        }
+
+        /* Make containers full width on mobile */
+        .container {
+          padding: 10px !important;
+        }
+
+        /* Stack buttons vertically */
+        .button-group {
+          flex-direction: column !important;
+        }
+
+        .button-group button {
+          width: 100% !important;
+          margin-bottom: 8px !important;
+        }
+      }
     </style>
   </head>
   <body>
