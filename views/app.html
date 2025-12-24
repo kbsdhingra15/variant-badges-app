@@ -472,21 +472,9 @@
         border-radius: 6px;
         margin-bottom: 16px;
       }
-
-      /* Responsive */
-      @media (max-width: 768px) {
-        .app-container {
-          padding: 16px;
-        }
-        .tabs {
-          overflow-x: auto;
-        }
-        .pricing-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-      /* Mobile responsiveness */
-      @media (max-width: 768px) {
+      /* Mobile responsiveness - wider breakpoint for newer phones */
+      @media (max-width: 1024px) {
+        /* Changed from 768px to 1024px */
         .product-card {
           flex-direction: column !important;
         }
@@ -518,6 +506,21 @@
         .button-group button {
           width: 100% !important;
           margin-bottom: 8px !important;
+        }
+      }
+
+      /* Extra small devices - phones in portrait */
+      @media (max-width: 480px) {
+        body {
+          font-size: 14px !important;
+        }
+
+        h1 {
+          font-size: 20px !important;
+        }
+
+        .product-image {
+          max-width: 100% !important;
         }
       }
     </style>
