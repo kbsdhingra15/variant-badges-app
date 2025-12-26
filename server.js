@@ -665,6 +665,14 @@ app.post(
     }
   }
 );
+// Privacy Policy page
+app.get("/privacy-policy", (req, res) => {
+  const fs = require("fs");
+  const path = require("path");
+  const htmlPath = path.join(__dirname, "views", "privacy-policy.html");
+  const html = fs.readFileSync(htmlPath, "utf8");
+  res.type("html").send(html);
+});
 app.listen(PORT, () => {
   console.log("");
   console.log("🚀 Variant Badges App Server Started");
