@@ -7,20 +7,25 @@ name = "Variant Badges"
 handle = "variant-badges-display"
 
 [extensions.settings]
-[[extensions.settings.fields]]
-  id = "enabled"
-  name = "Enable badges"
-  type = "boolean"
-  default = true
 
-[[extensions.settings.fields]]
-  id = "badge_position"
-  name = "Badge position"
-  type = "select"
-  default = "top-right"
-  options = [
-    { label = "Top right", value = "top-right" },
-    { label = "Top left", value = "top-left" },
-    { label = "Bottom right", value = "bottom-right" },
-    { label = "Bottom left", value = "bottom-left" }
-  ]
+  [[extensions.settings.blocks]]
+    type = "variant_badges"
+    name = "Variant Badges"
+    
+    [[extensions.settings.blocks.settings]]
+      id = "enabled"
+      label = "Enable badges"
+      type = "checkbox"
+      default = true
+    
+    [[extensions.settings.blocks.settings]]
+      id = "badge_position"
+      label = "Badge position"
+      type = "select"
+      default = "top-right"
+      options = [
+        { label = "Top right", value = "top-right" },
+        { label = "Top left", value = "top-left" },
+        { label = "Bottom right", value = "bottom-right" },
+        { label = "Bottom left", value = "bottom-left" }
+      ]
