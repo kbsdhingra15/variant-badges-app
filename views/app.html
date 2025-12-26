@@ -747,124 +747,178 @@
           </div>
         </div>
       </div>
+<!-- HELP VIEW -->
+<div id="help-view" class="view-section">
+  <div class="page-header">
+    <h2>Help & Support</h2>
+    <p>Find answers to common questions and get assistance</p>
+  </div>
 
-      <!-- HELP VIEW -->
-      <div id="help-view" class="view-section">
-        <div class="page-header">
-          <h2>Help & Support</h2>
-          <p>Find answers to common questions</p>
-        </div>
+  <div class="card">
+    <h3>Need Assistance?</h3>
+    <div class="contact-grid">
+      <!-- Email Support -->
+      <div class="contact-card">
+        <div class="contact-icon">📧</div>
+        <h4>Email Support</h4>
+        <p>Send us a detailed message</p>
+        <button
+          class="btn btn-primary"
+          onclick="window.location.href='mailto:shopifyapps15@gmail.com'"
+        >
+          Email Us
+        </button>
+        <p style="margin-top: 8px; font-size: 13px; color: #6d7175;">shopifyapps15@gmail.com</p>
+      </div>
 
-        <div class="card">
-          <h3>Need Assistance?</h3>
-          <div class="contact-grid">
-            <div class="contact-card">
-              <div class="contact-icon">💬</div>
-              <h4>Live Chat</h4>
-              <p>Get instant help from our support team</p>
-              <button class="btn btn-primary" onclick="openLiveChat()">
-                Start Chat
-              </button>
-            </div>
-            <div class="contact-card">
-              <div class="contact-icon">📧</div>
-              <h4>Email Support</h4>
-              <p>Send us a detailed message</p>
-              <button
-                class="btn btn-secondary"
-                onclick="window.location.href='mailto:support@variantbadges.com'"
-              >
-                Email Us
-              </button>
-            </div>
-            <div class="contact-card">
-              <div class="contact-icon">📚</div>
-              <h4>Documentation</h4>
-              <p>Browse our knowledge base</p>
-              <button
-                class="btn btn-secondary"
-                onclick="window.open('https://docs.variantbadges.com', '_blank')"
-              >
-                View Docs
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <h3>Frequently Asked Questions</h3>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span>How do I add badges to my theme?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              1. Click "Open Theme Editor" from the banner<br />
-              2. In the left sidebar, click "Add section" or "Add block"<br />
-              3. Find "Variant Badges Display" under Apps<br />
-              4. Drag it into your product template<br />
-              5. Click "Save" - badges will now appear on your store!
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span>How do badges work with multiple options?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              If your product has Color, Size, and Material options, go to
-              Settings and select which option type should display badges. For
-              example, if you choose "Color", badges will appear on color
-              swatches (Black, Red, Blue) but not on size selectors.
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span>Can I assign badges to all variants at once?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              Yes! When you assign a badge to "Black", it automatically applies
-              to ALL Black variants (Small, Medium, Large, XL). This saves you
-              from clicking dozens of times.
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span>Why aren't my badges showing on the storefront?</span>
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              Common issues:<br />
-              1. App block not added to theme (check the banner)<br />
-              2. Badge display is disabled in Settings<br />
-              3. Wrong option type selected (badges on Color but you chose
-              Size)<br />
-              4. Cache - try clearing browser cache or incognito mode
-            </div>
-          </div>
-
-          <div class="faq-item">
-            <div class="faq-question" onclick="toggleFaq(this)">
-              <span
-                >What's the difference between HOT, NEW, and SALE badges?</span
-              >
-              <span class="faq-icon">▼</span>
-            </div>
-            <div class="faq-answer">
-              <strong>HOT</strong> (red) - Trending or popular items<br />
-              <strong>NEW</strong> (green) - Recently added products<br />
-              <strong>SALE</strong> (orange) - Discounted items (Pro plan
-              auto-applies this)
-            </div>
-          </div>
-        </div>
+      <!-- Documentation -->
+      <div class="contact-card">
+        <div class="contact-icon">📚</div>
+        <h4>Documentation</h4>
+        <p>Setup guides and tutorials</p>
+        <button
+          class="btn btn-secondary"
+          onclick="window.open('/privacy-policy', '_blank')"
+        >
+          View Docs
+        </button>
       </div>
     </div>
+  </div>
+
+  <div class="card">
+    <h3>Frequently Asked Questions</h3>
+
+    <!-- Setup & Installation -->
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>How do I add badges to my theme?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        1. Click "Open Theme Editor" from the banner (or go to Online Store → Themes → Customize)<br />
+        2. Navigate to your product page template<br />
+        3. In the left sidebar, click "Add section" or "Add block"<br />
+        4. Search for "Variant Badges" under the Apps section<br />
+        5. Drag it into your product template where you want badges to appear<br />
+        6. Click "Save" - badges will now show on your storefront!
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Do badges work on all themes?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        Yes! Our app uses Shopify's Theme App Extension technology, which works universally on all themes including Dawn, Debut, Sense, and custom themes. You don't need to edit any theme code.
+      </div>
+    </div>
+
+    <!-- Badge Assignment -->
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Can I assign badges to specific sizes or colors?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        Yes! Go to Settings and choose which option type (Color, Size, Material, etc.) you want to display badges on. Then in Manage Badges, assign badges to specific option values like "Black", "Large", or "Cotton".
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Can I assign badges to all variants at once?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        Absolutely! When you assign a badge to "Black", it automatically applies to ALL variants with that option value (Black/Small, Black/Medium, Black/Large, etc.). This option-level assignment saves you from clicking dozens of times and makes badge management much faster.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>How do badges work with products that have multiple options?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        If your product has Color, Size, and Material options, you choose ONE option type in Settings to display badges on. For example, if you select "Color", badges will appear on color swatches (Black, Red, Blue) but not on size or material selectors. This prevents badge clutter and keeps your product pages clean.
+      </div>
+    </div>
+
+    <!-- Badge Types -->
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>What's the difference between HOT, NEW, and SALE badges?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        <strong>🔥 HOT</strong> (red badge) - Use for trending, popular, or bestselling items to create urgency<br />
+        <strong>✨ NEW</strong> (green badge) - Highlight recently added products or new arrivals<br />
+        <strong>💰 SALE</strong> (orange badge) - Mark discounted items or special promotions<br /><br />
+        You can assign these badges to any variant option based on your merchandising strategy.
+      </div>
+    </div>
+
+    <!-- Troubleshooting -->
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Why aren't my badges showing on the storefront?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        Check these common issues:<br />
+        1. <strong>App block not added:</strong> Check the banner at the top - if it shows, you need to add the app block to your theme<br />
+        2. <strong>Display disabled:</strong> Go to Settings and make sure "Enable badge display" is checked<br />
+        3. <strong>Wrong option type:</strong> Verify you've selected the correct option type (e.g., badges assigned to Color but Size is selected in Settings)<br />
+        4. <strong>No badges assigned:</strong> Make sure you've actually assigned badges in the Manage Badges tab<br />
+        5. <strong>Cache:</strong> Try viewing in incognito mode or clearing your browser cache
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Can I preview badges before they go live?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        Yes! Click the "Preview →" button next to any product in the Manage Badges tab. This opens your product page so you can see exactly how badges will look on your live storefront before customers see them.
+      </div>
+    </div>
+
+    <!-- Data & Privacy -->
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>What happens to my badges if I uninstall the app?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        All badge assignments and settings are automatically deleted when you uninstall the app. Your product data remains completely unchanged - we only store badge assignments, not your actual product information. You can reinstall anytime and start fresh.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(this)">
+        <span>Do you store customer data?</span>
+        <span class="faq-icon">▼</span>
+      </div>
+      <div class="faq-answer">
+        No. We don't collect, store, or access any customer personal information (names, emails, addresses, etc.). We only work with product variant information to display badges. See our <a href="/privacy-policy" target="_blank" style="color: #008060;">Privacy Policy</a> for details.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Contact Footer -->
+  <div class="card" style="text-align: center; background: #f6f6f7;">
+    <h4 style="margin-bottom: 8px;">Still need help?</h4>
+    <p style="color: #6d7175; margin-bottom: 12px;">We're here to assist you!</p>
+    <p>
+      Email us at <a href="mailto:shopifyapps15@gmail.com" style="color: #008060; text-decoration: none; font-weight: 600;">shopifyapps15@gmail.com</a>
+    </p>
+    <p style="font-size: 13px; color: #999; margin-top: 8px;">We typically respond within 24 hours</p>
+  </div>
+</div>
 
     <script>
       // ============================================
