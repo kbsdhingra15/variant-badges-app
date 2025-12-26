@@ -59,7 +59,7 @@
 
       const data = await response.json();
       badgeData = data.badges || {};
-
+      config.selectedOption = data.selectedOption;
       buildVariantMap();
       applyBadges();
       observeVariantChanges();
@@ -90,13 +90,47 @@
   }
 
   function applyBadges() {
-    const inputs = document.querySelectorAll(
-      'input[type="radio"][id*="template"], input[type="radio"][name*="option"]'
-    );
+    if (!config.selectedOption) {
+      console.log("Variant Badges: No selected option configured");
+      return;
+    }
+    // Find all radio inputs for product options
+    const selectors = [
+      'input[type="radio"][id*="template"]',
+      'input[type="radio"][name*="option"]',
+      'input[type="radio"][name^="options"]',
+      '.product-form__input input[type="radio"]',
+      'fieldset input[type="radio"]',
+    ];
 
-    if (inputs.length === 0) return;
+    let inputs = [];
+    for (const selector of selectors) {
+      const found = document.querySelectorAll(selector);
+      if (found.length > 0) {
+        inputs = found;
+        break;
+      }
+    }
+
+    if (inputs.length === 0) {
+      console.log("Variant Badges: No radio inputs found");
+      return;
+    }
 
     inputs.forEach((input) => {
+      // CRITICAL: Find the fieldset/option group this input belongs to
+      const fieldset =
+        input.closest("fieldset") || input.closest(".product-form__input");
+      if (!fieldset) return;
+
+      // Get the option name from legend or label
+      const legend = fieldset.querySelector("legend");
+      const optionName = legend ? legend.textContent.trim() : "";
+
+      // Only process if this matches the selected option type
+      if (optionName !== config.selectedOption) {
+        return; // Skip this option group (Size, Fabric, etc.)
+      }
       const optionValue = input.value;
       const variantIds = variantMap[optionValue] || [];
 
@@ -108,33 +142,50 @@
         }
       }
 
+      // Find label - try multiple methods
       let label = null;
+
+      // Method 1: Parent is label
       if (input.parentElement?.tagName === "LABEL") {
         label = input.parentElement;
-      } else if (input.nextElementSibling?.tagName === "LABEL") {
+      }
+
+      // Method 2: Next sibling is label
+      if (!label && input.nextElementSibling?.tagName === "LABEL") {
         label = input.nextElementSibling;
-      } else {
-        label =
-          input.closest("label") ||
-          document.querySelector(`label[for="${input.id}"]`);
+      }
+
+      // Method 3: Closest label
+      if (!label) {
+        label = input.closest("label");
+      }
+
+      // Method 4: Label with for attribute
+      if (!label && input.id) {
+        label = document.querySelector(`label[for="${input.id}"]`);
+      }
+
+      // Method 5: Previous sibling is label
+      if (!label && input.previousElementSibling?.tagName === "LABEL") {
+        label = input.previousElementSibling;
       }
 
       if (!label) return;
 
+      // Check if badge already exists with correct type
       const existingBadge = label.querySelector(".variant-badge-overlay");
 
       if (badgeToShow) {
-        if (existingBadge) {
-          const expectedText =
-            BADGE_STYLES[badgeToShow].emoji +
-            " " +
-            BADGE_STYLES[badgeToShow].text;
-          if (existingBadge.textContent === expectedText) {
-            return;
-          }
-          existingBadge.remove();
+        const badgeStyle = BADGE_STYLES[badgeToShow.toUpperCase()];
+        if (!badgeStyle) return; // Skip if badge type not found
+
+        const expectedText = badgeStyle.emoji + " " + badgeStyle.text;
+
+        // Only update if badge doesn't exist or is wrong type
+        if (!existingBadge || existingBadge.textContent !== expectedText) {
+          if (existingBadge) existingBadge.remove();
+          addBadgeToElement(label, badgeToShow.toUpperCase());
         }
-        addBadgeToElement(label, badgeToShow);
       } else if (existingBadge) {
         existingBadge.remove();
       }
@@ -142,7 +193,7 @@
   }
 
   function addBadgeToElement(element, badgeType) {
-    const badge = BADGE_STYLES[badgeType];
+    const badge = BADGE_STYLES[badgeType.toUpperCase()];
     if (!badge || element.querySelector(".variant-badge-overlay")) return;
 
     const badgeEl = document.createElement("span");
@@ -158,25 +209,62 @@
   }
 
   function observeVariantChanges() {
+    let isInitialized = false;
+    let applyTimeout = null;
+
+    // Wait for initial render to complete
+    setTimeout(() => {
+      isInitialized = true;
+    }, 1000);
+
     // Listen for variant changes
     document.addEventListener("change", (e) => {
-      if (e.target.matches('input[type="radio"]')) {
-        setTimeout(() => applyBadges(), 100);
+      if (e.target.matches('input[type="radio"]') && isInitialized) {
+        // Clear any pending re-apply
+        if (applyTimeout) clearTimeout(applyTimeout);
+
+        // Wait for DOM to fully settle before re-applying
+        applyTimeout = setTimeout(() => {
+          console.log("Variant Badges: Re-applying after variant change");
+          applyBadges();
+        }, 500); // Longer delay to let Dawn finish DOM updates
       }
     });
 
-    // Observe DOM changes
-    const observer = new MutationObserver(() => {
-      setTimeout(() => applyBadges(), 100);
+    // Watch for product form rebuilds (less aggressive)
+    const observer = new MutationObserver((mutations) => {
+      if (!isInitialized) return; // Skip during initial load
+
+      // Only react to significant changes (fieldset added/removed)
+      const significantChange = mutations.some(
+        (m) =>
+          m.type === "childList" &&
+          Array.from(m.addedNodes).some(
+            (node) =>
+              node.nodeName === "FIELDSET" ||
+              (node.classList && node.classList.contains("product-form__input"))
+          )
+      );
+
+      if (significantChange) {
+        if (applyTimeout) clearTimeout(applyTimeout);
+        applyTimeout = setTimeout(() => {
+          console.log("Variant Badges: Re-applying after DOM rebuild");
+          applyBadges();
+        }, 500);
+      }
     });
 
-    const productForm = document.querySelector(
-      'product-form, variant-radios, [class*="product"]'
-    );
-    if (productForm) {
-      observer.observe(productForm, {
+    // Watch only the variant selectors container, not entire form
+    const variantSelectors =
+      document.querySelector(".product-form__controls") ||
+      document.querySelector("variant-radios") ||
+      document.querySelector(".product-form");
+
+    if (variantSelectors) {
+      observer.observe(variantSelectors, {
         childList: true,
-        subtree: true,
+        subtree: false, // Only direct children, not deep
       });
     }
   }
