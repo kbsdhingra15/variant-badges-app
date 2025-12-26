@@ -7,7 +7,7 @@ name = "Variant Badges"
 handle = "variant-badges-display"
 
 [extensions.settings]
-
+  
   [[extensions.settings.blocks]]
     type = "variant_badges"
     name = "Variant Badges"
@@ -29,3 +29,10 @@ handle = "variant-badges-display"
         { label = "Bottom right", value = "bottom-right" },
         { label = "Bottom left", value = "bottom-left" }
       ]
+
+# CRITICAL: Tell Shopify to include these assets
+[[extensions.assets]]
+  key = "variant-badges.js"
+
+[[extensions.assets]]
+  key = "variant-badges.css"
