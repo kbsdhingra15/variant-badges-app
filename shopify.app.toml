@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "variant-badges-app"
 client_id = "1636cf7a93099710fbaf876c2f2a4a4d"
+name = "Variant Badges"
 application_url = "https://variant-badges-app-production.up.railway.app"
 embedded = true
 
@@ -9,20 +9,21 @@ embedded = true
 automatically_update_urls_on_dev = true
 dev_store_url = "quickstart-c559582d.myshopify.com"
 
+[webhooks]
+api_version = "2024-10"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
 [access_scopes]
-scopes = "write_products,read_products,read_themes"
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_products,read_themes,write_products"
 
 [auth]
 redirect_urls = [
   "https://variant-badges-app-production.up.railway.app/auth/callback"
 ]
-
-[webhooks]
-api_version = "2024-10"
-
-  [[webhooks.subscriptions]]
-  topics = ["app/uninstalled"]
-  uri = "/webhooks/app/uninstalled"
 
 [pos]
 embedded = false
