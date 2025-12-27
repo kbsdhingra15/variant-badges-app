@@ -555,27 +555,38 @@
     </div>
 
     <div class="app-container">
-      <!-- Onboarding Banner -->
-      <div id="setup-banner" style="display: none">
-        <div class="banner">
-          <div class="banner-icon">⚠️</div>
-          <div class="banner-content">
-            <h4>Complete Setup (30 seconds)</h4>
-            <p>
-              Badges are ready! Add them to your theme to make them visible to
-              customers.
-            </p>
-            <div class="banner-actions">
-              <button class="btn btn-primary" onclick="openThemeEditor()">
-                🎨 Open Theme Editor
-              </button>
-              <button class="btn btn-outline" onclick="dismissBanner()">
-                Dismiss
-              </button>
-            </div>
-          </div>
+  <!-- Onboarding Banner -->
+  <div id="setup-banner" style="display: none">
+    <div class="banner">
+      <div class="banner-icon">⚠️</div>
+      <div class="banner-content">
+        <h4>Complete Setup (30 seconds)</h4>
+        <p>
+          Badges are ready! Add them to your theme to make them visible to
+          customers:
+        </p>
+        
+        <!-- ADD THIS ORDERED LIST -->
+        <ol style="margin: 12px 0 20px 20px; padding: 0; line-height: 1.8; color: #333; text-align: left;">
+          <li>Click <strong>"Open Theme Editor"</strong> below</li>
+          <li>Navigate to <strong>Products → Default product</strong> in the sidebar</li>
+          <li>Click <strong>"Add block"</strong></li>
+          <li>Find <strong>"Variant Badges"</strong> under Apps</li>
+          <li>Add it near your variant selector</li>
+          <li>Click <strong>"Save"</strong> - Done! ✅</li>
+        </ol>
+        
+        <div class="banner-actions">
+          <button class="btn btn-primary" onclick="openThemeEditor()">
+            🎨 Open Theme Editor
+          </button>
+          <button class="btn btn-outline" onclick="dismissBanner()">
+            Dismiss
+          </button>
         </div>
       </div>
+    </div>
+  </div>
 
       <!-- MANAGE BADGES VIEW -->
       <div id="manage-view" class="view-section active">
