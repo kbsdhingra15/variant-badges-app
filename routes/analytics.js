@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const pool = require("../database/db");
+const { pool } = require("../database/db");
 
 // Public endpoint - called from storefront
 router.post("/track", async (req, res) => {
