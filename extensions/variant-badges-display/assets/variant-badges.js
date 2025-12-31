@@ -125,6 +125,9 @@
       const data = await response.json();
       badgeData = data.badges || {};
       config.selectedOption = data.selectedOption;
+      // ← ADD THIS TO DEBUG
+      console.log("Badge Data:", badgeData);
+      console.log("Sample Badge:", badgeData[Object.keys(badgeData)[0]]);
       // Track badge views
       Object.keys(badgeData).forEach((variantId) => {
         const badge = badgeData[variantId];
