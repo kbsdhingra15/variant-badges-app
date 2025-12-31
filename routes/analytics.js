@@ -4,15 +4,6 @@ const pool = require("../database/db");
 
 // Public endpoint - called from storefront
 router.post("/track", async (req, res) => {
-  // Add CORS headers
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type");
-
-  // Handle preflight
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
   try {
     const {
       shop,
