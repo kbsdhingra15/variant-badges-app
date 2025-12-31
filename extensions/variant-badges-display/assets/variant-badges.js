@@ -21,6 +21,69 @@
     enabled: true,
     position: "top-right",
   };
+  // ============================================
+  // ANALYTICS TRACKING
+  // ============================================
+
+  // Generate unique session ID
+  function getSessionId() {
+    try {
+      let sessionId = sessionStorage.getItem("vb_session");
+      if (!sessionId) {
+        sessionId =
+          "vb_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem("vb_session", sessionId);
+      }
+      return sessionId;
+    } catch {
+      return "vb_" + Date.now();
+    }
+  }
+
+  // Track events (fire and forget)
+  function trackEvent(eventType, variantId, badgeType, optionValue) {
+    if (!config.shopDomain || !config.appUrl) return;
+
+    const data = {
+      shop: config.shopDomain,
+      product_id: config.productId,
+      variant_id: variantId,
+      badge_type: badgeType,
+      option_value: optionValue,
+      event_type: eventType,
+      session_id: getSessionId(),
+    };
+
+    fetch(`${config.appUrl}/api/analytics/track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      keepalive: true,
+    }).catch(() => {});
+  }
+
+  // ← ADD THIS NEW FUNCTION HERE
+  // Track add to cart events
+  function initAddToCartTracking() {
+    const form = document.querySelector('form[action*="/cart/add"]');
+    if (!form) return;
+
+    form.addEventListener("submit", function () {
+      const variantInput = form.querySelector('[name="id"]');
+      if (!variantInput) return;
+
+      const variantId = variantInput.value;
+      if (badgeData[variantId]) {
+        const badge = badgeData[variantId];
+        trackEvent(
+          "add_to_cart",
+          variantId,
+          badge.badge_type,
+          badge.option_value
+        );
+      }
+    });
+  }
 
   function init() {
     // Get configuration
@@ -47,8 +110,10 @@
     }
 
     loadBadgeData();
-  }
 
+    // ← ADD THIS LINE AT THE END
+    initAddToCartTracking();
+  }
   async function loadBadgeData() {
     try {
       const response = await fetch(
@@ -60,6 +125,11 @@
       const data = await response.json();
       badgeData = data.badges || {};
       config.selectedOption = data.selectedOption;
+      // Track badge views
+      Object.keys(badgeData).forEach((variantId) => {
+        const badge = badgeData[variantId];
+        trackEvent("view", variantId, badge.badge_type, badge.option_value);
+      });
       buildVariantMap();
       applyBadges();
       observeVariantChanges();
@@ -220,6 +290,16 @@
     // Listen for variant changes
     document.addEventListener("change", (e) => {
       if (e.target.matches('input[type="radio"]') && isInitialized) {
+        // ← ADD TRACKING HERE
+        // Get the selected variant ID and track click
+        const selectedInput = e.target;
+        const variantId =
+          selectedInput.value || selectedInput.dataset.variantId;
+
+        if (variantId && badgeData[variantId]) {
+          const badge = badgeData[variantId];
+          trackEvent("click", variantId, badge.badge_type, badge.option_value);
+        }
         // Clear any pending re-apply
         if (applyTimeout) clearTimeout(applyTimeout);
 
