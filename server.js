@@ -17,6 +17,7 @@ const settingsRouter = require("./routes/settings");
 const publicRouter = require("./routes/public");
 const authRouter = require("./routes/auth");
 const setupRouter = require("./routes/setup");
+const analyticsRoutes = require("./routes/analytics");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -512,7 +513,7 @@ app.use("/api/products", authenticateRequest, productsRouter);
 app.use("/api/badges", authenticateRequest, badgesRouter);
 app.use("/api/settings", authenticateRequest, settingsRouter);
 app.use("/api/setup", authenticateRequest, setupRouter);
-
+app.use("/api/analytics", analyticsRoutes);
 // ============================================
 // APP PAGE
 // ============================================
