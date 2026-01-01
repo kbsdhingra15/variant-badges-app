@@ -64,63 +64,80 @@
 
   // ← ADD THIS NEW FUNCTION HERE
   // Track add to cart events
-  // Track add to cart events
   function initAddToCartTracking() {
-    // Try multiple form selectors
-    const selectors = [
-      'form[action*="/cart/add"]',
-      'form[action="/cart/add"]',
-      ".product-form",
-      "form#product-form",
-    ];
+    console.log("Initializing add-to-cart tracking...");
 
-    let form = null;
-    for (const selector of selectors) {
-      form = document.querySelector(selector);
-      if (form) {
-        console.log("Found cart form:", selector);
-        break;
-      }
-    }
+    setTimeout(() => {
+      const selectors = [
+        'form[action*="/cart/add"]',
+        'form[action="/cart/add"]',
+        ".product-form",
+        "form.product-form",
+        "form#product-form",
+      ];
 
-    if (!form) {
-      console.log("No add-to-cart form found");
-      return;
-    }
-
-    form.addEventListener("submit", function () {
-      console.log("Form submitted!");
-
-      // Try multiple ways to get variant ID
-      let variantId = null;
-
-      // Method 1: Hidden input named "id"
-      const variantInput = form.querySelector('[name="id"]');
-      if (variantInput) {
-        variantId = variantInput.value;
-      }
-
-      // Method 2: Selected radio option
-      if (!variantId) {
-        const selectedRadio = form.querySelector('input[type="radio"]:checked');
-        if (selectedRadio) {
-          variantId = selectedRadio.dataset.variantId || selectedRadio.value;
+      let form = null;
+      for (const selector of selectors) {
+        form = document.querySelector(selector);
+        if (form) {
+          console.log("✅ Found cart form:", selector);
+          break;
         }
       }
 
-      console.log("Variant ID:", variantId);
-      console.log("Badge data:", badgeData[variantId]);
-
-      if (variantId && badgeData[variantId]) {
-        const badge = badgeData[variantId];
-        const badgeType = typeof badge === "string" ? badge : badge.badge_type;
-        const optionValue =
-          typeof badge === "string" ? null : badge.option_value;
-
-        console.log("Tracking add-to-cart:", badgeType, optionValue);
-        trackEvent("add_to_cart", variantId, badgeType, optionValue);
+      if (!form) {
+        console.log("❌ No add-to-cart form found");
+        return;
       }
-    });
+
+      // Listen to form submit WITHOUT preventing default
+      form.addEventListener(
+        "submit",
+        function (e) {
+          // DON'T call e.preventDefault() - let Shopify handle it
+          handleAddToCart();
+        },
+        true
+      ); // Use capture phase to run first
+
+      // Also listen for AJAX cart adds (theme-specific)
+      document.addEventListener("cart:item-added", handleAddToCart);
+      document.addEventListener("product:added-to-cart", handleAddToCart);
+    }, 1000);
+  }
+
+  function handleAddToCart() {
+    console.log("🛒 Add to cart triggered!");
+
+    // Get variant ID
+    let variantId = null;
+
+    const variantInput = document.querySelector('form [name="id"]');
+    if (variantInput) {
+      variantId = variantInput.value;
+    }
+
+    if (!variantId) {
+      const selectedRadio = document.querySelector(
+        'input[type="radio"]:checked'
+      );
+      if (selectedRadio) {
+        variantId = selectedRadio.dataset.variantId || selectedRadio.value;
+      }
+    }
+
+    console.log("Variant ID:", variantId);
+
+    if (variantId && badgeData[variantId]) {
+      const badge = badgeData[variantId];
+      const badgeType = typeof badge === "string" ? badge : badge.badge_type;
+      const optionValue = typeof badge === "string" ? null : badge.option_value;
+
+      console.log("✅ Tracking add-to-cart:", badgeType, optionValue);
+      trackEvent("add_to_cart", variantId, badgeType, optionValue);
+    } else {
+      console.log("No badge for variant:", variantId);
+    }
   }
 
   function init() {
