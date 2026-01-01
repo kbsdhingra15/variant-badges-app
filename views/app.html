@@ -1252,81 +1252,123 @@
       // SETTINGS
       // ============================================
 
-      async function loadSettings() {
-        try {
-          // Load available options first
-          const optionsResponse = await authenticatedFetch(
-            "/api/products/options"
-          );
-          if (optionsResponse.ok) {
-            const optionsData = await optionsResponse.json();
-            const optionSelect = document.getElementById("option-type");
+async function loadSettings() {
+  try {
+    // Load available options first
+    const optionsResponse = await authenticatedFetch(
+      "/api/products/options?shop=" + SHOP
+    );
 
-            // Clear existing options except the placeholder
-            optionSelect.innerHTML =
-              '<option value="">Select option type...</option>';
+    if (optionsResponse.ok) {
+      const optionsData = await optionsResponse.json();
+      const optionSelect = document.getElementById("option-type");
+      optionSelect.innerHTML =
+        '<option value="">Select an option type...</option>';
 
-            // Add fetched options
-            optionsData.options.forEach((optionName) => {
-              const opt = document.createElement("option");
-              opt.value = optionName;
-              opt.textContent = optionName;
-              optionSelect.appendChild(opt);
-            });
+      optionsData.options.forEach((optionName) => {
+        const opt = document.createElement("option");
+        opt.value = optionName;
+        opt.textContent = optionName;
+        optionSelect.appendChild(opt);
+      });
+    }
 
-            console.log("✅ Loaded option types:", optionsData.options);
-          }
+    // Load saved settings
+    const settingsResponse = await authenticatedFetch(
+      "/api/settings?shop=" + SHOP
+    );
 
-          // Then load saved settings
-          const response = await authenticatedFetch(`/api/settings`);
+    if (settingsResponse.ok) {
+      const settings = await settingsResponse.json();
 
-          if (!response.ok) {
-            console.error("Failed to load settings, status:", response.status);
-            return;
-          }
+      // Store current settings globally for comparison
+      window.currentSettings = {
+        selectedOption: settings.selectedOption,
+        enabled: settings.enabled
+      };
 
-          const settings = await response.json();
-
-          document.getElementById("enable-display").checked =
-            settings.enabled !== false;
-          document.getElementById("option-type").value =
-            settings.selectedOption || "";
-
-          window.settingsLoaded = true;
-          console.log("✅ Settings loaded");
-        } catch (error) {
-          console.error("Failed to load settings:", error);
-        }
+      if (settings.selectedOption) {
+        document.getElementById("option-type").value =
+          settings.selectedOption;
       }
 
-      async function saveSettings() {
-        const enabled = document.getElementById("enable-display").checked;
-        const selectedOption = document.getElementById("option-type").value;
+      document.getElementById("enable-badges").checked =
+        settings.enabled !== false;
+    }
+  } catch (error) {
+    console.error("Failed to load settings:", error);
+  }
+}
 
-        if (!selectedOption) {
-          alert("Please select an option type");
-          return;
-        }
+async function saveSettings() {
+  try {
+    const selectedOption = document.getElementById("option-type").value;
+    const enabled = document.getElementById("enable-badges").checked;
 
-        try {
-          const response = await authenticatedFetch("/api/settings", {
-            method: "POST",
-            body: JSON.stringify({
-              enabled,
-              selectedOption,
-            }),
-          });
+    if (!selectedOption) {
+      showNotification("Please select an option type", "error");
+      return;
+    }
 
-          if (response.ok) {
-            alert("✅ Settings saved!");
-          } else {
-            throw new Error(`HTTP ${response.status}`);
-          }
-        } catch (error) {
-          console.error("Failed to save settings:", error);
-          alert("Failed to save settings");
-        }
+    // Get current option from page state
+    const currentOption = window.currentSettings?.selectedOption;
+
+    // If option changed, show confirmation
+    if (currentOption && currentOption !== selectedOption) {
+      const confirmed = confirm(
+        `⚠️ WARNING: Changing Option Type\n\n` +
+        `You are changing from "${currentOption}" to "${selectedOption}".\n\n` +
+        `This will DELETE ALL existing badge assignments!\n\n` +
+        `You will need to reassign badges after this change.\n\n` +
+        `Do you want to continue?`
+      );
+
+      if (!confirmed) {
+        // Reset dropdown to current value
+        document.getElementById("option-type").value = currentOption;
+        return;
       }
+    }
+
+    const response = await authenticatedFetch("/api/settings/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        shop: SHOP,
+        selectedOption,
+        enabled,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Show different messages based on whether badges were deleted
+      if (data.badgesDeleted) {
+        showNotification(
+          `Settings saved! ${data.deletedCount} badge assignment(s) deleted. Please reassign badges in the Manage Badges tab.`,
+          "success"
+        );
+        
+        // Update current settings
+        window.currentSettings = { selectedOption, enabled };
+        
+        // Optionally reload manage badges view to show empty state
+        if (currentView === 'manage') {
+          loadBadges();
+        }
+      } else {
+        showNotification("Settings saved successfully!", "success");
+        window.currentSettings = { selectedOption, enabled };
+      }
+    } else {
+      showNotification("Failed to save settings", "error");
+    }
+  } catch (error) {
+    console.error("Save settings error:", error);
+    showNotification("Error saving settings", "error");
+  }
+}
 
       // ============================================
       // PLANS

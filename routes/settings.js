@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { getAppSettings, saveAppSettings } = require("../database/db");
+const { getAppSettings, saveAppSettings, pool } = require("../database/db");
 
 // Get settings for shop
 router.get("/", async (req, res) => {
@@ -37,6 +37,25 @@ router.post("/", async (req, res) => {
       enabled,
     });
 
+    // Get current settings to check if option changed
+    const currentSettings = await getAppSettings(shop);
+    const oldOption = currentSettings?.selectedOption;
+    let badgesDeleted = false;
+    let deletedCount = 0;
+
+    // If option type changed, delete all badge assignments
+    if (oldOption && oldOption !== selectedOption) {
+      const result = await pool.query(
+        "DELETE FROM badge_assignments WHERE shop = $1",
+        [shop]
+      );
+      badgesDeleted = true;
+      deletedCount = result.rowCount;
+      console.log(
+        `🗑️ Deleted ${deletedCount} badges due to option change: ${oldOption} → ${selectedOption}`
+      );
+    }
+
     await saveAppSettings(shop, {
       selected_option: selectedOption,
       badge_display_enabled:
@@ -45,7 +64,12 @@ router.post("/", async (req, res) => {
     });
 
     console.log("✅ Settings saved successfully");
-    res.json({ success: true });
+
+    res.json({
+      success: true,
+      badgesDeleted,
+      deletedCount,
+    });
   } catch (error) {
     console.error("Error saving settings:", error);
     res.status(500).json({ error: "Failed to save settings" });
