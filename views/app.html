@@ -5,6 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
     <style>
+      /* Custom Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #202223;
+}
+
+.modal-body {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6d7175;
+  margin-bottom: 24px;
+  white-space: pre-line;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.modal-btn-primary {
+  background: #008060;
+  color: white;
+}
+
+.modal-btn-primary:hover {
+  background: #006e52;
+}
+
+.modal-btn-secondary {
+  background: #f1f2f3;
+  color: #202223;
+}
+
+.modal-btn-secondary:hover {
+  background: #e3e4e5;
+}
+
+.modal-btn-danger {
+  background: #d72c0d;
+  color: white;
+}
+
+.modal-btn-danger:hover {
+  background: #c0280b;
+}
       * {
         margin: 0;
         padding: 0;
@@ -913,6 +997,49 @@
 </div>
 
     <script>
+      // Custom modal functions
+function showAlert(message, title = "Notice") {
+  const modal = document.getElementById('custom-modal');
+  const titleEl = document.getElementById('modal-title');
+  const messageEl = document.getElementById('modal-message');
+  const actionsEl = document.getElementById('modal-actions');
+  
+  titleEl.textContent = title;
+  messageEl.textContent = message;
+  actionsEl.innerHTML = '<button class="modal-btn modal-btn-primary" onclick="closeModal()">OK</button>';
+  
+  modal.classList.add('active');
+}
+
+function showConfirm(message, title = "Confirm") {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('custom-modal');
+    const titleEl = document.getElementById('modal-title');
+    const messageEl = document.getElementById('modal-message');
+    const actionsEl = document.getElementById('modal-actions');
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    actionsEl.innerHTML = `
+      <button class="modal-btn modal-btn-secondary" onclick="closeModal(false)">Cancel</button>
+      <button class="modal-btn modal-btn-danger" onclick="closeModal(true)">Continue</button>
+    `;
+    
+    modal.classList.add('active');
+    
+    window.modalResolve = resolve;
+  });
+}
+
+function closeModal(result) {
+  const modal = document.getElementById('custom-modal');
+  modal.classList.remove('active');
+  
+  if (window.modalResolve) {
+    window.modalResolve(result || false);
+    window.modalResolve = null;
+  }
+}
       // ============================================
       // CONFIGURATION
       // ============================================
@@ -1307,25 +1434,23 @@ async function saveSettings() {
     const enabled = document.getElementById("enable-display").checked;
 
     if (!selectedOption) {
-      alert("Please select an option type");
+      showAlert("Please select an option type", "Missing Selection");
       return;
     }
 
-    // Get current option from page state (if it exists)
     const currentOption = window.currentSettings?.selectedOption;
 
     // If option changed, show confirmation
     if (currentOption && currentOption !== selectedOption) {
-      const confirmed = confirm(
-        `⚠️ WARNING: Changing Option Type\n\n` +
+      const confirmed = await showConfirm(
         `You are changing from "${currentOption}" to "${selectedOption}".\n\n` +
         `This will DELETE ALL existing badge assignments!\n\n` +
         `You will need to reassign badges after this change.\n\n` +
-        `Do you want to continue?`
+        `Do you want to continue?`,
+        "⚠️ Warning: Changing Option Type"
       );
 
       if (!confirmed) {
-        // Reset dropdown to current value
         document.getElementById("option-type").value = currentOption;
         return;
       }
@@ -1340,34 +1465,40 @@ async function saveSettings() {
       }),
     });
 
+    if (!response.ok) {
+      showAlert("Failed to save settings", "Error");
+      return;
+    }
+
     const data = await response.json();
 
     if (data.success) {
-      // Show different messages based on whether badges were deleted
+      window.currentSettings = { selectedOption, enabled };
+      
       if (data.badgesDeleted) {
-        alert(
-          `✅ Settings saved!\n\n` +
-          `${data.deletedCount} badge assignment(s) were deleted.\n\n` +
-          `Please reassign badges in the Manage Badges tab.`
+        showAlert(
+          `All badge assignments have been removed.\n\n` +
+          `Please reassign badges for the new option type in Manage Badges.`,
+          "✅ Settings Saved"
         );
-        
-        // Update current settings
-        window.currentSettings = { selectedOption, enabled };
-        
-        // Reload manage badges if currently on that view
-        if (document.getElementById('manage-view').style.display !== 'none') {
+      } else {
+        showAlert("Settings saved successfully!", "✅ Success");
+      }
+      
+      try {
+        const manageView = document.getElementById('manage-view');
+        if (manageView && manageView.style.display !== 'none' && typeof loadBadges === 'function') {
           loadBadges();
         }
-      } else {
-        alert("✅ Settings saved successfully!");
-        window.currentSettings = { selectedOption, enabled };
+      } catch (reloadError) {
+        console.log("Could not reload badges:", reloadError);
       }
     } else {
-      alert("❌ Failed to save settings");
+      showAlert("Failed to save settings", "Error");
     }
   } catch (error) {
     console.error("Save settings error:", error);
-    alert("❌ Error saving settings");
+    showAlert("Error saving settings: " + error.message, "Error");
   }
 }
 
@@ -1403,5 +1534,13 @@ async function saveSettings() {
         );
       }
     </script>
+    <!-- Custom Modal -->
+<div id="custom-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header" id="modal-title">Confirm</div>
+    <div class="modal-body" id="modal-message"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
   </body>
 </html>
