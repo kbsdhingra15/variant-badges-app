@@ -67,7 +67,6 @@
   // Track add to cart events
   function initAddToCartTracking() {
     // Temporarily disabled - investigating cart redirect issue
-    console.log("Add-to-cart tracking disabled");
     return;
   }
   function init() {
@@ -157,7 +156,6 @@
 
   function applyBadges() {
     if (!config.selectedOption) {
-      console.log("Variant Badges: No selected option configured");
       return;
     }
     // Find all radio inputs for product options
@@ -179,7 +177,6 @@
     }
 
     if (inputs.length === 0) {
-      console.log("Variant Badges: No radio inputs found");
       return;
     }
 
@@ -322,7 +319,6 @@
 
         // Wait for DOM to fully settle before re-applying
         applyTimeout = setTimeout(() => {
-          console.log("Variant Badges: Re-applying after variant change");
           applyBadges();
         }, 500);
       }
@@ -346,7 +342,6 @@
       if (significantChange) {
         if (applyTimeout) clearTimeout(applyTimeout);
         applyTimeout = setTimeout(() => {
-          console.log("Variant Badges: Re-applying after DOM rebuild");
           applyBadges();
         }, 500);
       }
