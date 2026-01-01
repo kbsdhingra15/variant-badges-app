@@ -64,9 +64,9 @@
 
   // ← ADD THIS NEW FUNCTION HERE
   // Track add to cart events
-  // Track add to cart events by watching cart count
+  // Track add to cart by intercepting fetch requests
   function initAddToCartTracking() {
-    console.log("Initializing add-to-cart tracking...");
+    console.log("Initializing add-to-cart tracking via fetch intercept...");
 
     // Store last selected variant with badge
     let lastBadgedVariant = null;
@@ -88,66 +88,16 @@
       }
     });
 
-    // Watch cart count element for changes
-    const cartCountSelectors = [
-      ".cart-count",
-      "[data-cart-count]",
-      ".cart-count-bubble",
-      "#cart-count",
-      ".header__icon--cart span",
-    ];
+    // Intercept fetch requests to /cart/add
+    const originalFetch = window.fetch;
+    window.fetch = function (...args) {
+      const url = args[0];
 
-    let cartCountElement = null;
-    for (const selector of cartCountSelectors) {
-      cartCountElement = document.querySelector(selector);
-      if (cartCountElement) {
-        console.log("✅ Found cart count element:", selector);
-        break;
-      }
-    }
+      // Check if this is an add-to-cart request
+      if (typeof url === "string" && url.includes("/cart/add")) {
+        console.log("🛒 Add-to-cart request detected!");
 
-    if (cartCountElement) {
-      let lastCount = parseInt(cartCountElement.textContent) || 0;
-
-      // Watch for changes to cart count
-      const observer = new MutationObserver(() => {
-        const newCount = parseInt(cartCountElement.textContent) || 0;
-
-        if (newCount > lastCount) {
-          console.log("🛒 Cart count increased! Tracking add-to-cart");
-
-          if (lastBadgedVariant && badgeData[lastBadgedVariant]) {
-            const badge = badgeData[lastBadgedVariant];
-            const badgeType =
-              typeof badge === "string" ? badge : badge.badge_type;
-            const optionValue =
-              typeof badge === "string" ? null : badge.option_value;
-
-            console.log("✅ Tracking add-to-cart:", badgeType, optionValue);
-            trackEvent(
-              "add_to_cart",
-              lastBadgedVariant,
-              badgeType,
-              optionValue
-            );
-          }
-
-          lastCount = newCount;
-        }
-      });
-
-      observer.observe(cartCountElement, {
-        characterData: true,
-        childList: true,
-        subtree: true,
-      });
-    } else {
-      console.log("⚠️ Cart count element not found, using fallback method");
-
-      // Fallback: Listen for Shopify's cart events (theme-dependent)
-      document.addEventListener("cart:updated", () => {
-        console.log("🛒 Cart updated event detected");
-
+        // Track the add-to-cart event
         if (lastBadgedVariant && badgeData[lastBadgedVariant]) {
           const badge = badgeData[lastBadgedVariant];
           const badgeType =
@@ -158,8 +108,13 @@
           console.log("✅ Tracking add-to-cart:", badgeType, optionValue);
           trackEvent("add_to_cart", lastBadgedVariant, badgeType, optionValue);
         }
-      });
-    }
+      }
+
+      // Call original fetch
+      return originalFetch.apply(this, args);
+    };
+
+    console.log("✅ Fetch intercept active");
   }
 
   function init() {
