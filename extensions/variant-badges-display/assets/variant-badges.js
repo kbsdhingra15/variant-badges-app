@@ -64,59 +64,12 @@
 
   // ← ADD THIS NEW FUNCTION HERE
   // Track add to cart events
-  // Track add to cart by intercepting fetch requests
+  // Track add to cart events
   function initAddToCartTracking() {
-    console.log("Initializing add-to-cart tracking via fetch intercept...");
-
-    // Store last selected variant with badge
-    let lastBadgedVariant = null;
-
-    // Watch for variant changes to track which badged variant is selected
-    document.addEventListener("change", (e) => {
-      if (e.target.matches('input[type="radio"]')) {
-        const optionValue = e.target.value;
-        const variantIds = variantMap[optionValue] || [];
-
-        // Check if selected variant has a badge
-        for (const variantId of variantIds) {
-          if (badgeData[variantId]) {
-            lastBadgedVariant = variantId;
-            console.log("Badged variant selected:", variantId);
-            break;
-          }
-        }
-      }
-    });
-
-    // Intercept fetch requests to /cart/add
-    const originalFetch = window.fetch;
-    window.fetch = function (...args) {
-      const url = args[0];
-
-      // Check if this is an add-to-cart request
-      if (typeof url === "string" && url.includes("/cart/add")) {
-        console.log("🛒 Add-to-cart request detected!");
-
-        // Track the add-to-cart event
-        if (lastBadgedVariant && badgeData[lastBadgedVariant]) {
-          const badge = badgeData[lastBadgedVariant];
-          const badgeType =
-            typeof badge === "string" ? badge : badge.badge_type;
-          const optionValue =
-            typeof badge === "string" ? null : badge.option_value;
-
-          console.log("✅ Tracking add-to-cart:", badgeType, optionValue);
-          trackEvent("add_to_cart", lastBadgedVariant, badgeType, optionValue);
-        }
-      }
-
-      // Call original fetch
-      return originalFetch.apply(this, args);
-    };
-
-    console.log("✅ Fetch intercept active");
+    // Temporarily disabled - investigating cart redirect issue
+    console.log("Add-to-cart tracking disabled");
+    return;
   }
-
   function init() {
     // Get configuration
     const container = document.querySelector(".variant-badges-container");
