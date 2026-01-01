@@ -1284,33 +1284,34 @@ async function loadSettings() {
       // Store current settings globally for comparison
       window.currentSettings = {
         selectedOption: settings.selectedOption,
-        enabled: settings.enabled
+        enabled: settings.badgeDisplayEnabled
       };
 
+      // Set option type dropdown
       if (settings.selectedOption) {
-        document.getElementById("option-type").value =
-          settings.selectedOption;
+        document.getElementById("option-type").value = settings.selectedOption;
       }
 
-      document.getElementById("enable-badges").checked =
-        settings.enabled !== false;
+      // Set enable toggle
+      document.getElementById("enable-display").checked = 
+        settings.badgeDisplayEnabled !== false;
     }
   } catch (error) {
     console.error("Failed to load settings:", error);
+    alert("Failed to load settings");
   }
 }
-
 async function saveSettings() {
   try {
     const selectedOption = document.getElementById("option-type").value;
-    const enabled = document.getElementById("enable-badges").checked;
+    const enabled = document.getElementById("enable-display").checked;
 
     if (!selectedOption) {
-      showNotification("Please select an option type", "error");
+      alert("Please select an option type");
       return;
     }
 
-    // Get current option from page state
+    // Get current option from page state (if it exists)
     const currentOption = window.currentSettings?.selectedOption;
 
     // If option changed, show confirmation
@@ -1330,13 +1331,12 @@ async function saveSettings() {
       }
     }
 
-    const response = await authenticatedFetch("/api/settings/save", {
+    const response = await authenticatedFetch("/api/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        shop: SHOP,
         selectedOption,
-        enabled,
+        enabled
       }),
     });
 
@@ -1345,28 +1345,29 @@ async function saveSettings() {
     if (data.success) {
       // Show different messages based on whether badges were deleted
       if (data.badgesDeleted) {
-        showNotification(
-          `Settings saved! ${data.deletedCount} badge assignment(s) deleted. Please reassign badges in the Manage Badges tab.`,
-          "success"
+        alert(
+          `✅ Settings saved!\n\n` +
+          `${data.deletedCount} badge assignment(s) were deleted.\n\n` +
+          `Please reassign badges in the Manage Badges tab.`
         );
         
         // Update current settings
         window.currentSettings = { selectedOption, enabled };
         
-        // Optionally reload manage badges view to show empty state
-        if (currentView === 'manage') {
+        // Reload manage badges if currently on that view
+        if (document.getElementById('manage-view').style.display !== 'none') {
           loadBadges();
         }
       } else {
-        showNotification("Settings saved successfully!", "success");
+        alert("✅ Settings saved successfully!");
         window.currentSettings = { selectedOption, enabled };
       }
     } else {
-      showNotification("Failed to save settings", "error");
+      alert("❌ Failed to save settings");
     }
   } catch (error) {
     console.error("Save settings error:", error);
-    showNotification("Error saving settings", "error");
+    alert("❌ Error saving settings");
   }
 }
 
