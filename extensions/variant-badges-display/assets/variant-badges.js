@@ -339,28 +339,37 @@
     setTimeout(() => {
       isInitialized = true;
     }, 1000);
-
     // Listen for variant changes
     document.addEventListener("change", (e) => {
       if (e.target.matches('input[type="radio"]') && isInitialized) {
-        // ← ADD TRACKING HERE
-        // Track badge click - get option value from input
-        const optionValue = e.target.value;
-        // Find variant IDs for this option value
-        const variantIds = variantMap[optionValue] || [];
+        // Only track if this is the selected option type (e.g., Color, not Size)
+        const fieldset =
+          e.target.closest("fieldset") ||
+          e.target.closest(".product-form__input");
+        if (fieldset) {
+          const legend = fieldset.querySelector("legend");
+          const optionName = legend ? legend.textContent.trim() : "";
 
-        // Check if any of these variants have a badge
-        for (const variantId of variantIds) {
-          if (badgeData[variantId]) {
-            const badge = badgeData[variantId];
-            const badgeType =
-              typeof badge === "string" ? badge : badge.badge_type;
-            const optVal =
-              typeof badge === "string" ? optionValue : badge.option_value;
-            trackEvent("click", variantId, badgeType, optVal);
-            break; // Only track once
+          // Only track clicks on the badged option type
+          if (optionName === config.selectedOption) {
+            const optionValue = e.target.value;
+            const variantIds = variantMap[optionValue] || [];
+
+            // Check if any of these variants have a badge
+            for (const variantId of variantIds) {
+              if (badgeData[variantId]) {
+                const badge = badgeData[variantId];
+                const badgeType =
+                  typeof badge === "string" ? badge : badge.badge_type;
+                const optVal =
+                  typeof badge === "string" ? optionValue : badge.option_value;
+                trackEvent("click", variantId, badgeType, optVal);
+                break; // Only track once
+              }
+            }
           }
         }
+
         // Clear any pending re-apply
         if (applyTimeout) clearTimeout(applyTimeout);
 
@@ -368,7 +377,7 @@
         applyTimeout = setTimeout(() => {
           console.log("Variant Badges: Re-applying after variant change");
           applyBadges();
-        }, 500); // Longer delay to let Dawn finish DOM updates
+        }, 500);
       }
     });
 
