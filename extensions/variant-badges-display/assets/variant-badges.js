@@ -21,6 +21,10 @@
     enabled: true,
     position: "top-right",
   };
+
+  // Prevent duplicate event listeners
+  let trackingListenersAttached = false;
+
   // ============================================
   // ANALYTICS TRACKING
   // ============================================
@@ -62,13 +66,13 @@
     }).catch(() => {});
   }
 
-  // ← ADD THIS NEW FUNCTION HERE
-  // Track add to cart events
   // Track add to cart events
   function initAddToCartTracking() {
-    // Temporarily disabled - investigating cart redirect issue
+    // Add-to-cart tracking will be added in v1.1
+    // Currently disabled to avoid cart functionality interference
     return;
   }
+
   function init() {
     // Get configuration
     const container = document.querySelector(".variant-badges-container");
@@ -94,10 +98,9 @@
     }
 
     loadBadgeData();
-
-    // ← ADD THIS LINE AT THE END
     initAddToCartTracking();
   }
+
   async function loadBadgeData() {
     try {
       const response = await fetch(
@@ -133,6 +136,7 @@
       console.error("Variant Badges error:", error);
     }
   }
+
   function buildVariantMap() {
     const variants = window.ShopifyAnalytics?.meta?.product?.variants || [];
     variantMap = {};
@@ -158,6 +162,7 @@
     if (!config.selectedOption) {
       return;
     }
+
     // Find all radio inputs for product options
     const selectors = [
       'input[type="radio"][id*="template"]',
@@ -194,6 +199,7 @@
       if (optionName !== config.selectedOption) {
         return; // Skip this option group (Size, Fabric, etc.)
       }
+
       const optionValue = input.value;
       const variantIds = variantMap[optionValue] || [];
 
@@ -283,46 +289,53 @@
     setTimeout(() => {
       isInitialized = true;
     }, 1000);
-    // Listen for variant changes
-    document.addEventListener("change", (e) => {
-      if (e.target.matches('input[type="radio"]') && isInitialized) {
-        // Only track if this is the selected option type (e.g., Color, not Size)
-        const fieldset =
-          e.target.closest("fieldset") ||
-          e.target.closest(".product-form__input");
-        if (fieldset) {
-          const legend = fieldset.querySelector("legend");
-          const optionName = legend ? legend.textContent.trim() : "";
 
-          // Only track clicks on the badged option type
-          if (optionName === config.selectedOption) {
-            const optionValue = e.target.value;
-            const variantIds = variantMap[optionValue] || [];
+    // Listen for variant changes - ONLY ADD ONCE
+    if (!trackingListenersAttached) {
+      document.addEventListener("change", (e) => {
+        if (e.target.matches('input[type="radio"]') && isInitialized) {
+          // Only track if this is the selected option type (e.g., Color, not Size)
+          const fieldset =
+            e.target.closest("fieldset") ||
+            e.target.closest(".product-form__input");
+          if (fieldset) {
+            const legend = fieldset.querySelector("legend");
+            const optionName = legend ? legend.textContent.trim() : "";
 
-            // Check if any of these variants have a badge
-            for (const variantId of variantIds) {
-              if (badgeData[variantId]) {
-                const badge = badgeData[variantId];
-                const badgeType =
-                  typeof badge === "string" ? badge : badge.badge_type;
-                const optVal =
-                  typeof badge === "string" ? optionValue : badge.option_value;
-                trackEvent("click", variantId, badgeType, optVal);
-                break; // Only track once
+            // Only track clicks on the badged option type
+            if (optionName === config.selectedOption) {
+              const optionValue = e.target.value;
+              const variantIds = variantMap[optionValue] || [];
+
+              // Check if any of these variants have a badge
+              for (const variantId of variantIds) {
+                if (badgeData[variantId]) {
+                  const badge = badgeData[variantId];
+                  const badgeType =
+                    typeof badge === "string" ? badge : badge.badge_type;
+                  const optVal =
+                    typeof badge === "string"
+                      ? optionValue
+                      : badge.option_value;
+                  trackEvent("click", variantId, badgeType, optVal);
+                  break; // Only track once
+                }
               }
             }
           }
+
+          // Clear any pending re-apply
+          if (applyTimeout) clearTimeout(applyTimeout);
+
+          // Wait for DOM to fully settle before re-applying
+          applyTimeout = setTimeout(() => {
+            applyBadges();
+          }, 500);
         }
+      });
 
-        // Clear any pending re-apply
-        if (applyTimeout) clearTimeout(applyTimeout);
-
-        // Wait for DOM to fully settle before re-applying
-        applyTimeout = setTimeout(() => {
-          applyBadges();
-        }, 500);
-      }
-    });
+      trackingListenersAttached = true;
+    }
 
     // Watch for product form rebuilds (less aggressive)
     const observer = new MutationObserver((mutations) => {
