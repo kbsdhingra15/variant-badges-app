@@ -64,23 +64,61 @@
 
   // ← ADD THIS NEW FUNCTION HERE
   // Track add to cart events
+  // Track add to cart events
   function initAddToCartTracking() {
-    const form = document.querySelector('form[action*="/cart/add"]');
-    if (!form) return;
+    // Try multiple form selectors
+    const selectors = [
+      'form[action*="/cart/add"]',
+      'form[action="/cart/add"]',
+      ".product-form",
+      "form#product-form",
+    ];
+
+    let form = null;
+    for (const selector of selectors) {
+      form = document.querySelector(selector);
+      if (form) {
+        console.log("Found cart form:", selector);
+        break;
+      }
+    }
+
+    if (!form) {
+      console.log("No add-to-cart form found");
+      return;
+    }
 
     form.addEventListener("submit", function () {
-      const variantInput = form.querySelector('[name="id"]');
-      if (!variantInput) return;
+      console.log("Form submitted!");
 
-      const variantId = variantInput.value;
-      if (badgeData[variantId]) {
+      // Try multiple ways to get variant ID
+      let variantId = null;
+
+      // Method 1: Hidden input named "id"
+      const variantInput = form.querySelector('[name="id"]');
+      if (variantInput) {
+        variantId = variantInput.value;
+      }
+
+      // Method 2: Selected radio option
+      if (!variantId) {
+        const selectedRadio = form.querySelector('input[type="radio"]:checked');
+        if (selectedRadio) {
+          variantId = selectedRadio.dataset.variantId || selectedRadio.value;
+        }
+      }
+
+      console.log("Variant ID:", variantId);
+      console.log("Badge data:", badgeData[variantId]);
+
+      if (variantId && badgeData[variantId]) {
         const badge = badgeData[variantId];
-        trackEvent(
-          "add_to_cart",
-          variantId,
-          badge.badge_type,
-          badge.option_value
-        );
+        const badgeType = typeof badge === "string" ? badge : badge.badge_type;
+        const optionValue =
+          typeof badge === "string" ? null : badge.option_value;
+
+        console.log("Tracking add-to-cart:", badgeType, optionValue);
+        trackEvent("add_to_cart", variantId, badgeType, optionValue);
       }
     });
   }
@@ -125,14 +163,23 @@
       const data = await response.json();
       badgeData = data.badges || {};
       config.selectedOption = data.selectedOption;
-      // ← ADD THIS TO DEBUG
-      console.log("Badge Data:", badgeData);
-      console.log("Sample Badge:", badgeData[Object.keys(badgeData)[0]]);
-      // Track badge views
+
+      // Track badge views - only once per unique badge type
+      const trackedBadges = new Set();
       Object.keys(badgeData).forEach((variantId) => {
         const badge = badgeData[variantId];
-        trackEvent("view", variantId, badge.badge_type, badge.option_value);
+        const badgeType = typeof badge === "string" ? badge : badge.badge_type;
+        const optionValue =
+          typeof badge === "string" ? null : badge.option_value;
+
+        // Only track if we haven't tracked this badge type yet
+        const trackingKey = `${badgeType}-${optionValue}`;
+        if (!trackedBadges.has(trackingKey)) {
+          trackedBadges.add(trackingKey);
+          trackEvent("view", variantId, badgeType, optionValue);
+        }
       });
+
       buildVariantMap();
       applyBadges();
       observeVariantChanges();
@@ -140,7 +187,6 @@
       console.error("Variant Badges error:", error);
     }
   }
-
   function buildVariantMap() {
     const variants = window.ShopifyAnalytics?.meta?.product?.variants || [];
     variantMap = {};
@@ -298,14 +344,22 @@
     document.addEventListener("change", (e) => {
       if (e.target.matches('input[type="radio"]') && isInitialized) {
         // ← ADD TRACKING HERE
-        // Get the selected variant ID and track click
-        const selectedInput = e.target;
-        const variantId =
-          selectedInput.value || selectedInput.dataset.variantId;
+        // Track badge click - get option value from input
+        const optionValue = e.target.value;
+        // Find variant IDs for this option value
+        const variantIds = variantMap[optionValue] || [];
 
-        if (variantId && badgeData[variantId]) {
-          const badge = badgeData[variantId];
-          trackEvent("click", variantId, badge.badge_type, badge.option_value);
+        // Check if any of these variants have a badge
+        for (const variantId of variantIds) {
+          if (badgeData[variantId]) {
+            const badge = badgeData[variantId];
+            const badgeType =
+              typeof badge === "string" ? badge : badge.badge_type;
+            const optVal =
+              typeof badge === "string" ? optionValue : badge.option_value;
+            trackEvent("click", variantId, badgeType, optVal);
+            break; // Only track once
+          }
         }
         // Clear any pending re-apply
         if (applyTimeout) clearTimeout(applyTimeout);
