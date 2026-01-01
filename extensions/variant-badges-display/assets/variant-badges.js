@@ -64,79 +64,101 @@
 
   // ← ADD THIS NEW FUNCTION HERE
   // Track add to cart events
+  // Track add to cart events by watching cart count
   function initAddToCartTracking() {
     console.log("Initializing add-to-cart tracking...");
 
-    setTimeout(() => {
-      const selectors = [
-        'form[action*="/cart/add"]',
-        'form[action="/cart/add"]',
-        ".product-form",
-        "form.product-form",
-        "form#product-form",
-      ];
+    // Store last selected variant with badge
+    let lastBadgedVariant = null;
 
-      let form = null;
-      for (const selector of selectors) {
-        form = document.querySelector(selector);
-        if (form) {
-          console.log("✅ Found cart form:", selector);
-          break;
+    // Watch for variant changes to track which badged variant is selected
+    document.addEventListener("change", (e) => {
+      if (e.target.matches('input[type="radio"]')) {
+        const optionValue = e.target.value;
+        const variantIds = variantMap[optionValue] || [];
+
+        // Check if selected variant has a badge
+        for (const variantId of variantIds) {
+          if (badgeData[variantId]) {
+            lastBadgedVariant = variantId;
+            console.log("Badged variant selected:", variantId);
+            break;
+          }
         }
       }
+    });
 
-      if (!form) {
-        console.log("❌ No add-to-cart form found");
-        return;
-      }
+    // Watch cart count element for changes
+    const cartCountSelectors = [
+      ".cart-count",
+      "[data-cart-count]",
+      ".cart-count-bubble",
+      "#cart-count",
+      ".header__icon--cart span",
+    ];
 
-      // Listen to form submit WITHOUT preventing default
-      form.addEventListener(
-        "submit",
-        function (e) {
-          // DON'T call e.preventDefault() - let Shopify handle it
-          handleAddToCart();
-        },
-        true
-      ); // Use capture phase to run first
-
-      // Also listen for AJAX cart adds (theme-specific)
-      document.addEventListener("cart:item-added", handleAddToCart);
-      document.addEventListener("product:added-to-cart", handleAddToCart);
-    }, 1000);
-  }
-
-  function handleAddToCart() {
-    console.log("🛒 Add to cart triggered!");
-
-    // Get variant ID
-    let variantId = null;
-
-    const variantInput = document.querySelector('form [name="id"]');
-    if (variantInput) {
-      variantId = variantInput.value;
-    }
-
-    if (!variantId) {
-      const selectedRadio = document.querySelector(
-        'input[type="radio"]:checked'
-      );
-      if (selectedRadio) {
-        variantId = selectedRadio.dataset.variantId || selectedRadio.value;
+    let cartCountElement = null;
+    for (const selector of cartCountSelectors) {
+      cartCountElement = document.querySelector(selector);
+      if (cartCountElement) {
+        console.log("✅ Found cart count element:", selector);
+        break;
       }
     }
 
-    console.log("Variant ID:", variantId);
+    if (cartCountElement) {
+      let lastCount = parseInt(cartCountElement.textContent) || 0;
 
-    if (variantId && badgeData[variantId]) {
-      const badge = badgeData[variantId];
-      const badgeType = typeof badge === "string" ? badge : badge.badge_type;
-      const optionValue = typeof badge === "string" ? null : badge.option_value;
+      // Watch for changes to cart count
+      const observer = new MutationObserver(() => {
+        const newCount = parseInt(cartCountElement.textContent) || 0;
 
-      console.log("✅ Tracking add-to-cart:", badgeType, optionValue);
-      trackEvent("add_to_cart", variantId, badgeType, optionValue);
+        if (newCount > lastCount) {
+          console.log("🛒 Cart count increased! Tracking add-to-cart");
+
+          if (lastBadgedVariant && badgeData[lastBadgedVariant]) {
+            const badge = badgeData[lastBadgedVariant];
+            const badgeType =
+              typeof badge === "string" ? badge : badge.badge_type;
+            const optionValue =
+              typeof badge === "string" ? null : badge.option_value;
+
+            console.log("✅ Tracking add-to-cart:", badgeType, optionValue);
+            trackEvent(
+              "add_to_cart",
+              lastBadgedVariant,
+              badgeType,
+              optionValue
+            );
+          }
+
+          lastCount = newCount;
+        }
+      });
+
+      observer.observe(cartCountElement, {
+        characterData: true,
+        childList: true,
+        subtree: true,
+      });
     } else {
-      console.log("No badge for variant:", variantId);
+      console.log("⚠️ Cart count element not found, using fallback method");
+
+      // Fallback: Listen for Shopify's cart events (theme-dependent)
+      document.addEventListener("cart:updated", () => {
+        console.log("🛒 Cart updated event detected");
+
+        if (lastBadgedVariant && badgeData[lastBadgedVariant]) {
+          const badge = badgeData[lastBadgedVariant];
+          const badgeType =
+            typeof badge === "string" ? badge : badge.badge_type;
+          const optionValue =
+            typeof badge === "string" ? null : badge.option_value;
+
+          console.log("✅ Tracking add-to-cart:", badgeType, optionValue);
+          trackEvent("add_to_cart", lastBadgedVariant, badgeType, optionValue);
+        }
+      });
     }
   }
 
