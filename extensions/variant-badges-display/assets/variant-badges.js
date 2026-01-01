@@ -249,7 +249,11 @@
       const existingBadge = label.querySelector(".variant-badge-overlay");
 
       if (badgeToShow) {
-        const badgeStyle = BADGE_STYLES[badgeToShow.toUpperCase()];
+        const badgeType =
+          typeof badgeToShow === "string"
+            ? badgeToShow
+            : badgeToShow.badge_type;
+        const badgeStyle = BADGE_STYLES[badgeType.toUpperCase()];
         if (!badgeStyle) return; // Skip if badge type not found
 
         const expectedText = badgeStyle.emoji + " " + badgeStyle.text;
@@ -257,7 +261,7 @@
         // Only update if badge doesn't exist or is wrong type
         if (!existingBadge || existingBadge.textContent !== expectedText) {
           if (existingBadge) existingBadge.remove();
-          addBadgeToElement(label, badgeToShow.toUpperCase());
+          addBadgeToElement(label, badgeType.toUpperCase());
         }
       } else if (existingBadge) {
         existingBadge.remove();
