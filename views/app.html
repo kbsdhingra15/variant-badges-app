@@ -1643,61 +1643,61 @@ async function saveSettings() {
       👋 Welcome to Variant Badges!
     </div>
     <div class="modal-body" style="text-align: left;">
-      <p style="margin-bottom: 16px; font-size: 15px; font-weight: 500;">Get your badges live in 3 easy steps:</p>
-      
-      <!-- Step 1: Theme Editor (REORDERED - NOW FIRST) -->
-      <div style="margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px;">
-        <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
-          🎨 Step 1: Add App Block to Your Theme
-        </h4>
-        <ol style="color: #6d7175; margin: 0 0 12px 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
-          <li>Click "Open Theme Editor" below</li>
-          <li>Click "Add section" under Template in the left sidebar</li>
-          <li>Find and click "Variant Badges" under Apps</li>
-          <li>This will create a new section as "Apps" and add "Variant Badges" block under it</li>
-          <li>Click "Save" - Done! ✅</li>
-        </ol>
-        <button class="btn btn-primary" onclick="openThemeEditorFromModal()" style="margin: 0 0 12px 0; padding: 10px 20px;">
-          📝 Open Theme Editor
-        </button>
-        <img src="/images/help/help-02-add-section.png" 
-             alt="Theme Editor Screenshot" 
-             style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block;">
-      </div>
-      
-      <!-- Step 2: Settings (REORDERED - NOW SECOND) -->
-      <div style="margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px;">
-        <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
-          📋 Step 2: Choose Your Option Type
-        </h4>
-        <p style="color: #6d7175; margin: 0 0 12px 0; font-size: 13px; line-height: 1.6;">
-          Go to <strong>Settings</strong> tab and select which product option (Color, Size, etc.) should display badges.
-        </p>
-        <img src="/images/appstore/02-settings.png" 
-             alt="Settings Screenshot" 
-             style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block;">
-      </div>
-      
-      <!-- Step 3: Manage Badges -->
-      <div style="margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px;">
-        <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
-          🏷️ Step 3: Assign Badges to Products
-        </h4>
-        <p style="color: #6d7175; margin: 0 0 12px 0; font-size: 13px; line-height: 1.6;">
-          Go to <strong>Manage Badges</strong> tab and assign HOT or NEW badges to specific product variants.
-        </p>
-        <img src="/images/appstore/01-manage-badges.png" 
-             alt="Manage Badges Screenshot" 
-             style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block;">
-      </div>
-      
-      <!-- Help section -->
-      <div style="background: #fff4e5; padding: 10px 12px; border-radius: 6px; border-left: 4px solid #ff9800; margin: 0;">
-        <p style="margin: 0; font-size: 13px; line-height: 1.5;">
-          💡 <strong>Need help?</strong> Check the <a href="#" onclick="switchTab('help'); closeWelcomeModal(); return false;" style="color: #008060; text-decoration: underline;">Help tab</a> for detailed guides and support.
-        </p>
-      </div>
-    </div>
+  <p style="margin: 0 0 12px 0; font-size: 15px; font-weight: 500;">Get your badges live in 3 easy steps:</p>
+  
+  <!-- Step 1: Theme Editor -->
+  <div style="margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+    <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
+      🎨 Step 1: Add App Block to Your Theme
+    </h4>
+    <ol style="color: #6d7175; margin: 0 0 10px 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+      <li>Click "Open Theme Editor" below</li>
+      <li>Click "Add section" under Template in the left sidebar</li>
+      <li>Find and click "Variant Badges" under Apps</li>
+      <li>This will create a new section as "Apps" and add "Variant Badges" block under it</li>
+      <li>Click "Save" - Done! ✅</li>
+    </ol>
+    <button class="btn btn-primary" onclick="openThemeEditorFromModal()" style="margin: 0 0 10px 0; padding: 10px 20px; display: inline-block;">
+      📝 Open Theme Editor
+    </button>
+    <img src="/images/help/help-02-add-section.png" 
+         alt="Theme Editor Screenshot" 
+         style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block; margin: 0;">
+  </div>
+  
+  <!-- Step 2: Settings -->
+  <div style="margin-bottom: 16px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+    <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
+      📋 Step 2: Choose Your Option Type
+    </h4>
+    <p style="color: #6d7175; margin: 0 0 10px 0; font-size: 13px; line-height: 1.6;">
+      Go to <strong>Settings</strong> tab and select which product option (Color, Size, etc.) should display badges.
+    </p>
+    <img src="/images/appstore/02-settings.png" 
+         alt="Settings Screenshot" 
+         style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block; margin: 0;">
+  </div>
+  
+  <!-- Step 3: Manage Badges -->
+  <div style="margin-bottom: 12px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+    <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
+      🏷️ Step 3: Assign Badges to Products
+    </h4>
+    <p style="color: #6d7175; margin: 0 0 10px 0; font-size: 13px; line-height: 1.6;">
+      Go to <strong>Manage Badges</strong> tab and assign HOT or NEW badges to specific product variants.
+    </p>
+    <img src="/images/appstore/01-manage-badges.png" 
+         alt="Manage Badges Screenshot" 
+         style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block; margin: 0;">
+  </div>
+  
+  <!-- Help section - tighter spacing -->
+  <div style="background: #fff4e5; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #ff9800; margin: 0;">
+    <p style="margin: 0; font-size: 13px; line-height: 1.5;">
+      💡 <strong>Need help?</strong> Check the <a href="#" onclick="switchTab('help'); closeWelcomeModal(); return false;" style="color: #008060; text-decoration: underline;">Help tab</a> for detailed guides and support.
+    </p>
+  </div>
+</div>
     <div class="modal-actions" style="margin-top: 20px;">
       <button class="modal-btn modal-btn-primary" onclick="closeWelcomeModal()">
         ✅ Get Started
