@@ -263,7 +263,8 @@
       if (window.getComputedStyle(badgeContainer).position === "static") {
         badgeContainer.style.position = "relative";
       }
-
+      // IMPORTANT: Ensure overflow is visible so badge isn't clipped
+      badgeContainer.style.overflow = "visible";
       // For label-based badges, also set z-index
       if (badgeContainer === label) {
         label.style.zIndex = "10";
