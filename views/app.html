@@ -1072,10 +1072,9 @@ function closeWelcomeModal() {
 
 function openThemeEditorFromModal() {
   const shopHandle = SHOP.replace('.myshopify.com', '');
-  const extensionUUID = '90dba2be-1dc9-d8e4-be0a-1ab557ac86682c7bdbdf';
   
-  // Deep link that opens theme editor with app block pre-selected
-  const url = `https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product&addAppBlockId=${extensionUUID}/variant-badges&target=mainSection`;
+  // Opens theme editor on product template with apps sidebar open
+  const url = `https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product`;
   
   window.open(url, '_blank');
 }
@@ -1660,20 +1659,20 @@ async function saveSettings() {
       </div>
       
       <!-- Step 2: Theme Editor -->
-      <div style="margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px;">
-        <h4 style="margin-bottom: 8px; color: #202223; font-size: 14px;">
-          🎨 Step 2: Add App Block to Your Theme
-        </h4>
-        <p style="color: #6d7175; margin-bottom: 12px; font-size: 13px; line-height: 1.5;">
-          Click below to open Theme Editor, then click "Add section" under Template and select "Variant Badges" from the Apps menu.
-        </p>
-        <button class="btn btn-primary" onclick="openThemeEditorFromModal()" style="margin-bottom: 12px;">
-          📝 Open Theme Editor
-        </button>
-        <img src="/images/help/help-04-success.png" 
-             alt="Theme Editor Screenshot" 
-             style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-      </div>
+<div style="margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+  <h4 style="margin-bottom: 8px; color: #202223; font-size: 14px;">
+    🎨 Step 2: Add App Block to Your Theme
+  </h4>
+  <p style="color: #6d7175; margin-bottom: 12px; font-size: 13px; line-height: 1.5;">
+    Click below to open Theme Editor. In the left sidebar under <strong>Apps</strong>, find and click <strong>"Variant Badges"</strong> to add it to your product page.
+  </p>
+  <button class="btn btn-primary" onclick="openThemeEditorFromModal()" style="margin-bottom: 12px;">
+    📝 Open Theme Editor
+  </button>
+  <img src="/images/help/help-04-success.png" 
+       alt="Theme Editor Screenshot" 
+       style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+</div>
       
       <!-- Step 3: Manage Badges -->
       <div style="margin-bottom: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
