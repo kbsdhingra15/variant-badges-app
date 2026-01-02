@@ -240,7 +240,11 @@
       }
 
       if (!label) return;
-
+      // IMPORTANT: Ensure label has position relative and higher z-index
+      if (window.getComputedStyle(label).position === "static") {
+        label.style.position = "relative";
+      }
+      label.style.zIndex = "10"; // Ensure badge appears above absolutely positioned input
       // Check if badge already exists with correct type
       const existingBadge = label.querySelector(".variant-badge-overlay");
 
@@ -273,11 +277,13 @@
     badgeEl.className = `variant-badge-overlay badge-${config.position}`;
     badgeEl.textContent = badge.emoji + " " + badge.text;
     badgeEl.style.backgroundColor = badge.color;
+    badgeEl.style.zIndex = "100"; // High z-index to appear above everything
 
     if (window.getComputedStyle(element).position === "static") {
       element.style.position = "relative";
     }
-
+    // Ensure parent also has proper stacking
+    element.style.zIndex = "10";
     element.appendChild(badgeEl);
   }
 

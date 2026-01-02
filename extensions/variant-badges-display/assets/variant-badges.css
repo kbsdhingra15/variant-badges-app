@@ -10,7 +10,7 @@
   letter-spacing: 0.5px;
   padding: 3px 7px;
   border-radius: 3px;
-  z-index: 100;
+  z-index: 100 !important;
   pointer-events: none;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   color: white;
