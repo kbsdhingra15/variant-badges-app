@@ -241,31 +241,31 @@
 
       if (!label) return;
 
-      // For Horizon theme - badge needs to go on parent, not label
+      // Determine badge container
       let badgeContainer = label;
 
-      // Check if label has absolutely positioned input child
-      const hasAbsoluteInput = Array.from(label.children).some((child) => {
-        return (
-          child.tagName === "INPUT" &&
-          window.getComputedStyle(child).position === "absolute"
-        );
-      });
+      // Check if this is a Horizon-style theme (absolute positioned input covering label)
+      const inputInLabel = label.querySelector('input[type="radio"]');
+      if (inputInLabel) {
+        const inputStyle = window.getComputedStyle(inputInLabel);
+        const isAbsoluteCovering =
+          inputStyle.position === "absolute" &&
+          inputStyle.width === "100%" &&
+          inputStyle.height === "100%";
 
-      if (hasAbsoluteInput) {
-        // Use parent element instead
-        badgeContainer = label.parentElement;
-        if (
-          badgeContainer &&
-          window.getComputedStyle(badgeContainer).position === "static"
-        ) {
-          badgeContainer.style.position = "relative";
+        if (isAbsoluteCovering && label.parentElement) {
+          // Horizon-style: Use parent element
+          badgeContainer = label.parentElement;
         }
-      } else {
-        // Normal themes - use label
-        if (window.getComputedStyle(label).position === "static") {
-          label.style.position = "relative";
-        }
+      }
+
+      // Ensure container has position relative
+      if (window.getComputedStyle(badgeContainer).position === "static") {
+        badgeContainer.style.position = "relative";
+      }
+
+      // For label-based badges, also set z-index
+      if (badgeContainer === label) {
         label.style.zIndex = "10";
       }
 
