@@ -1051,6 +1051,46 @@ function showAlert(message, title = "Notice") {
   
   modal.classList.add('active');
 }
+// Welcome modal functions
+function showWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (modal) {
+    modal.classList.add('active');
+    // Mark as seen
+    localStorage.setItem('vb_welcome_shown_' + SHOP, 'true');
+  }
+}
+
+function closeWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+function openThemeEditorFromModal() {
+  const shopHandle = SHOP.replace('.myshopify.com', '');
+  window.open(`https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product`, '_blank');
+}
+
+// Check if first time user
+function checkFirstTimeUser() {
+  const hasSeenWelcome = localStorage.getItem('vb_welcome_shown_' + SHOP);
+  
+  if (!hasSeenWelcome) {
+    // Show welcome modal after short delay
+    setTimeout(() => {
+      showWelcomeModal();
+    }, 800);
+  }
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkFirstTimeUser);
+} else {
+  checkFirstTimeUser();
+}
 
 function showConfirm(message, title = "Confirm") {
   return new Promise((resolve) => {
@@ -1071,6 +1111,46 @@ function showConfirm(message, title = "Confirm") {
     window.modalResolve = resolve;
   });
 }
+// Welcome modal functions
+function showWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (modal) {
+    modal.classList.add('active');
+    // Mark as seen
+    localStorage.setItem('vb_welcome_shown_' + SHOP, 'true');
+  }
+}
+
+function closeWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+function openThemeEditorFromModal() {
+  const shopHandle = SHOP.replace('.myshopify.com', '');
+  window.open(`https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product`, '_blank');
+}
+
+// Check if first time user
+function checkFirstTimeUser() {
+  const hasSeenWelcome = localStorage.getItem('vb_welcome_shown_' + SHOP);
+  
+  if (!hasSeenWelcome) {
+    // Show welcome modal after short delay
+    setTimeout(() => {
+      showWelcomeModal();
+    }, 800);
+  }
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkFirstTimeUser);
+} else {
+  checkFirstTimeUser();
+}
 
 function closeModal(result) {
   const modal = document.getElementById('custom-modal');
@@ -1080,6 +1160,46 @@ function closeModal(result) {
     window.modalResolve(result || false);
     window.modalResolve = null;
   }
+}
+// Welcome modal functions
+function showWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (modal) {
+    modal.classList.add('active');
+    // Mark as seen
+    localStorage.setItem('vb_welcome_shown_' + SHOP, 'true');
+  }
+}
+
+function closeWelcomeModal() {
+  const modal = document.getElementById('welcome-modal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+function openThemeEditorFromModal() {
+  const shopHandle = SHOP.replace('.myshopify.com', '');
+  window.open(`https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product`, '_blank');
+}
+
+// Check if first time user
+function checkFirstTimeUser() {
+  const hasSeenWelcome = localStorage.getItem('vb_welcome_shown_' + SHOP);
+  
+  if (!hasSeenWelcome) {
+    // Show welcome modal after short delay
+    setTimeout(() => {
+      showWelcomeModal();
+    }, 800);
+  }
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkFirstTimeUser);
+} else {
+  checkFirstTimeUser();
 }
       // ============================================
       // CONFIGURATION
@@ -1583,5 +1703,78 @@ async function saveSettings() {
     <div class="modal-actions" id="modal-actions"></div>
   </div>
 </div>
+<!-- Custom Modal -->
+<div id="custom-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header" id="modal-title">Confirm</div>
+    <div class="modal-body" id="modal-message"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+<!-- Welcome Modal (First-time Setup Guide) -->
+<div id="welcome-modal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 700px;">
+    <div class="modal-header">
+      👋 Welcome to Variant Badges!
+    </div>
+    <div class="modal-body" style="text-align: left;">
+      <p style="margin-bottom: 20px; font-size: 15px;">Get your badges live in 3 easy steps:</p>
+      
+      <!-- Step 1: Settings -->
+      <div style="margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+        <h4 style="margin-bottom: 8px; color: #202223; font-size: 14px;">
+          📋 Step 1: Choose Your Option Type
+        </h4>
+        <p style="color: #6d7175; margin-bottom: 12px; font-size: 13px; line-height: 1.5;">
+          Go to <strong>Settings</strong> tab and select which product option (Color, Size, etc.) should display badges.
+        </p>
+        <img src="/images/appstore/02-settings.png" 
+             alt="Settings Screenshot" 
+             style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      </div>
+      
+      <!-- Step 2: Theme Editor -->
+      <div style="margin-bottom: 24px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+        <h4 style="margin-bottom: 8px; color: #202223; font-size: 14px;">
+          🎨 Step 2: Add App Block to Your Theme
+        </h4>
+        <p style="color: #6d7175; margin-bottom: 12px; font-size: 13px; line-height: 1.5;">
+          Click below to open Theme Editor, then click "Add section" under Template and select "Variant Badges" from the Apps menu.
+        </p>
+        <button class="btn btn-primary" onclick="openThemeEditorFromModal()" style="margin-bottom: 12px;">
+          📝 Open Theme Editor
+        </button>
+        <img src="/images/help/help-04-success.png" 
+             alt="Theme Editor Screenshot" 
+             style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      </div>
+      
+      <!-- Step 3: Manage Badges -->
+      <div style="margin-bottom: 20px; padding: 16px; background: #f9fafb; border-radius: 8px;">
+        <h4 style="margin-bottom: 8px; color: #202223; font-size: 14px;">
+          🏷️ Step 3: Assign Badges to Products
+        </h4>
+        <p style="color: #6d7175; margin-bottom: 12px; font-size: 13px; line-height: 1.5;">
+          Go to <strong>Manage Badges</strong> tab and assign HOT or NEW badges to specific product variants.
+        </p>
+        <img src="/images/appstore/01-manage-badges.png" 
+             alt="Manage Badges Screenshot" 
+             style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      </div>
+      
+      <div style="background: #fff4e5; padding: 12px; border-radius: 6px; border-left: 4px solid #ff9800;">
+        <p style="margin: 0; font-size: 13px;">
+          💡 <strong>Need help?</strong> Check the <a href="#" onclick="switchTab('help'); closeWelcomeModal(); return false;" style="color: #008060; text-decoration: underline;">Help tab</a> for detailed guides and support.
+        </p>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn modal-btn-primary" onclick="closeWelcomeModal()">
+        ✅ Get Started
+      </button>
+    </div>
+  </div>
+</div>
+
   </body>
 </html>

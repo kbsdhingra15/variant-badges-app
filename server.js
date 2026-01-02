@@ -22,7 +22,8 @@ const analyticsRoutes = require("./routes/analytics");
 const app = express();
 // Body parser
 app.use(express.json());
-
+// Serve static files from public directory
+app.use(express.static("public"));
 // ← ADD CORS MIDDLEWARE HERE (before routes)
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
