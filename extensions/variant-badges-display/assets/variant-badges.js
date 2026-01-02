@@ -240,14 +240,41 @@
       }
 
       if (!label) return;
-      // IMPORTANT: Ensure label has position relative and higher z-index
-      if (window.getComputedStyle(label).position === "static") {
-        label.style.position = "relative";
-      }
-      label.style.zIndex = "10"; // Ensure badge appears above absolutely positioned input
-      // Check if badge already exists with correct type
-      const existingBadge = label.querySelector(".variant-badge-overlay");
 
+      // For Horizon theme - badge needs to go on parent, not label
+      let badgeContainer = label;
+
+      // Check if label has absolutely positioned input child
+      const hasAbsoluteInput = Array.from(label.children).some((child) => {
+        return (
+          child.tagName === "INPUT" &&
+          window.getComputedStyle(child).position === "absolute"
+        );
+      });
+
+      if (hasAbsoluteInput) {
+        // Use parent element instead
+        badgeContainer = label.parentElement;
+        if (
+          badgeContainer &&
+          window.getComputedStyle(badgeContainer).position === "static"
+        ) {
+          badgeContainer.style.position = "relative";
+        }
+      } else {
+        // Normal themes - use label
+        if (window.getComputedStyle(label).position === "static") {
+          label.style.position = "relative";
+        }
+        label.style.zIndex = "10";
+      }
+
+      if (!badgeContainer) return;
+
+      // Check if badge already exists with correct type
+      const existingBadge = badgeContainer.querySelector(
+        ".variant-badge-overlay"
+      );
       if (badgeToShow) {
         const badgeType =
           typeof badgeToShow === "string"
@@ -261,7 +288,7 @@
         // Only update if badge doesn't exist or is wrong type
         if (!existingBadge || existingBadge.textContent !== expectedText) {
           if (existingBadge) existingBadge.remove();
-          addBadgeToElement(label, badgeType.toUpperCase());
+          addBadgeToElement(badgeContainer, badgeType.toUpperCase());
         }
       } else if (existingBadge) {
         existingBadge.remove();
