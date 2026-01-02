@@ -17,6 +17,8 @@
   white-space: nowrap;
   opacity: 1;
   transition: opacity 0.2s ease;
+  isolation: isolate; /* ← ADD THIS */
+  transform: translateZ(0); /* ← ADD THIS - creates new stacking context */
 }
 
 /* Position variants */
