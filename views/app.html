@@ -1072,9 +1072,13 @@ function closeWelcomeModal() {
 
 function openThemeEditorFromModal() {
   const shopHandle = SHOP.replace('.myshopify.com', '');
-  window.open(`https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product`, '_blank');
+  const extensionUUID = '90dba2be-1dc9-d8e4-be0a-1ab557ac86682c7bdbdf';
+  
+  // Deep link that opens theme editor with app block pre-selected
+  const url = `https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product&addAppBlockId=${extensionUUID}/variant-badges&target=mainSection`;
+  
+  window.open(url, '_blank');
 }
-
 // Check if first time user
 function checkFirstTimeUser() {
   const hasSeenWelcome = localStorage.getItem('vb_welcome_shown_' + SHOP);
