@@ -27,8 +27,10 @@
   background: white;
   border-radius: 8px;
   padding: 24px;
-  max-width: 500px;
+  max-width: 700px;
   width: 90%;
+  max-height: 90vh; /* ← ADD THIS - don't exceed viewport */
+  overflow-y: auto; /* ← ADD THIS - scroll if content is tall */
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -1111,46 +1113,6 @@ function showConfirm(message, title = "Confirm") {
     window.modalResolve = resolve;
   });
 }
-// Welcome modal functions
-function showWelcomeModal() {
-  const modal = document.getElementById('welcome-modal');
-  if (modal) {
-    modal.classList.add('active');
-    // Mark as seen
-    localStorage.setItem('vb_welcome_shown_' + SHOP, 'true');
-  }
-}
-
-function closeWelcomeModal() {
-  const modal = document.getElementById('welcome-modal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-function openThemeEditorFromModal() {
-  const shopHandle = SHOP.replace('.myshopify.com', '');
-  window.open(`https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product`, '_blank');
-}
-
-// Check if first time user
-function checkFirstTimeUser() {
-  const hasSeenWelcome = localStorage.getItem('vb_welcome_shown_' + SHOP);
-  
-  if (!hasSeenWelcome) {
-    // Show welcome modal after short delay
-    setTimeout(() => {
-      showWelcomeModal();
-    }, 800);
-  }
-}
-
-// Initialize on page load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', checkFirstTimeUser);
-} else {
-  checkFirstTimeUser();
-}
 
 function closeModal(result) {
   const modal = document.getElementById('custom-modal');
@@ -1160,46 +1122,6 @@ function closeModal(result) {
     window.modalResolve(result || false);
     window.modalResolve = null;
   }
-}
-// Welcome modal functions
-function showWelcomeModal() {
-  const modal = document.getElementById('welcome-modal');
-  if (modal) {
-    modal.classList.add('active');
-    // Mark as seen
-    localStorage.setItem('vb_welcome_shown_' + SHOP, 'true');
-  }
-}
-
-function closeWelcomeModal() {
-  const modal = document.getElementById('welcome-modal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-function openThemeEditorFromModal() {
-  const shopHandle = SHOP.replace('.myshopify.com', '');
-  window.open(`https://admin.shopify.com/store/${shopHandle}/themes/current/editor?context=apps&template=product`, '_blank');
-}
-
-// Check if first time user
-function checkFirstTimeUser() {
-  const hasSeenWelcome = localStorage.getItem('vb_welcome_shown_' + SHOP);
-  
-  if (!hasSeenWelcome) {
-    // Show welcome modal after short delay
-    setTimeout(() => {
-      showWelcomeModal();
-    }, 800);
-  }
-}
-
-// Initialize on page load
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', checkFirstTimeUser);
-} else {
-  checkFirstTimeUser();
 }
       // ============================================
       // CONFIGURATION
@@ -1775,6 +1697,5 @@ async function saveSettings() {
     </div>
   </div>
 </div>
-
   </body>
 </html>
