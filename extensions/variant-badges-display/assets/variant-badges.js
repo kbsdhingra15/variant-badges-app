@@ -243,7 +243,7 @@
 
       // Determine badge container
       let badgeContainer = label;
-
+      let isHorizonStyle = false;
       // Check if this is a Horizon-style theme (absolute positioned input covering label)
       const inputInLabel = label.querySelector('input[type="radio"]');
       if (inputInLabel) {
@@ -256,6 +256,7 @@
         if (isAbsoluteCovering && label.parentElement) {
           // Horizon-style: Use parent element
           badgeContainer = label.parentElement;
+          isHorizonStyle = true;
         }
       }
 
@@ -263,13 +264,15 @@
       if (window.getComputedStyle(badgeContainer).position === "static") {
         badgeContainer.style.position = "relative";
       }
-      // IMPORTANT: Ensure overflow is visible so badge isn't clipped
-      badgeContainer.style.overflow = "visible";
+
       // For label-based badges, also set z-index
       if (badgeContainer === label) {
         label.style.zIndex = "10";
       }
-
+      // Store theme info for badge positioning
+      if (isHorizonStyle) {
+        badgeContainer.dataset.horizonStyle = "true";
+      }
       if (!badgeContainer) return;
 
       // Check if badge already exists with correct type

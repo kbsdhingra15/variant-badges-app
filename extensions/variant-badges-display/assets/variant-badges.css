@@ -27,9 +27,20 @@
   right: -6px;
 }
 
+/* Horizon theme needs more offset to escape overflow clipping */
+[data-horizon-style="true"] .badge-top-right {
+  top: -12px;
+  right: -12px;
+}
+
 .badge-top-left {
   top: -6px;
   left: -6px;
+}
+
+[data-horizon-style="true"] .badge-top-left {
+  top: -12px;
+  left: -12px;
 }
 
 .badge-bottom-right {
@@ -37,9 +48,19 @@
   right: -6px;
 }
 
+[data-horizon-style="true"] .badge-bottom-right {
+  bottom: -12px;
+  right: -12px;
+}
+
 .badge-bottom-left {
   bottom: -6px;
   left: -6px;
+}
+
+[data-horizon-style="true"] .badge-bottom-left {
+  bottom: -12px;
+  left: -12px;
 }
 
 /* Fade in animation */
