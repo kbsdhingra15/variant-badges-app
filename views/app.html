@@ -223,14 +223,15 @@
 
       /* Buttons */
       .btn {
-        display: inline-block;
-        padding: 10px 16px;
+       /* display: inline-block; */
+        padding: 10px 20px;
         border-radius: 6px;
+         border: none;
         font-size: 14px;
         font-weight: 500;
         cursor: pointer;
-        border: none;
-        text-decoration: none;
+       /* border: none;
+        text-decoration: none; */
         transition: all 0.2s;
       }
       .btn-primary {
@@ -1692,7 +1693,7 @@ async function saveSettings() {
   </div>
   
 <!-- Help section - centered text -->
-<div style="background: #fff4e5; padding: 10px 12px; border-radius: 6px; border-left: 4px solid #ff9800; margin: 0; display: flex; align-items: center; min-height: 40px;">
+<div style="background: #fff4e5; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #ff9800; margin: 0; display: flex; align-items: center;">
   <p style="margin: 0; font-size: 13px; line-height: 1.4;">
     💡 <strong>Need help?</strong> Check the <a href="#" onclick="switchTab('help'); closeWelcomeModal(); return false;" style="color: #008060; text-decoration: underline;">Help tab</a> for detailed guides and support.
   </p>
