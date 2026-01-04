@@ -241,14 +241,26 @@
       .btn-primary:hover {
         background: #006e52;
       }
-      .btn-secondary {
-        background: white;
-        color: #202223;
-        border: 1px solid #c9cccf;
-      }
-      .btn-secondary:hover {
-        background: #f6f6f7;
-      }
+    .btn-secondary {
+  background: #f1f2f3;
+  color: #202223;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e3e4e5;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
       .btn-outline {
         background: transparent;
         color: #008060;
@@ -675,52 +687,59 @@
   </div>
 
       <!-- MANAGE BADGES VIEW -->
-      <div id="manage-view" class="view-section active">
-        <div class="page-header">
-          <h2>Manage Badges</h2>
-          <p>Assign HOT, NEW, and SALE badges to product variants</p>
-        </div>
+<div id="manage-view" class="view-section active">
+  <div class="page-header">
+    <h2>Manage Badges</h2>
+    <p>Assign HOT, NEW, and SALE badges to product variants</p>
+  </div>
 
-        <!-- No option selected warning -->
-        <div id="no-option-warning" style="display: none">
-          <div class="banner">
-            <div class="banner-icon">⚠️</div>
-            <div class="banner-content">
-              <h4>Select Option Type First</h4>
-              <p>
-                Please go to Settings and select which product option (Color,
-                Size, etc.) you want to assign badges to.
-              </p>
-              <div class="banner-actions">
-                <button class="btn btn-primary" onclick="switchTab('settings')">
-                  ⚙️ Go to Settings
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+  <!-- Warning when no option selected -->
+  <div id="no-option-warning" class="card" style="display: none; background: #fff4e5; border-left: 4px solid #ff9800; padding: 16px;">
+    <p style="margin: 0;">⚠️ Please select an option type in the <a href="#" onclick="switchTab('settings'); return false;" style="color: #008060; font-weight: 600;">Settings tab</a> before assigning badges.</p>
+  </div>
 
-        <!-- Products list -->
-        <div id="products-list-container" style="display: none">
-          <div class="card">
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 16px;
-              "
-            >
-              <h3 id="badge-assignments-title">Badge Assignments</h3>
-              <div
-                style="color: #6d7175; font-size: 14px"
-                id="option-type-label"
-              ></div>
-            </div>
-            <div id="products-list" class="badge-list"></div>
-          </div>
+  <!-- Products list container -->
+  <div id="products-list-container" style="display: none;">
+    <div class="card">
+      <p id="option-type-label" style="margin-bottom: 16px; color: #6d7175; font-weight: 500;"></p>
+      
+      <!-- Search Box -->
+      <div style="margin-bottom: 20px;">
+        <input 
+          type="text" 
+          id="product-search" 
+          placeholder="🔍 Search products by name..." 
+          style="width: 100%; max-width: 400px; padding: 10px 12px; border: 1px solid #c9cccf; border-radius: 6px; font-size: 14px;"
+          onkeyup="handleProductSearch(event)"
+        >
+        <button onclick="clearSearch()" style="margin-left: 8px; padding: 10px 16px; background: #f1f2f3; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+          Clear
+        </button>
+      </div>
+
+      <!-- Products List -->
+      <div id="products-list"></div>
+
+      <!-- Pagination Controls -->
+      <div id="pagination-controls" style="margin-top: 20px; display: none; align-items: center; justify-content: space-between; padding: 16px; background: #f9fafb; border-radius: 6px;">
+        <div id="pagination-info" style="color: #6d7175; font-size: 14px;">
+          <!-- Shows: Products 1-20 of 147 -->
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button id="prev-page" onclick="goToPreviousPage()" class="btn btn-secondary" disabled style="padding: 8px 16px;">
+            ← Previous
+          </button>
+          <span id="page-numbers" style="color: #6d7175; font-size: 14px; margin: 0 8px;">
+            <!-- Page 1 of 5 -->
+          </span>
+          <button id="next-page" onclick="goToNextPage()" class="btn btn-secondary" style="padding: 8px 16px;">
+            Next →
+          </button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
 
       <!-- SETTINGS VIEW -->
       <div id="settings-view" class="view-section">
@@ -1288,64 +1307,145 @@ function closeModal(result) {
       // ============================================
       // BADGE MANAGEMENT
       // ============================================
+// ============================================
+// BADGE MANAGEMENT WITH PAGINATION
+// ============================================
 
-      async function loadProducts() {
-        try {
-          console.log("📦 Loading all products with badge assignments...");
+// Pagination state
+let currentPage = 1;
+let totalPages = 1;
+let currentSearch = '';
+const itemsPerPage = 20;
+let isLoadingProducts = false;
 
-          // First, check if option type is selected
-          const settingsResponse = await authenticatedFetch(`/api/settings`);
-          if (!settingsResponse.ok) {
-            throw new Error("Failed to load settings");
-          }
+// Load products with pagination
+async function loadProducts(page = 1, search = '') {
+  if (isLoadingProducts) {
+    console.log('⏳ Already loading products, skipping...');
+    return;
+  }
 
-          const settings = await settingsResponse.json();
-          const selectedOption = settings.selectedOption;
+  try {
+    isLoadingProducts = true;
+    console.log(`📦 Loading products - Page ${page}, Search: "${search}"`);
 
-          if (!selectedOption) {
-            // Show warning
-            document.getElementById("no-option-warning").style.display =
-              "block";
-            document.getElementById("products-list-container").style.display =
-              "none";
-            window.productsLoaded = true;
-            return;
-          }
+    // First, check if option type is selected
+    const settingsResponse = await authenticatedFetch(`/api/settings`);
+    if (!settingsResponse.ok) {
+      throw new Error("Failed to load settings");
+    }
 
-          // Hide warning, show products list
-          document.getElementById("no-option-warning").style.display = "none";
-          document.getElementById("products-list-container").style.display =
-            "block";
-          document.getElementById(
-            "option-type-label"
-          ).textContent = `Assigning badges to: ${selectedOption} variants`;
+    const settings = await settingsResponse.json();
+    const selectedOption = settings.selectedOption;
 
-          // Show loading state
-          document.getElementById("products-list").innerHTML =
-            '<div class="loading">Loading products...</div>';
+    if (!selectedOption) {
+      document.getElementById("no-option-warning").style.display = "block";
+      document.getElementById("products-list-container").style.display = "none";
+      window.productsLoaded = true;
+      isLoadingProducts = false;
+      return;
+    }
 
-          // Fetch all products with their badge assignments
-          const response = await authenticatedFetch(`/api/badges/all-products`);
+    // Hide warning, show products list
+    document.getElementById("no-option-warning").style.display = "none";
+    document.getElementById("products-list-container").style.display = "block";
+    document.getElementById("option-type-label").textContent = 
+      `Assigning badges to: ${selectedOption} variants`;
 
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
+    // Show loading state
+    document.getElementById("products-list").innerHTML =
+      '<div class="loading">Loading products...</div>';
 
-          const data = await response.json();
-          renderAllProducts(data);
+    // Fetch paginated products using NEW endpoint
+    const response = await authenticatedFetch(
+      `/api/badges/paginated?page=${page}&limit=${itemsPerPage}&search=${encodeURIComponent(search)}`
+    );
 
-          window.productsLoaded = true;
-          console.log(
-            "✅ Products loaded:",
-            data.products ? data.products.length : 0
-          );
-        } catch (error) {
-          console.error("Failed to load products:", error);
-          document.getElementById("products-list").innerHTML =
-            '<div class="error">Failed to load products. Please try again.</div>';
-        }
-      }
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
 
+    const data = await response.json();
+    
+    // Update pagination state
+    currentPage = data.currentPage;
+    totalPages = data.totalPages;
+    currentSearch = search;
+
+    // Render products using EXISTING function
+    renderAllProducts(data);
+
+    // Update pagination controls
+    updatePaginationControls(data);
+
+    window.productsLoaded = true;
+    console.log(`✅ Products loaded: ${data.products.length} of ${data.totalProducts}`);
+  } catch (error) {
+    console.error("Failed to load products:", error);
+    document.getElementById("products-list").innerHTML =
+      '<div class="error">Failed to load products. Please try again.</div>';
+  } finally {
+    isLoadingProducts = false;
+  }
+}
+
+// Update pagination controls
+function updatePaginationControls(data) {
+  const { currentPage, totalPages, totalProducts, limit } = data;
+  
+  // Calculate display range
+  const start = (currentPage - 1) * limit + 1;
+  const end = Math.min(currentPage * limit, totalProducts);
+  
+  // Update info text
+  document.getElementById("pagination-info").textContent = 
+    totalProducts > 0 ? `Products ${start}-${end} of ${totalProducts}` : 'No products found';
+
+  // Update page numbers
+  document.getElementById("page-numbers").textContent = 
+    totalPages > 1 ? `Page ${currentPage} of ${totalPages}` : '';
+
+  // Update buttons
+  const prevBtn = document.getElementById("prev-page");
+  const nextBtn = document.getElementById("next-page");
+
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
+
+  // Show/hide pagination if needed
+  const paginationDiv = document.getElementById("pagination-controls");
+  paginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
+}
+
+// Navigation functions
+function goToPreviousPage() {
+  if (currentPage > 1 && !isLoadingProducts) {
+    loadProducts(currentPage - 1, currentSearch);
+  }
+}
+
+function goToNextPage() {
+  if (currentPage < totalPages && !isLoadingProducts) {
+    loadProducts(currentPage + 1, currentSearch);
+  }
+}
+
+// Search handling with debounce
+let searchTimeout;
+function handleProductSearch(event) {
+  clearTimeout(searchTimeout);
+  const searchTerm = event.target.value.trim();
+  
+  // Debounce search - wait 500ms after user stops typing
+  searchTimeout = setTimeout(() => {
+    loadProducts(1, searchTerm); // Reset to page 1 on new search
+  }, 500);
+}
+
+function clearSearch() {
+  document.getElementById("product-search").value = '';
+  loadProducts(1, ''); // Reset to page 1, no search
+}
       function renderAllProducts(data) {
         const container = document.getElementById("products-list");
 

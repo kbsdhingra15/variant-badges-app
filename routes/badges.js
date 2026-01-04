@@ -4,7 +4,237 @@ const {
   getBadgeAssignments,
   saveBadgeAssignment,
   deleteBadgeAssignment,
+  getAppSettings,
+  pool,
 } = require("../database/db");
+
+// ========== NEW PAGINATION ENDPOINT ==========
+// This is a NEW endpoint - existing /all-products stays untouched
+router.get("/paginated", async (req, res) => {
+  try {
+    const shop = req.shop;
+    const { accessToken } = req.shopifySession;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const search = req.query.search || "";
+
+    console.log(
+      `📦 [PAGINATION] Page ${page}, Limit ${limit}, Search: "${search}"`
+    );
+
+    // Get settings
+    const settings = await getAppSettings(shop);
+    const selectedOption = settings.selectedOption;
+
+    if (!selectedOption) {
+      return res.json({
+        products: [],
+        badges: {},
+        selectedOption: null,
+        totalProducts: 0,
+        currentPage: page,
+        totalPages: 0,
+        hasMore: false,
+      });
+    }
+
+    // Build GraphQL query with pagination
+    const query = `
+      query getProducts($first: Int!, $query: String, $after: String) {
+        products(first: $first, query: $query, after: $after) {
+          edges {
+            cursor
+            node {
+              id
+              title
+              handle
+              featuredImage {
+                url
+                altText
+              }
+              options {
+                name
+                values
+              }
+              variants(first: 100) {
+                edges {
+                  node {
+                    id
+                    title
+                    displayName
+                    selectedOptions {
+                      name
+                      value
+                    }
+                  }
+                }
+              }
+            }
+          }
+          pageInfo {
+            hasNextPage
+            hasPreviousPage
+            startCursor
+            endCursor
+          }
+        }
+      }
+    `;
+
+    // Pagination cursor logic
+    let cursor = null;
+    if (page > 1) {
+      // For page 2+, we need to fetch from beginning and skip to correct cursor
+      // This is a limitation of GraphQL pagination - we'll optimize later
+      const skipCount = (page - 1) * limit;
+
+      // Fetch products up to current page to get cursor
+      const skipQuery = `
+        query getProducts($first: Int!, $query: String) {
+          products(first: $first, query: $query) {
+            edges {
+              cursor
+            }
+            pageInfo {
+              endCursor
+            }
+          }
+        }
+      `;
+
+      const skipResponse = await fetch(
+        `https://${shop}/admin/api/2024-10/graphql.json`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": accessToken,
+          },
+          body: JSON.stringify({
+            query: skipQuery,
+            variables: {
+              first: skipCount,
+              query: search ? `title:*${search}*` : null,
+            },
+          }),
+        }
+      );
+
+      const skipData = await skipResponse.json();
+      if (skipData.errors) {
+        console.error("GraphQL skip errors:", skipData.errors);
+      } else {
+        cursor = skipData.data?.products?.pageInfo?.endCursor || null;
+      }
+    }
+
+    // Fetch current page
+    const variables = {
+      first: limit,
+      query: search ? `title:*${search}*` : null,
+      after: cursor,
+    };
+
+    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const response = await fetch(graphqlUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+
+    const productsData = await response.json();
+
+    if (productsData.errors) {
+      console.error("GraphQL errors:", productsData.errors);
+      throw new Error("GraphQL query failed");
+    }
+
+    // Transform products to match existing format
+    const products = productsData.data.products.edges.map((edge) => ({
+      id: edge.node.id.split("/").pop(),
+      title: edge.node.title,
+      handle: edge.node.handle,
+      image: edge.node.featuredImage?.url,
+      options: edge.node.options,
+      variants: edge.node.variants.edges.map((v) => ({
+        id: v.node.id.split("/").pop(),
+        title: v.node.title,
+        displayName: v.node.displayName,
+        selectedOptions: v.node.selectedOptions,
+      })),
+    }));
+
+    // Get total count (for pagination info)
+    let totalProducts = 0;
+    if (!search) {
+      const countQuery = `query { productsCount { count } }`;
+      const countResponse = await fetch(graphqlUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Shopify-Access-Token": accessToken,
+        },
+        body: JSON.stringify({ query: countQuery }),
+      });
+
+      const countData = await countResponse.json();
+      totalProducts = countData.data?.productsCount?.count || 0;
+    } else {
+      // For search, estimate total (Shopify doesn't provide exact count for search)
+      totalProducts = products.length; // Underestimate, will update as user paginate
+    }
+
+    // Get badge assignments - SAME FORMAT as existing endpoint
+    const productIds = products.map((p) => p.id);
+    const badges = {};
+
+    if (productIds.length > 0) {
+      const badgeQuery = `
+        SELECT * FROM badge_assignments 
+        WHERE shop = $1 
+        AND product_id = ANY($2)
+        AND option_type = $3
+      `;
+      const result = await pool.query(badgeQuery, [
+        shop,
+        productIds,
+        selectedOption,
+      ]);
+
+      // Format badges exactly like existing endpoint
+      result.rows.forEach((row) => {
+        const key = `${row.product_id}_${row.option_value}`;
+        badges[key] = {
+          badge_type: row.badge_type,
+          option_value: row.option_value,
+        };
+      });
+    }
+
+    const totalPages = Math.ceil(totalProducts / limit);
+    const hasMore = productsData.data.products.pageInfo.hasNextPage;
+
+    // Return format compatible with existing renderAllProducts()
+    res.json({
+      products,
+      badges,
+      selectedOption,
+      totalProducts,
+      currentPage: page,
+      totalPages,
+      hasMore,
+      limit,
+    });
+  } catch (error) {
+    console.error("Error fetching paginated products:", error);
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+// ========== END NEW PAGINATION ENDPOINT ==========
 
 // Get all products with badge assignments (for main UI)
 router.get("/all-products", async (req, res) => {
