@@ -10,6 +10,7 @@ const {
 
 // ========== NEW PAGINATION ENDPOINT ==========
 // This is a NEW endpoint - existing /all-products stays untouched
+// ========== PAGINATION ENDPOINT - PAGINATE OPTION GROUPS (ROWS) ==========
 router.get("/paginated", async (req, res) => {
   try {
     const shop = req.shop;
@@ -32,19 +33,18 @@ router.get("/paginated", async (req, res) => {
         products: [],
         badges: {},
         selectedOption: null,
-        totalProducts: 0,
+        totalRows: 0,
         currentPage: page,
         totalPages: 0,
         hasMore: false,
       });
     }
 
-    // Build GraphQL query with pagination
+    // Fetch ALL products to build complete option groups list
     const query = `
-      query getProducts($first: Int!, $query: String, $after: String) {
-        products(first: $first, query: $query, after: $after) {
+      query getProducts($first: Int!, $query: String) {
+        products(first: $first, query: $query) {
           edges {
-            cursor
             node {
               id
               title
@@ -72,68 +72,13 @@ router.get("/paginated", async (req, res) => {
               }
             }
           }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
-          }
         }
       }
     `;
 
-    // Pagination cursor logic
-    let cursor = null;
-    if (page > 1) {
-      // For page 2+, we need to fetch from beginning and skip to correct cursor
-      // This is a limitation of GraphQL pagination - we'll optimize later
-      const skipCount = (page - 1) * limit;
-
-      // Fetch products up to current page to get cursor
-      const skipQuery = `
-        query getProducts($first: Int!, $query: String) {
-          products(first: $first, query: $query) {
-            edges {
-              cursor
-            }
-            pageInfo {
-              endCursor
-            }
-          }
-        }
-      `;
-
-      const skipResponse = await fetch(
-        `https://${shop}/admin/api/2024-10/graphql.json`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Shopify-Access-Token": accessToken,
-          },
-          body: JSON.stringify({
-            query: skipQuery,
-            variables: {
-              first: skipCount,
-              query: search ? `title:*${search}*` : null,
-            },
-          }),
-        }
-      );
-
-      const skipData = await skipResponse.json();
-      if (skipData.errors) {
-        console.error("GraphQL skip errors:", skipData.errors);
-      } else {
-        cursor = skipData.data?.products?.pageInfo?.endCursor || null;
-      }
-    }
-
-    // Fetch current page
     const variables = {
-      first: limit,
+      first: 250, // Fetch enough products
       query: search ? `title:*${search}*` : null,
-      after: cursor,
     };
 
     const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
@@ -153,8 +98,7 @@ router.get("/paginated", async (req, res) => {
       throw new Error("GraphQL query failed");
     }
 
-    // Transform products to match existing format
-    const products = productsData.data.products.edges.map((edge) => ({
+    const allProducts = productsData.data.products.edges.map((edge) => ({
       id: edge.node.id.split("/").pop(),
       title: edge.node.title,
       handle: edge.node.handle,
@@ -168,31 +112,61 @@ router.get("/paginated", async (req, res) => {
       })),
     }));
 
-    // Get total count (for pagination info)
-    let totalProducts = 0;
-    if (!search) {
-      const countQuery = `query { productsCount { count } }`;
-      const countResponse = await fetch(graphqlUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Shopify-Access-Token": accessToken,
-        },
-        body: JSON.stringify({ query: countQuery }),
+    // Build ALL rows (product + option value combinations)
+    const allRows = [];
+
+    allProducts.forEach((product) => {
+      const selectedOptionData = product.options.find(
+        (opt) => opt.name === selectedOption
+      );
+
+      if (!selectedOptionData) return;
+
+      // For each option value in this product, create a row
+      const optionValuesInProduct = new Set();
+
+      product.variants.forEach((variant) => {
+        const selectedOpt = variant.selectedOptions?.find(
+          (opt) => opt.name === selectedOption
+        );
+        if (selectedOpt) {
+          optionValuesInProduct.add(selectedOpt.value);
+        }
       });
 
-      const countData = await countResponse.json();
-      totalProducts = countData.data?.productsCount?.count || 0;
-    } else {
-      // For search, estimate total (Shopify doesn't provide exact count for search)
-      totalProducts = products.length; // Underestimate, will update as user paginate
-    }
+      // Create one row per unique option value in this product
+      optionValuesInProduct.forEach((optionValue) => {
+        const variantsWithThisOption = product.variants.filter((variant) => {
+          const selectedOpt = variant.selectedOptions?.find(
+            (opt) => opt.name === selectedOption
+          );
+          return selectedOpt && selectedOpt.value === optionValue;
+        });
 
-    // Get badge assignments - SAME FORMAT as existing endpoint
-    const productIds = products.map((p) => p.id);
+        allRows.push({
+          productId: product.id,
+          productTitle: product.title,
+          productHandle: product.handle,
+          productImage: product.image,
+          optionValue: optionValue,
+          variantIds: variantsWithThisOption.map((v) => v.id),
+          variantCount: variantsWithThisOption.length,
+        });
+      });
+    });
+
+    // Sort rows alphabetically by product title, then option value
+    allRows.sort((a, b) => {
+      const titleCompare = a.productTitle.localeCompare(b.productTitle);
+      if (titleCompare !== 0) return titleCompare;
+      return a.optionValue.localeCompare(b.optionValue);
+    });
+
+    // Get badge assignments
+    const allProductIds = [...new Set(allRows.map((row) => row.productId))];
     const badges = {};
 
-    if (productIds.length > 0) {
+    if (allProductIds.length > 0) {
       const badgeQuery = `
         SELECT * FROM badge_assignments 
         WHERE shop = $1 
@@ -201,11 +175,10 @@ router.get("/paginated", async (req, res) => {
       `;
       const result = await pool.query(badgeQuery, [
         shop,
-        productIds,
+        allProductIds,
         selectedOption,
       ]);
 
-      // Format badges exactly like existing endpoint
       result.rows.forEach((row) => {
         const key = `${row.product_id}_${row.option_value}`;
         badges[key] = {
@@ -215,18 +188,49 @@ router.get("/paginated", async (req, res) => {
       });
     }
 
-    const totalPages = Math.ceil(totalProducts / limit);
-    const hasMore = productsData.data.products.pageInfo.hasNextPage;
+    // PAGINATE THE ROWS
+    const totalRows = allRows.length;
+    const totalPages = Math.ceil(totalRows / limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedRows = allRows.slice(startIndex, endIndex);
 
-    // Return format compatible with existing renderAllProducts()
+    // Transform rows to product format for frontend compatibility
+    const productsForPage = paginatedRows.map((row) => ({
+      id: row.productId,
+      title: row.productTitle,
+      handle: row.productHandle,
+      image: row.productImage,
+      options: [
+        {
+          name: selectedOption,
+          values: [row.optionValue],
+        },
+      ],
+      variants: row.variantIds.map((id) => ({
+        id: id,
+        selectedOptions: [{ name: selectedOption, value: row.optionValue }],
+      })),
+      // Additional row metadata
+      _rowData: {
+        optionValue: row.optionValue,
+        variantCount: row.variantCount,
+      },
+    }));
+
+    console.log(
+      `✅ Total rows: ${totalRows}, Page ${page}/${totalPages}, Showing: ${paginatedRows.length}`
+    );
+
     res.json({
-      products,
+      products: productsForPage,
       badges,
       selectedOption,
-      totalProducts,
+      totalRows: totalRows,
+      totalProducts: totalRows, // For frontend compatibility
       currentPage: page,
       totalPages,
-      hasMore,
+      hasMore: page < totalPages,
       limit,
     });
   } catch (error) {
