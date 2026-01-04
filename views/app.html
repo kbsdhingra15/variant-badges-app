@@ -779,71 +779,130 @@
           </button>
         </div>
       </div>
+<!-- PLANS VIEW -->
+<div id="plans-view" class="view-section">
+  <div class="page-header">
+    <h2>Plans & Pricing</h2>
+    <p>Choose the plan that fits your store</p>
+  </div>
 
-      <!-- PLANS VIEW -->
-      <div id="plans-view" class="view-section">
-        <div class="page-header">
-          <h2>Plans & Pricing</h2>
-          <p>Choose the plan that fits your store</p>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; max-width: 800px; margin: 0 auto;">
+    
+    <!-- Free Plan -->
+    <div class="card" style="border: 2px solid #e1e3e5; position: relative;">
+      <div style="text-align: center; padding: 24px;">
+        <h3 style="font-size: 24px; margin: 0 0 8px 0;">Free</h3>
+        <div style="font-size: 48px; font-weight: 700; color: #008060; margin: 16px 0;">
+          $0<span style="font-size: 18px; font-weight: 400; color: #6d7175;">/mo</span>
         </div>
-
-        <div class="card">
-          <div class="pricing-grid">
-            <div class="pricing-card">
-              <h4>Free</h4>
-              <div class="pricing-price">$0<span>/mo</span></div>
-              <ul class="pricing-features">
-                <li>Manual badge assignment</li>
-                <li>HOT and NEW badges</li>
-                <li>Up to 50 products</li>
-                <li>Email support</li>
-              </ul>
-              <button class="btn btn-outline" style="width: 100%">
-                Current Plan
-              </button>
-            </div>
-
-            <div class="pricing-card featured">
-              <div class="pricing-badge">Most Popular</div>
-              <h4>Pro</h4>
-              <div class="pricing-price">$9<span>/mo</span></div>
-              <ul class="pricing-features">
-                <li>Everything in Free</li>
-                <li>Auto SALE badge on discounts</li>
-                <li>Unlimited products</li>
-                <li>Priority support</li>
-                <li>Custom badge styles</li>
-              </ul>
-              <button
-                class="btn btn-primary"
-                style="width: 100%"
-                onclick="upgradePlan('pro')"
-              >
-                Upgrade to Pro
-              </button>
-            </div>
-
-            <div class="pricing-card">
-              <h4>Enterprise</h4>
-              <div class="pricing-price">$29<span>/mo</span></div>
-              <ul class="pricing-features">
-                <li>Everything in Pro</li>
-                <li>Custom badge text</li>
-                <li>A/B testing</li>
-                <li>Analytics dashboard</li>
-                <li>Dedicated account manager</li>
-              </ul>
-              <button
-                class="btn btn-outline"
-                style="width: 100%"
-                onclick="upgradePlan('enterprise')"
-              >
-                Contact Sales
-              </button>
-            </div>
+        <p style="color: #6d7175; font-size: 14px; margin: 0 0 24px 0;">Perfect for getting started</p>
+        
+        <div style="text-align: left; margin-bottom: 24px;">
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;">14-day trial with all features</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;"><strong>5 products</strong> after trial</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;">Unlimited variants per product</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;">HOT and NEW badges</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;">Email support</span>
           </div>
         </div>
+        
+        <button class="btn btn-outline" style="width: 100%;" disabled>
+          Current Plan
+        </button>
       </div>
+    </div>
+
+    <!-- Pro Plan -->
+    <div class="card" style="border: 2px solid #008060; position: relative; box-shadow: 0 4px 12px rgba(0, 128, 96, 0.15);">
+      <div style="position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #008060; color: white; padding: 4px 16px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+        MOST POPULAR
+      </div>
+      
+      <div style="text-align: center; padding: 24px;">
+        <h3 style="font-size: 24px; margin: 0 0 8px 0;">Pro</h3>
+        <div style="font-size: 48px; font-weight: 700; color: #008060; margin: 16px 0;">
+          $4.99<span style="font-size: 18px; font-weight: 400; color: #6d7175;">/mo</span>
+        </div>
+        <p style="color: #6d7175; font-size: 14px; margin: 0 0 24px 0;">For growing stores</p>
+        
+        <div style="text-align: left; margin-bottom: 24px;">
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;"><strong>Everything in Free</strong></span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;"><strong>Unlimited products</strong></span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;">Unlimited variants</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+            <span style="color: #008060; font-size: 18px;">✓</span>
+            <span style="font-size: 14px; line-height: 1.6;">Priority support</span>
+          </div>
+          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px; opacity: 0.6;">
+            <span style="font-size: 18px;">⏳</span>
+            <span style="font-size: 14px; line-height: 1.6;">Auto SALE badges <em>(coming soon)</em></span>
+          </div>
+        </div>
+        
+        <button class="btn btn-primary" style="width: 100%;" onclick="alert('Upgrade functionality coming soon!')">
+          Upgrade to Pro
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FAQ Section -->
+  <div class="card" style="max-width: 800px; margin: 40px auto 0;">
+    <h3 style="margin: 0 0 16px 0;">Frequently Asked Questions</h3>
+    
+    <div style="margin-bottom: 16px;">
+      <h4 style="margin: 0 0 8px 0; font-size: 15px;">What happens after the 14-day trial?</h4>
+      <p style="margin: 0; color: #6d7175; font-size: 14px; line-height: 1.6;">
+        You'll automatically move to the Free plan, which allows badges on up to 5 products with unlimited variants. Upgrade anytime to unlock all products.
+      </p>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <h4 style="margin: 0 0 8px 0; font-size: 15px;">What counts as a "product"?</h4>
+      <p style="margin: 0; color: #6d7175; font-size: 14px; line-height: 1.6;">
+        Each unique product in your Shopify store counts as one product. For example, a t-shirt with 10 color variants counts as 1 product, not 10.
+      </p>
+    </div>
+    
+    <div style="margin-bottom: 16px;">
+      <h4 style="margin: 0 0 8px 0; font-size: 15px;">Can I cancel anytime?</h4>
+      <p style="margin: 0; color: #6d7175; font-size: 14px; line-height: 1.6;">
+        Yes! You can downgrade to Free or cancel anytime. Your badges will remain visible on your first 5 products on the Free plan.
+      </p>
+    </div>
+    
+    <div>
+      <h4 style="margin: 0 0 8px 0; font-size: 15px;">Do you offer refunds?</h4>
+      <p style="margin: 0; color: #6d7175; font-size: 14px; line-height: 1.6;">
+        We offer a 14-day free trial so you can test all features. If you have issues, contact support and we'll help resolve them.
+      </p>
+    </div>
+  </div>
+</div>
 <!-- HELP VIEW -->
 <div id="help-view" class="view-section">
   <div class="page-header">
