@@ -443,5 +443,4 @@ module.exports = {
   saveSubscription,
   initializeTrial,
   countBadgedProducts,
-  createSubscriptionsTable,
 };
