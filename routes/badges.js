@@ -621,9 +621,10 @@ router.post("/", checkPlanLimits, async (req, res) => {
     // Check if adding a badge to a NEW product would exceed limits
     if (badgeType && badgeType !== "none") {
       const currentBadges = await getBadgeAssignments(shop);
-      const currentProductIds = new Set(currentBadges.map((b) => b.product_id));
-      const isNewProduct = !currentProductIds.has(productId);
-
+      const currentProductIds = new Set(
+        currentBadges.map((b) => String(b.product_id)) // ← Convert to string
+      );
+      const isNewProduct = !currentProductIds.has(String(productId));
       // If new product and at limit, block
       if (isNewProduct && !req.planLimits.canAddBadges) {
         return res.status(403).json({
