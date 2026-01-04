@@ -1473,11 +1473,16 @@ function updatePaginationControls(data) {
     ? `Products ${start}-${end} of ${totalProducts}` 
     : 'No products found';
   
-  document.getElementById("pagination-info").textContent = infoText;
+  const infoElement = document.getElementById("pagination-info");
+  if (infoElement) {
+    infoElement.textContent = infoText;
+  }
 
   // Update page numbers
-  document.getElementById("page-numbers").textContent = 
-    totalPages > 1 ? `Page ${currentPage} of ${totalPages}` : '';
+  const pageNumElement = document.getElementById("page-numbers");
+  if (pageNumElement) {
+    pageNumElement.textContent = totalPages > 1 ? `Page ${currentPage} of ${totalPages}` : '';
+  }
 
   // Update buttons
   const prevBtn = document.getElementById("prev-page");
@@ -1488,10 +1493,16 @@ function updatePaginationControls(data) {
     nextBtn.disabled = currentPage >= totalPages;
   }
 
-  // Show/hide pagination if needed
+  // ALWAYS show pagination div to display count
   const paginationDiv = document.getElementById("pagination-controls");
   if (paginationDiv) {
-    paginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
+    paginationDiv.style.display = 'flex';
+    
+    // Hide navigation buttons if only 1 page
+    const navButtons = paginationDiv.querySelector('div:last-child');
+    if (navButtons) {
+      navButtons.style.display = totalPages > 1 ? 'flex' : 'none';
+    }
   }
   
   console.log(`📊 Pagination: ${start}-${end} of ${totalProducts}, Page ${currentPage}/${totalPages}`);
