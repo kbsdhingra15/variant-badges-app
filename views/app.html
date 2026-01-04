@@ -1304,9 +1304,6 @@ function closeModal(result) {
 
       checkSetupStatus();
 
-      // ============================================
-      // BADGE MANAGEMENT
-      // ============================================
 // ============================================
 // BADGE MANAGEMENT WITH PAGINATION
 // ============================================
@@ -1365,21 +1362,24 @@ async function loadProducts(page = 1, search = '') {
       throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await response.json();
+    const rawData = await response.json();
+    
+    // Transform data to match renderAllProducts() expectations
+    const transformedData = transformProductsData(rawData);
     
     // Update pagination state
-    currentPage = data.currentPage;
-    totalPages = data.totalPages;
+    currentPage = rawData.currentPage;
+    totalPages = rawData.totalPages;
     currentSearch = search;
 
     // Render products using EXISTING function
-    renderAllProducts(data);
+    renderAllProducts(transformedData);
 
     // Update pagination controls
-    updatePaginationControls(data);
+    updatePaginationControls(rawData);
 
     window.productsLoaded = true;
-    console.log(`✅ Products loaded: ${data.products.length} of ${data.totalProducts}`);
+    console.log(`✅ Products loaded: ${rawData.products.length} of ${rawData.totalProducts}`);
   } catch (error) {
     console.error("Failed to load products:", error);
     document.getElementById("products-list").innerHTML =
@@ -1387,6 +1387,74 @@ async function loadProducts(page = 1, search = '') {
   } finally {
     isLoadingProducts = false;
   }
+}
+
+// Transform pagination data to match existing renderAllProducts() format
+function transformProductsData(rawData) {
+  const { products, badges, selectedOption } = rawData;
+  
+  const transformedProducts = products.map(product => {
+    // Find the selected option (e.g., "Color")
+    const selectedOptionData = product.options.find(opt => opt.name === selectedOption);
+    
+    if (!selectedOptionData) {
+      return {
+        ...product,
+        options: []
+      };
+    }
+
+    // Group variants by option value
+    const optionGroups = {};
+    
+    product.variants.forEach(variant => {
+      // Find the value for the selected option
+      const selectedOpt = variant.selectedOptions?.find(opt => opt.name === selectedOption);
+      
+      if (selectedOpt) {
+        const optionValue = selectedOpt.value;
+        
+        if (!optionGroups[optionValue]) {
+          optionGroups[optionValue] = {
+            optionValue: optionValue,
+            variantIds: [],
+            variantCount: 0,
+            imageUrl: variant.image?.url || product.image
+          };
+        }
+        
+        optionGroups[optionValue].variantIds.push(variant.id);
+        optionGroups[optionValue].variantCount++;
+      }
+    });
+
+    // Convert to options array with badge info
+    const options = Object.values(optionGroups).map(group => {
+      // Check if this option value has a badge
+      const badgeKey = `${product.id}_${group.optionValue}`;
+      const badgeInfo = badges[badgeKey];
+      
+      return {
+        optionValue: group.optionValue,
+        variantCount: group.variantCount,
+        variantIds: group.variantIds,
+        imageUrl: group.imageUrl,
+        badge: badgeInfo ? badgeInfo.badge_type : 'none'
+      };
+    });
+
+    return {
+      ...product,
+      options: options,
+      imageUrl: product.image
+    };
+  });
+
+  return {
+    products: transformedProducts,
+    selectedOption: selectedOption,
+    shop: SHOP
+  };
 }
 
 // Update pagination controls
