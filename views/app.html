@@ -1459,15 +1459,21 @@ function transformProductsData(rawData) {
 
 // Update pagination controls
 function updatePaginationControls(data) {
-  const { currentPage, totalPages, totalProducts, limit } = data;
+  const currentPage = data.currentPage || 1;
+  const totalPages = data.totalPages || 1;
+  const totalProducts = data.totalProducts || data.totalRows || 0;
+  const limit = data.limit || itemsPerPage;
   
   // Calculate display range
-  const start = (currentPage - 1) * limit + 1;
+  const start = totalProducts > 0 ? (currentPage - 1) * limit + 1 : 0;
   const end = Math.min(currentPage * limit, totalProducts);
   
   // Update info text
-  document.getElementById("pagination-info").textContent = 
-    totalProducts > 0 ? `Products ${start}-${end} of ${totalProducts}` : 'No products found';
+  const infoText = totalProducts > 0 
+    ? `Products ${start}-${end} of ${totalProducts}` 
+    : 'No products found';
+  
+  document.getElementById("pagination-info").textContent = infoText;
 
   // Update page numbers
   document.getElementById("page-numbers").textContent = 
@@ -1477,14 +1483,19 @@ function updatePaginationControls(data) {
   const prevBtn = document.getElementById("prev-page");
   const nextBtn = document.getElementById("next-page");
 
-  prevBtn.disabled = currentPage <= 1;
-  nextBtn.disabled = currentPage >= totalPages;
+  if (prevBtn && nextBtn) {
+    prevBtn.disabled = currentPage <= 1;
+    nextBtn.disabled = currentPage >= totalPages;
+  }
 
   // Show/hide pagination if needed
   const paginationDiv = document.getElementById("pagination-controls");
-  paginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
+  if (paginationDiv) {
+    paginationDiv.style.display = totalPages > 1 ? 'flex' : 'none';
+  }
+  
+  console.log(`📊 Pagination: ${start}-${end} of ${totalProducts}, Page ${currentPage}/${totalPages}`);
 }
-
 // Navigation functions
 function goToPreviousPage() {
   if (currentPage > 1 && !isLoadingProducts) {
