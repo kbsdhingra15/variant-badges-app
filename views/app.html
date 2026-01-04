@@ -1700,7 +1700,7 @@ function clearSearch() {
         container.innerHTML = html;
       }
 
-      async function saveBadge(productId, optionValue, badgeType) {
+     async function saveBadge(productId, optionValue, badgeType) {
   try {
     console.log('💾 Saving badge:', productId, optionValue, badgeType);
 
@@ -1730,7 +1730,7 @@ function clearSearch() {
     }
 
     console.log('✅ Badge saved:', data);
-    showAlert(`Badge ${badgeType === 'none' ? 'removed' : 'assigned'} successfully!`);
+    // Alert removed - silent success ✅
     
     // Reload products to reflect changes
     loadProducts(currentPage, currentSearch);
