@@ -1947,9 +1947,8 @@ function updatePlanUI() {
       planBadge.style.background = '#008060';
       planBadge.style.display = 'inline-block';
     } else if (currentPlan.plan_name === 'trial') {
-      const daysLeft = Math.ceil(
-        (new Date(currentPlan.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24)
-      );
+     const msLeft = new Date(currentPlan.trial_ends_at) - new Date();
+const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
       planBadge.textContent = `Trial (${daysLeft} days left)`;
       planBadge.style.background = '#ff9800';
       planBadge.style.display = 'inline-block';
