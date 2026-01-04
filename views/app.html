@@ -1699,8 +1699,7 @@ function clearSearch() {
 
         container.innerHTML = html;
       }
-
-     async function saveBadge(productId, optionValue, badgeType) {
+async function saveBadge(productId, optionValue, badgeType) {
   try {
     console.log('💾 Saving badge:', productId, optionValue, badgeType);
 
@@ -1710,33 +1709,46 @@ function clearSearch() {
       body: JSON.stringify({ productId, optionValue, badgeType })
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      const data = await response.json();
+      
+      // Handle plan limit reached
+      if (response.status === 403 && data.needsUpgrade) {
+        const upgrade = await showConfirm(
+          `${data.message}\n\nWould you like to upgrade now?`,
+          'Upgrade Required'
+        );
 
-    // Handle plan limit reached
-    if (response.status === 403 && data.needsUpgrade) {
-      const upgrade = await showConfirm(
-        `${data.message}\n\nWould you like to upgrade now?`,
-        'Upgrade Required'
-      );
-
-      if (upgrade) {
-        upgradeToPro();
+        if (upgrade) {
+          upgradeToPro();
+        }
+        return;
       }
+
+      // Other errors
+      console.error('Failed to save badge:', data.error);
+      showAlert('Failed to save badge. Please try again.');
       return;
     }
 
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to save badge');
-    }
-
+    // Success
+    const data = await response.json();
     console.log('✅ Badge saved:', data);
-    // Alert removed - silent success ✅
     
     // Reload products to reflect changes
-    loadProducts(currentPage, currentSearch);
+    try {
+      await loadProducts(currentPage, currentSearch);
+    } catch (reloadError) {
+      console.error('Error reloading products:', reloadError);
+      // Don't show alert for reload errors - badge was saved successfully
+    }
+    
   } catch (error) {
     console.error('Error saving badge:', error);
-    showAlert('Failed to save badge. Please try again.');
+    // Only show alert if it's a network error or request failed
+    if (error.message && !error.message.includes('load')) {
+      showAlert('Network error. Please check your connection and try again.');
+    }
   }
 }
       // Load products on start
