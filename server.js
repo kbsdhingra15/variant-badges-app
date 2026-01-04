@@ -530,8 +530,8 @@ app.use("/api/products", authenticateRequest, productsRouter);
 app.use("/api/badges", authenticateRequest, badgesRouter);
 app.use("/api/settings", authenticateRequest, settingsRouter);
 app.use("/api/setup", authenticateRequest, setupRouter);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/billing", billingRouter);
+app.use("/api/analytics", authenticateRequest, analyticsRoutes);
+app.use("/api/billing", authenticateRequest, billingRouter);
 // ============================================
 // APP PAGE
 // ============================================
