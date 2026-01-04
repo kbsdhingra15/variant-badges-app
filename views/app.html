@@ -862,7 +862,7 @@
           </div>
         </div>
         
-        <button class="btn btn-primary" style="width: 100%;" onclick="alert('Upgrade functionality coming soon!')">
+        <button class="btn btn-primary" style="width: 100%;" onclick="upgradeToPro()">
           Upgrade to Pro
         </button>
       </div>
@@ -1170,11 +1170,30 @@ function checkFirstTimeUser() {
 
 // Initialize on page load
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', checkFirstTimeUser);
+  document.addEventListener('DOMContentLoaded', () => {
+    checkFirstTimeUser();
+    loadBillingStatus();
+    
+    // Check for upgrade success in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('upgraded') === 'true') {
+      showAlert('🎉 Successfully upgraded to Pro! You now have unlimited products.');
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  });
 } else {
   checkFirstTimeUser();
+  loadBillingStatus();
+  
+  // Check for upgrade success in URL
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('upgraded') === 'true') {
+    showAlert('🎉 Successfully upgraded to Pro! You now have unlimited products.');
+    // Clean URL
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
 }
-
 function showConfirm(message, title = "Confirm") {
   return new Promise((resolve) => {
     const modal = document.getElementById('custom-modal');
@@ -1682,31 +1701,44 @@ function clearSearch() {
       }
 
       async function saveBadge(productId, optionValue, badgeType) {
-        try {
-          console.log("💾 Saving badge:", productId, optionValue, badgeType);
+  try {
+    console.log('💾 Saving badge:', productId, optionValue, badgeType);
 
-          const response = await authenticatedFetch("/api/badges", {
-            method: "POST",
-            body: JSON.stringify({
-              productId,
-              optionValue,
-              badgeType,
-            }),
-          });
+    const response = await authenticatedFetch('/api/badges', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId, optionValue, badgeType })
+    });
 
-          if (response.ok) {
-            console.log("✅ Badge saved");
-            // Refresh the products list to show updated badges
-            loadProducts();
-          } else {
-            throw new Error(`HTTP ${response.status}`);
-          }
-        } catch (error) {
-          console.error("Failed to save badge:", error);
-          alert("Failed to save badge. Please try again.");
-        }
+    const data = await response.json();
+
+    // Handle plan limit reached
+    if (response.status === 403 && data.needsUpgrade) {
+      const upgrade = await showConfirm(
+        `${data.message}\n\nWould you like to upgrade now?`,
+        'Upgrade Required'
+      );
+
+      if (upgrade) {
+        upgradeToPro();
       }
+      return;
+    }
 
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to save badge');
+    }
+
+    console.log('✅ Badge saved:', data);
+    showAlert(`Badge ${badgeType === 'none' ? 'removed' : 'assigned'} successfully!`);
+    
+    // Reload products to reflect changes
+    loadProducts(currentPage, currentSearch);
+  } catch (error) {
+    console.error('Error saving badge:', error);
+    showAlert('Failed to save badge. Please try again.');
+  }
+}
       // Load products on start
       loadProducts();
 
@@ -1868,6 +1900,82 @@ async function saveSettings() {
           "Live chat integration coming soon! For now, please email support@variantbadges.com"
         );
       }
+      // ============================================
+// BILLING & PLAN MANAGEMENT
+// ============================================
+
+let currentPlan = null;
+
+// Load billing status
+async function loadBillingStatus() {
+  try {
+    const response = await authenticatedFetch('/api/billing/status');
+    if (response.ok) {
+      currentPlan = await response.json();
+      console.log('💳 Current plan:', currentPlan);
+      updatePlanUI();
+    }
+  } catch (error) {
+    console.error('Error loading billing status:', error);
+  }
+}
+
+// Update UI based on plan
+function updatePlanUI() {
+  if (!currentPlan) return;
+
+  // Update plan badge if exists
+  const planBadge = document.getElementById('plan-badge');
+  if (planBadge) {
+    if (currentPlan.plan_name === 'pro') {
+      planBadge.textContent = 'Pro';
+      planBadge.style.background = '#008060';
+      planBadge.style.display = 'inline-block';
+    } else if (currentPlan.plan_name === 'trial') {
+      const daysLeft = Math.ceil(
+        (new Date(currentPlan.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24)
+      );
+      planBadge.textContent = `Trial (${daysLeft} days left)`;
+      planBadge.style.background = '#ff9800';
+      planBadge.style.display = 'inline-block';
+    } else {
+      planBadge.textContent = 'Free';
+      planBadge.style.background = '#6d7175';
+      planBadge.style.display = 'inline-block';
+    }
+  }
+}
+
+// Upgrade to Pro
+async function upgradeToPro() {
+  try {
+    const confirmed = await showConfirm(
+      'Upgrade to Pro for $4.99/month?\n\nYou\'ll get:\n✓ Unlimited products\n✓ Priority support\n✓ Future features',
+      'Upgrade to Pro'
+    );
+
+    if (!confirmed) return;
+
+    // Create billing charge
+    const response = await authenticatedFetch('/api/billing/create-charge', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: 'pro' })
+    });
+
+    const data = await response.json();
+
+    if (data.confirmationUrl) {
+      // Redirect to Shopify's billing approval page
+      window.top.location.href = data.confirmationUrl;
+    } else {
+      showAlert('Failed to create upgrade charge. Please try again.');
+    }
+  } catch (error) {
+    console.error('Error upgrading:', error);
+    showAlert('Failed to upgrade. Please try again or contact support.');
+  }
+}
     </script>
     <!-- Custom Modal -->
 <div id="custom-modal" class="modal-overlay">

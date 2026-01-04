@@ -18,7 +18,7 @@ const publicRouter = require("./routes/public");
 const authRouter = require("./routes/auth");
 const setupRouter = require("./routes/setup");
 const analyticsRoutes = require("./routes/analytics");
-
+const billingRouter = require("./routes/billing");
 const app = express();
 // Body parser
 app.use(express.json());
@@ -531,6 +531,7 @@ app.use("/api/badges", authenticateRequest, badgesRouter);
 app.use("/api/settings", authenticateRequest, settingsRouter);
 app.use("/api/setup", authenticateRequest, setupRouter);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/billing", billingRouter);
 // ============================================
 // APP PAGE
 // ============================================

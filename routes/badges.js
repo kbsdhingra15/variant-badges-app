@@ -1,3 +1,4 @@
+const { checkPlanLimits } = require("../middleware/planLimits");
 const express = require("express");
 const router = express.Router();
 const {
@@ -608,7 +609,7 @@ async function getProductBadgesGrouped(req, res) {
 }
 
 // Save badge assignment for an option value (applies to all matching variants)
-router.post("/", async (req, res) => {
+router.post("/", checkPlanLimits, async (req, res) => {
   try {
     const shop = req.shop; // From middleware, not req.body
     const { productId, optionValue, badgeType } = req.body;
@@ -616,7 +617,26 @@ router.post("/", async (req, res) => {
     if (!productId || !optionValue) {
       return res.status(400).json({ error: "Missing required fields" });
     }
+    // === ADD THIS BLOCK HERE ===
+    // Check if adding a badge to a NEW product would exceed limits
+    if (badgeType && badgeType !== "none") {
+      const currentBadges = await getBadgeAssignments(shop);
+      const currentProductIds = new Set(currentBadges.map((b) => b.product_id));
+      const isNewProduct = !currentProductIds.has(productId);
 
+      // If new product and at limit, block
+      if (isNewProduct && !req.planLimits.canAddBadges) {
+        return res.status(403).json({
+          error: "Product limit reached",
+          message: `Free plan allows badges on ${req.planLimits.maxProducts} products. Upgrade to Pro for unlimited products.`,
+          currentProducts: req.planLimits.currentProducts,
+          maxProducts: req.planLimits.maxProducts,
+          plan: req.planLimits.plan,
+          needsUpgrade: true,
+        });
+      }
+    }
+    // === END OF NEW BLOCK ===
     console.log("💾 Saving badge for shop:", shop);
     console.log(
       "   Product:",
