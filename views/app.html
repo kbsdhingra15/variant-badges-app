@@ -1208,7 +1208,7 @@ function showConfirm(message, title = "Confirm") {
     messageEl.textContent = message;
     actionsEl.innerHTML = `
       <button class="modal-btn modal-btn-secondary" onclick="closeModal(false)">Cancel</button>
-      <button class="modal-btn modal-btn-danger" onclick="closeModal(true)">Continue</button>
+      <button class="modal-btn modal-btn-primary" onclick="closeModal(true)">Continue</button>
     `;
     
     modal.classList.add('active');
