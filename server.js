@@ -521,6 +521,32 @@ app.get("/auth/token", async (req, res) => {
     res.status(500).json({ error: "Failed to generate token" });
   }
 });
+// ============================================
+// ⚠️ TODO: REMOVE BEFORE PRODUCTION LAUNCH ⚠️
+// This is a testing endpoint with NO authentication
+// Allows anyone to change any shop's plan
+// SECURITY RISK if left in production
+// ============================================
+app.post("/api/billing-test/force-free", async (req, res) => {
+  try {
+    const { saveSubscription } = require("./database/db");
+    const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
+
+    console.log("🧪 [TEST] Forcing Free plan for:", shop);
+
+    await saveSubscription(shop, {
+      plan_name: "free",
+      status: "active",
+      charge_id: null,
+      trial_ends_at: null,
+      cancelled_at: null,
+    });
+
+    res.json({ success: true, plan: "free", shop });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // ============================================
 // TOKEN GENERATION ROUTE (for routes/auth.js)
