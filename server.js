@@ -1,15 +1,14 @@
 const { pool } = require("./database/db");
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const { shopifyApi } = require("@shopify/shopify-api");
 require("@shopify/shopify-api/adapters/node");
 const cookieParser = require("cookie-parser");
-const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 const db = require("./database/db");
-
 const { initDB, saveShopSession, getShopSession } = require("./database/db");
 const productsRouter = require("./routes/products");
 const badgesRouter = require("./routes/badges");
@@ -56,7 +55,13 @@ const shopify = shopifyApi({
 
 app.use(
   cors({
-    origin: ["https://admin.shopify.com", process.env.SHOP_URL].filter(Boolean),
+    origin: [
+      "https://admin.shopify.com",
+      "https://quickstart-c559582d.myshopify.com",
+      "https://variant-badges-app-production.up.railway.app",
+      process.env.SHOP_URL,
+      process.env.HOST,
+    ].filter(Boolean),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
