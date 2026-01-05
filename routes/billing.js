@@ -214,17 +214,34 @@ router.get("/status", async (req, res) => {
 });
 
 // Cancel subscription (downgrade to free)
+// Cancel subscription (downgrade to free)
 router.post("/cancel", async (req, res) => {
   try {
     const shop = req.shop;
     const { accessToken } = req.shopifySession;
     const subscription = await getSubscription(shop);
 
+    let expiresOn = null;
+
     if (
       subscription &&
       subscription.charge_id &&
       subscription.plan_name === "pro"
     ) {
+      // Get charge details from Shopify to know when it expires
+      const chargeResponse = await fetch(
+        `https://${shop}/admin/api/2024-10/recurring_application_charges/${subscription.charge_id}.json`,
+        {
+          method: "GET",
+          headers: {
+            "X-Shopify-Access-Token": accessToken,
+          },
+        }
+      );
+
+      const chargeData = await chargeResponse.json();
+      expiresOn = chargeData.recurring_application_charge?.billing_on;
+
       // Cancel the recurring charge in Shopify
       await fetch(
         `https://${shop}/admin/api/2024-10/recurring_application_charges/${subscription.charge_id}.json`,
@@ -236,39 +253,30 @@ router.post("/cancel", async (req, res) => {
         }
       );
 
-      console.log(`🔻 Cancelled Pro subscription for ${shop}`);
+      console.log(
+        `🔻 Cancelled Pro subscription for ${shop}, expires: ${expiresOn}`
+      );
     }
 
-    // Update to free plan
+    // Mark as cancelled but keep billing_on date
     await saveSubscription(shop, {
-      plan_name: "free",
-      status: "active",
-      charge_id: null,
-      billing_on: null,
+      plan_name: "pro", // Keep Pro until expiry
+      status: "cancelled", // Mark as cancelled
+      charge_id: subscription.charge_id,
+      billing_on: expiresOn, // When it actually expires
       cancelled_at: new Date(),
     });
 
-    res.json({ success: true, plan: "free" });
+    res.json({
+      success: true,
+      plan: "pro", // Still Pro until expiry
+      status: "cancelled",
+      expiresOn: expiresOn,
+    });
   } catch (error) {
     console.error("Error cancelling subscription:", error);
     res.status(500).json({ error: "Failed to cancel subscription" });
   }
-});
-
-// TEMP - For testing Free plan limits
-router.post("/force-free", async (req, res) => {
-  const shop = req.shop;
-  console.log("🧪 [TEST] Forcing Free plan for:", shop);
-
-  await saveSubscription(shop, {
-    plan_name: "free",
-    status: "active",
-    charge_id: null,
-    trial_ends_at: null,
-    cancelled_at: null,
-  });
-
-  res.json({ success: true, plan: "free" });
 });
 
 module.exports = router;

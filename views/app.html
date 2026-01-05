@@ -1980,11 +1980,18 @@ function renderPlansPage() {
     freePlanBtn.onclick = () => cancelSubscription();
   }
 
-  // Update Pro plan button
+ // Update Pro plan button
   if (currentPlan.plan_name === 'pro') {
-    proPlanBtn.textContent = 'Current Plan';
-    proPlanBtn.disabled = true;
-    proPlanBtn.onclick = null;
+    if (currentPlan.status === 'cancelled') {
+      const expiryDate = new Date(currentPlan.billing_on).toLocaleDateString();
+      proPlanBtn.textContent = `Expires ${expiryDate}`;
+      proPlanBtn.disabled = true;
+      proPlanBtn.onclick = null;
+    } else {
+      proPlanBtn.textContent = 'Current Plan';
+      proPlanBtn.disabled = true;
+      proPlanBtn.onclick = null;
+    }
   } else {
     proPlanBtn.textContent = 'Upgrade to Pro';
     proPlanBtn.disabled = false;
@@ -2023,10 +2030,15 @@ async function upgradeToPro() {
   }
 }
 // Cancel subscription (downgrade to Free)
+// Cancel subscription (downgrade to Free)
 async function cancelSubscription() {
   try {
     const confirmed = await showConfirm(
-      'Are you sure you want to cancel your Pro subscription?\n\nYou will be downgraded to the Free plan (5 products limit).',
+      'Cancel your Pro subscription?\n\n' +
+      '• You will be charged for the remainder of your current billing cycle\n' +
+      '• Pro features will remain active until your next billing date\n' +
+      '• After that, you\'ll be on the Free plan (5 products limit)\n\n' +
+      'Are you sure you want to cancel?',
       'Cancel Subscription'
     );
 
@@ -2043,7 +2055,14 @@ async function cancelSubscription() {
       throw new Error(data.error || 'Failed to cancel subscription');
     }
 
-    showAlert('Subscription cancelled. You are now on the Free plan.');
+    // Show when access expires
+    const expiryDate = data.expiresOn ? new Date(data.expiresOn).toLocaleDateString() : 'the end of your billing cycle';
+    
+    showAlert(
+      `Subscription cancelled successfully.\n\n` +
+      `You will keep Pro access until ${expiryDate}.\n` +
+      `After that, you'll be on the Free plan.`
+    );
     
     // Reload billing status
     await loadBillingStatus();

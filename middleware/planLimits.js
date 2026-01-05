@@ -1,4 +1,8 @@
-const { getSubscription, countBadgedProducts } = require("../database/db");
+const {
+  getSubscription,
+  countBadgedProducts,
+  saveSubscription,
+} = require("../database/db"); // ADD saveSubscription
 
 // Middleware to check plan limits
 async function checkPlanLimits(req, res, next) {
@@ -7,19 +11,54 @@ async function checkPlanLimits(req, res, next) {
     console.log("🔒 [PLAN LIMITS] Checking limits for:", shop);
 
     const subscription = await getSubscription(shop);
-    console.log("🔒 [PLAN LIMITS] Subscription:", subscription?.plan_name);
+    console.log(
+      "🔒 [PLAN LIMITS] Subscription:",
+      subscription?.plan_name,
+      subscription?.status
+    );
 
-    // Allow all actions for Pro users
+    // Check if Pro but cancelled - still allow if before billing_on date
     if (subscription && subscription.plan_name === "pro") {
-      console.log("🔒 [PLAN LIMITS] Pro user - unlimited access");
-      req.planLimits = {
-        canAddBadges: true,
-        maxProducts: Infinity,
-        currentProducts: 0,
-        plan: "pro",
-      };
-      return next();
+      if (subscription.status === "cancelled" && subscription.billing_on) {
+        // Check if still in grace period
+        if (new Date(subscription.billing_on) > new Date()) {
+          console.log("🔒 [PLAN LIMITS] Cancelled Pro - still in grace period");
+          req.planLimits = {
+            canAddBadges: true,
+            maxProducts: Infinity,
+            currentProducts: 0,
+            plan: "pro",
+            status: "cancelled",
+            expiresOn: subscription.billing_on,
+          };
+          return next();
+        } else {
+          // Grace period expired - downgrade to free
+          console.log(
+            "🔒 [PLAN LIMITS] Cancelled Pro - grace period expired, downgrading"
+          );
+          await saveSubscription(shop, {
+            plan_name: "free",
+            status: "active",
+            charge_id: null,
+            billing_on: null,
+          });
+          // Continue to free plan logic below
+        }
+      } else if (subscription.status === "active") {
+        // Active Pro
+        console.log("🔒 [PLAN LIMITS] Active Pro - unlimited access");
+        req.planLimits = {
+          canAddBadges: true,
+          maxProducts: Infinity,
+          currentProducts: 0,
+          plan: "pro",
+        };
+        return next();
+      }
     }
+
+    // REMOVE THE DUPLICATE PRO CHECK HERE (lines 47-56)
 
     // Allow all actions during trial
     if (
