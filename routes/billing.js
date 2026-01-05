@@ -255,4 +255,20 @@ router.post("/cancel", async (req, res) => {
   }
 });
 
+// TEMP - For testing Free plan limits
+router.post("/force-free", async (req, res) => {
+  const shop = req.shop;
+  console.log("🧪 [TEST] Forcing Free plan for:", shop);
+
+  await saveSubscription(shop, {
+    plan_name: "free",
+    status: "active",
+    charge_id: null,
+    trial_ends_at: null,
+    cancelled_at: null,
+  });
+
+  res.json({ success: true, plan: "free" });
+});
+
 module.exports = router;
