@@ -823,9 +823,9 @@
           </div>
         </div>
         
-        <button class="btn btn-outline" style="width: 100%;" disabled>
-          Current Plan
-        </button>
+       <button id="free-plan-button" class="btn btn-outline" style="width: 100%;" disabled>
+  Current Plan
+</button>
       </div>
     </div>
 
@@ -865,9 +865,9 @@
           </div>
         </div>
         
-        <button class="btn btn-primary" style="width: 100%;" onclick="upgradeToPro()">
-          Upgrade to Pro
-        </button>
+     <button id="pro-plan-button" class="btn btn-primary" style="width: 100%;" onclick="upgradeToPro()">
+  Upgrade to Pro
+</button>
       </div>
     </div>
 
@@ -1930,6 +1930,7 @@ async function loadBillingStatus() {
       currentPlan = await response.json();
       console.log('💳 Current plan:', currentPlan);
       updatePlanUI();
+      renderPlansPage();
     }
   } catch (error) {
     console.error('Error loading billing status:', error);
@@ -1958,6 +1959,36 @@ const daysLeft = Math.max(0, Math.floor(msLeft / (1000 * 60 * 60 * 24)));
       planBadge.style.background = '#6d7175';
       planBadge.style.display = 'inline-block';
     }
+  }
+}
+
+// ADD THIS NEW FUNCTION HERE
+function renderPlansPage() {
+  if (!currentPlan) return;
+
+  const freePlanBtn = document.querySelector('#free-plan-button');
+  const proPlanBtn = document.querySelector('#pro-plan-button');
+
+  // Update Free plan button
+  if (currentPlan.plan_name === 'free' || currentPlan.plan_name === 'trial') {
+    freePlanBtn.textContent = 'Current Plan';
+    freePlanBtn.disabled = true;
+    freePlanBtn.onclick = null;
+  } else {
+    freePlanBtn.textContent = 'Downgrade';
+    freePlanBtn.disabled = false;
+    freePlanBtn.onclick = () => cancelSubscription();
+  }
+
+  // Update Pro plan button
+  if (currentPlan.plan_name === 'pro') {
+    proPlanBtn.textContent = 'Current Plan';
+    proPlanBtn.disabled = true;
+    proPlanBtn.onclick = null;
+  } else {
+    proPlanBtn.textContent = 'Upgrade to Pro';
+    proPlanBtn.disabled = false;
+    proPlanBtn.onclick = () => upgradeToPro();
   }
 }
 
@@ -1991,6 +2022,38 @@ async function upgradeToPro() {
     showAlert('Failed to upgrade. Please try again or contact support.');
   }
 }
+// Cancel subscription (downgrade to Free)
+async function cancelSubscription() {
+  try {
+    const confirmed = await showConfirm(
+      'Are you sure you want to cancel your Pro subscription?\n\nYou will be downgraded to the Free plan (5 products limit).',
+      'Cancel Subscription'
+    );
+
+    if (!confirmed) return;
+
+    const response = await authenticatedFetch('/api/billing/cancel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to cancel subscription');
+    }
+
+    showAlert('Subscription cancelled. You are now on the Free plan.');
+    
+    // Reload billing status
+    await loadBillingStatus();
+    
+  } catch (error) {
+    console.error('Error cancelling subscription:', error);
+    showAlert('Failed to cancel subscription. Please try again.');
+  }
+}
+
     </script>
     <!-- Custom Modal -->
 <div id="custom-modal" class="modal-overlay">
