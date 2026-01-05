@@ -1712,30 +1712,33 @@ async function saveBadge(productId, optionValue, badgeType) {
       body: JSON.stringify({ productId, optionValue, badgeType })
     });
 
-    if (!response.ok) {
-      const data = await response.json();
-      
-      // Handle plan limit reached
-      if (response.status === 403 && data.needsUpgrade) {
-        const upgrade = await showConfirm(
-          `${data.message}\n\nWould you like to upgrade now?`,
-          'Upgrade Required'
-        );
+    const data = await response.json();
 
-        if (upgrade) {
-          upgradeToPro();
+    // Handle plan limit reached
+    if (response.status === 403 && data.needsUpgrade) {
+      const upgrade = await showConfirm(
+        `${data.message}\n\nWould you like to upgrade now?`,
+        'Upgrade Required'
+      );
+
+      if (upgrade) {
+        upgradeToPro();
+      } else {
+        // User cancelled - reset dropdown to original value
+        const dropdown = event.target; // Get the dropdown that triggered this
+        if (dropdown) {
+          dropdown.value = 'none'; // Reset to "No Badge"
         }
-        return;
+        // Or reload products to reset all dropdowns
+        loadProducts(currentPage, currentSearch);
       }
-
-      // Other errors
-      console.error('Failed to save badge:', data.error);
-      showAlert('Failed to save badge. Please try again.');
       return;
     }
 
-    // Success
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to save badge');
+    }
+
     console.log('✅ Badge saved:', data);
     
     // Reload products to reflect changes
@@ -1743,12 +1746,10 @@ async function saveBadge(productId, optionValue, badgeType) {
       await loadProducts(currentPage, currentSearch);
     } catch (reloadError) {
       console.error('Error reloading products:', reloadError);
-      // Don't show alert for reload errors - badge was saved successfully
     }
     
   } catch (error) {
     console.error('Error saving badge:', error);
-    // Only show alert if it's a network error or request failed
     if (error.message && !error.message.includes('load')) {
       showAlert('Network error. Please check your connection and try again.');
     }
