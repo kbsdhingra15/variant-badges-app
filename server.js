@@ -561,6 +561,29 @@ app.post("/api/billing-test/force-free", async (req, res) => {
   }
 });
 
+// ⚠️ TEMP TEST - Expire cancelled subscription
+app.post("/api/billing-test/expire-cancelled", async (req, res) => {
+  try {
+    const { saveSubscription } = require("./database/db");
+    const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
+
+    // Set billing_on to yesterday (grace period expired)
+    await saveSubscription(shop, {
+      plan_name: "pro",
+      status: "cancelled",
+      billing_on: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
+      cancelled_at: new Date(),
+    });
+
+    res.json({
+      success: true,
+      message: "Grace period expired, will downgrade on next request",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ============================================
 // TOKEN GENERATION ROUTE (for routes/auth.js)
 // ============================================
