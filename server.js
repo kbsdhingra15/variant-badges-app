@@ -498,6 +498,19 @@ app.get("/auth/token", async (req, res) => {
     res.status(500).json({ error: "Failed to generate token" });
   }
 });
+// ⚠️ TEMP DEBUG - Check subscription details
+app.get("/api/billing-test/check-subscription", async (req, res) => {
+  try {
+    const { getSubscription } = require("./database/db");
+    const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
+
+    const subscription = await getSubscription(shop);
+
+    res.json(subscription);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // ============================================
 // TOKEN GENERATION ROUTE (for routes/auth.js)
