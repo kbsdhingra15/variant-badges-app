@@ -530,6 +530,10 @@ app.get("/api/billing-test/check-subscription", async (req, res) => {
     const subscription = await getSubscription(shop);
 
     res.json(subscription);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ============================================
 // ⚠️ TODO: REMOVE BEFORE PRODUCTION LAUNCH ⚠️
 // This is a testing endpoint with NO authentication
@@ -723,7 +727,7 @@ app.post(
       res.status(500).send("Error");
     }
   }
-  );
+);
 // Privacy Policy page
 app.get("/privacy-policy", (req, res) => {
   const fs = require("fs");
