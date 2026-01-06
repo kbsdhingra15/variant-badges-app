@@ -32,6 +32,7 @@ async function runMigrations() {
 // Call it immediately
 runMigrations();
 // Initialize database tables
+// Initialize database tables
 async function initDB() {
   const client = await pool.connect();
   try {
@@ -72,12 +73,34 @@ async function initDB() {
       )
     `);
 
+    // Subscriptions table (NEW - for billing)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id SERIAL PRIMARY KEY,
+        shop VARCHAR(255) NOT NULL UNIQUE,
+        plan_name VARCHAR(50) NOT NULL DEFAULT 'free',
+        status VARCHAR(50) NOT NULL DEFAULT 'active',
+        charge_id VARCHAR(255),
+        billing_on TIMESTAMP,
+        trial_ends_at TIMESTAMP,
+        cancelled_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes for better query performance
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_badge_shop ON badge_assignments(shop)
     `);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_badge_value ON badge_assignments(option_value)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_shop ON subscriptions(shop)
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status)
     `);
 
     console.log("✅ Database initialized");
@@ -323,6 +346,88 @@ async function getBadgesForPublicAPI(shop) {
   return result.rows;
 }
 
+// Get subscription for shop
+async function getSubscription(shop) {
+  try {
+    const result = await pool.query(
+      "SELECT * FROM subscriptions WHERE shop = $1",
+      [shop]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error("Error getting subscription:", error);
+    return null;
+  }
+}
+
+// Create or update subscription
+async function saveSubscription(shop, data) {
+  const {
+    plan_name = "free",
+    status = "active",
+    charge_id = null,
+    billing_on = null,
+    trial_ends_at = null,
+    cancelled_at = null,
+  } = data;
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO subscriptions 
+       (shop, plan_name, status, charge_id, billing_on, trial_ends_at, cancelled_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+       ON CONFLICT (shop) 
+       DO UPDATE SET 
+         plan_name = EXCLUDED.plan_name,
+         status = EXCLUDED.status,
+         charge_id = EXCLUDED.charge_id,
+         billing_on = EXCLUDED.billing_on,
+         trial_ends_at = EXCLUDED.trial_ends_at,
+         cancelled_at = EXCLUDED.cancelled_at,
+         updated_at = CURRENT_TIMESTAMP
+       RETURNING *`,
+      [
+        shop,
+        plan_name,
+        status,
+        charge_id,
+        billing_on,
+        trial_ends_at,
+        cancelled_at,
+      ]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error("Error saving subscription:", error);
+    throw error;
+  }
+}
+
+// Initialize trial for new shop
+async function initializeTrial(shop) {
+  const trialEndsAt = new Date();
+  trialEndsAt.setDate(trialEndsAt.getDate() + 14); // 14-day trial
+
+  return saveSubscription(shop, {
+    plan_name: "trial",
+    status: "active",
+    trial_ends_at: trialEndsAt,
+  });
+}
+
+// Count products with badges for a shop
+async function countBadgedProducts(shop) {
+  try {
+    const result = await pool.query(
+      "SELECT COUNT(DISTINCT product_id) as count FROM badge_assignments WHERE shop = $1",
+      [shop]
+    );
+    return parseInt(result.rows[0]?.count || 0);
+  } catch (error) {
+    console.error("Error counting badged products:", error);
+    return 0;
+  }
+}
 module.exports = {
   pool,
   initDB,
@@ -334,4 +439,8 @@ module.exports = {
   saveBadgeAssignment,
   deleteBadgeAssignment,
   getBadgesForPublicAPI, // ADD THIS LINE
+  getSubscription,
+  saveSubscription,
+  initializeTrial,
+  countBadgedProducts,
 };

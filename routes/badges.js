@@ -1,10 +1,245 @@
+const { checkPlanLimits } = require("../middleware/planLimits");
 const express = require("express");
 const router = express.Router();
 const {
   getBadgeAssignments,
   saveBadgeAssignment,
   deleteBadgeAssignment,
+  getAppSettings,
+  pool,
 } = require("../database/db");
+
+// ========== NEW PAGINATION ENDPOINT ==========
+// This is a NEW endpoint - existing /all-products stays untouched
+// ========== PAGINATION ENDPOINT - PAGINATE OPTION GROUPS (ROWS) ==========
+router.get("/paginated", async (req, res) => {
+  try {
+    const shop = req.shop;
+    const { accessToken } = req.shopifySession;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const search = req.query.search || "";
+
+    console.log(
+      `📦 [PAGINATION] Page ${page}, Limit ${limit}, Search: "${search}"`
+    );
+
+    // Get settings
+    const settings = await getAppSettings(shop);
+    const selectedOption = settings.selectedOption;
+
+    if (!selectedOption) {
+      return res.json({
+        products: [],
+        badges: {},
+        selectedOption: null,
+        totalRows: 0,
+        currentPage: page,
+        totalPages: 0,
+        hasMore: false,
+      });
+    }
+
+    // Fetch ALL products to build complete option groups list
+    const query = `
+      query getProducts($first: Int!, $query: String) {
+        products(first: $first, query: $query) {
+          edges {
+            node {
+              id
+              title
+              handle
+              featuredImage {
+                url
+                altText
+              }
+              options {
+                name
+                values
+              }
+              variants(first: 100) {
+                edges {
+                  node {
+                    id
+                    title
+                    displayName
+                    selectedOptions {
+                      name
+                      value
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      first: 250, // Fetch enough products
+      query: search ? `title:*${search}*` : null,
+    };
+
+    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const response = await fetch(graphqlUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": accessToken,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+
+    const productsData = await response.json();
+
+    if (productsData.errors) {
+      console.error("GraphQL errors:", productsData.errors);
+      throw new Error("GraphQL query failed");
+    }
+
+    const allProducts = productsData.data.products.edges.map((edge) => ({
+      id: edge.node.id.split("/").pop(),
+      title: edge.node.title,
+      handle: edge.node.handle,
+      image: edge.node.featuredImage?.url,
+      options: edge.node.options,
+      variants: edge.node.variants.edges.map((v) => ({
+        id: v.node.id.split("/").pop(),
+        title: v.node.title,
+        displayName: v.node.displayName,
+        selectedOptions: v.node.selectedOptions,
+      })),
+    }));
+
+    // Build ALL rows (product + option value combinations)
+    const allRows = [];
+
+    allProducts.forEach((product) => {
+      const selectedOptionData = product.options.find(
+        (opt) => opt.name === selectedOption
+      );
+
+      if (!selectedOptionData) return;
+
+      // For each option value in this product, create a row
+      const optionValuesInProduct = new Set();
+
+      product.variants.forEach((variant) => {
+        const selectedOpt = variant.selectedOptions?.find(
+          (opt) => opt.name === selectedOption
+        );
+        if (selectedOpt) {
+          optionValuesInProduct.add(selectedOpt.value);
+        }
+      });
+
+      // Create one row per unique option value in this product
+      optionValuesInProduct.forEach((optionValue) => {
+        const variantsWithThisOption = product.variants.filter((variant) => {
+          const selectedOpt = variant.selectedOptions?.find(
+            (opt) => opt.name === selectedOption
+          );
+          return selectedOpt && selectedOpt.value === optionValue;
+        });
+
+        allRows.push({
+          productId: product.id,
+          productTitle: product.title,
+          productHandle: product.handle,
+          productImage: product.image,
+          optionValue: optionValue,
+          variantIds: variantsWithThisOption.map((v) => v.id),
+          variantCount: variantsWithThisOption.length,
+        });
+      });
+    });
+
+    // Sort rows alphabetically by product title, then option value
+    allRows.sort((a, b) => {
+      const titleCompare = a.productTitle.localeCompare(b.productTitle);
+      if (titleCompare !== 0) return titleCompare;
+      return a.optionValue.localeCompare(b.optionValue);
+    });
+
+    // Get badge assignments
+    const allProductIds = [...new Set(allRows.map((row) => row.productId))];
+    const badges = {};
+
+    if (allProductIds.length > 0) {
+      const badgeQuery = `
+        SELECT * FROM badge_assignments 
+        WHERE shop = $1 
+        AND product_id = ANY($2)
+        AND option_type = $3
+      `;
+      const result = await pool.query(badgeQuery, [
+        shop,
+        allProductIds,
+        selectedOption,
+      ]);
+
+      result.rows.forEach((row) => {
+        const key = `${row.product_id}_${row.option_value}`;
+        badges[key] = {
+          badge_type: row.badge_type,
+          option_value: row.option_value,
+        };
+      });
+    }
+
+    // PAGINATE THE ROWS
+    const totalRows = allRows.length;
+    const totalPages = Math.ceil(totalRows / limit);
+    const startIndex = (page - 1) * limit;
+    const endIndex = startIndex + limit;
+    const paginatedRows = allRows.slice(startIndex, endIndex);
+
+    // Transform rows to product format for frontend compatibility
+    const productsForPage = paginatedRows.map((row) => ({
+      id: row.productId,
+      title: row.productTitle,
+      handle: row.productHandle,
+      image: row.productImage,
+      options: [
+        {
+          name: selectedOption,
+          values: [row.optionValue],
+        },
+      ],
+      variants: row.variantIds.map((id) => ({
+        id: id,
+        selectedOptions: [{ name: selectedOption, value: row.optionValue }],
+      })),
+      // Additional row metadata
+      _rowData: {
+        optionValue: row.optionValue,
+        variantCount: row.variantCount,
+      },
+    }));
+
+    console.log(
+      `✅ Total rows: ${totalRows}, Page ${page}/${totalPages}, Showing: ${paginatedRows.length}`
+    );
+
+    res.json({
+      products: productsForPage,
+      badges,
+      selectedOption,
+      totalRows: totalRows,
+      totalProducts: totalRows, // For frontend compatibility
+      currentPage: page,
+      totalPages,
+      hasMore: page < totalPages,
+      limit,
+    });
+  } catch (error) {
+    console.error("Error fetching paginated products:", error);
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+// ========== END NEW PAGINATION ENDPOINT ==========
 
 // Get all products with badge assignments (for main UI)
 router.get("/all-products", async (req, res) => {
@@ -374,7 +609,7 @@ async function getProductBadgesGrouped(req, res) {
 }
 
 // Save badge assignment for an option value (applies to all matching variants)
-router.post("/", async (req, res) => {
+router.post("/", checkPlanLimits, async (req, res) => {
   try {
     const shop = req.shop; // From middleware, not req.body
     const { productId, optionValue, badgeType } = req.body;
@@ -382,7 +617,27 @@ router.post("/", async (req, res) => {
     if (!productId || !optionValue) {
       return res.status(400).json({ error: "Missing required fields" });
     }
-
+    // === ADD THIS BLOCK HERE ===
+    // Check if adding a badge to a NEW product would exceed limits
+    if (badgeType && badgeType !== "none") {
+      const currentBadges = await getBadgeAssignments(shop);
+      const currentProductIds = new Set(
+        currentBadges.map((b) => String(b.product_id)) // ← Convert to string
+      );
+      const isNewProduct = !currentProductIds.has(String(productId));
+      // If new product and at limit, block
+      if (isNewProduct && !req.planLimits.canAddBadges) {
+        return res.status(403).json({
+          error: "Product limit reached",
+          message: `Free plan allows badges on ${req.planLimits.maxProducts} products. Upgrade to Pro for unlimited products.`,
+          currentProducts: req.planLimits.currentProducts,
+          maxProducts: req.planLimits.maxProducts,
+          plan: req.planLimits.plan,
+          needsUpgrade: true,
+        });
+      }
+    }
+    // === END OF NEW BLOCK ===
     console.log("💾 Saving badge for shop:", shop);
     console.log(
       "   Product:",

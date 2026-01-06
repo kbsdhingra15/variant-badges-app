@@ -1,15 +1,14 @@
 const { pool } = require("./database/db");
 require("dotenv").config();
 const express = require("express");
+const cors = require("cors");
 const { shopifyApi } = require("@shopify/shopify-api");
 require("@shopify/shopify-api/adapters/node");
 const cookieParser = require("cookie-parser");
-const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const jwt = require("jsonwebtoken");
 const db = require("./database/db");
-
 const { initDB, saveShopSession, getShopSession } = require("./database/db");
 const productsRouter = require("./routes/products");
 const badgesRouter = require("./routes/badges");
@@ -17,8 +16,26 @@ const settingsRouter = require("./routes/settings");
 const publicRouter = require("./routes/public");
 const authRouter = require("./routes/auth");
 const setupRouter = require("./routes/setup");
-
+const analyticsRoutes = require("./routes/analytics");
+const billingRouter = require("./routes/billing");
 const app = express();
+// Body parser
+app.use(express.json());
+// Serve static files from public directory
+app.use(express.static("public"));
+// ← ADD CORS MIDDLEWARE HERE (before routes)
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  // Handle preflight
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  next();
+});
 const PORT = process.env.PORT || 3000;
 
 initDB().catch((error) => {
@@ -38,7 +55,13 @@ const shopify = shopifyApi({
 
 app.use(
   cors({
-    origin: ["https://admin.shopify.com", process.env.SHOP_URL].filter(Boolean),
+    origin: [
+      "https://admin.shopify.com",
+      "https://quickstart-c559582d.myshopify.com",
+      "https://variant-badges-app-production.up.railway.app",
+      process.env.SHOP_URL,
+      process.env.HOST,
+    ].filter(Boolean),
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -507,6 +530,28 @@ app.get("/api/billing-test/check-subscription", async (req, res) => {
     const subscription = await getSubscription(shop);
 
     res.json(subscription);
+// ============================================
+// ⚠️ TODO: REMOVE BEFORE PRODUCTION LAUNCH ⚠️
+// This is a testing endpoint with NO authentication
+// Allows anyone to change any shop's plan
+// SECURITY RISK if left in production
+// ============================================
+app.post("/api/billing-test/force-free", async (req, res) => {
+  try {
+    const { saveSubscription } = require("./database/db");
+    const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
+
+    console.log("🧪 [TEST] Forcing Free plan for:", shop);
+
+    await saveSubscription(shop, {
+      plan_name: "free",
+      status: "active",
+      charge_id: null,
+      trial_ends_at: null,
+      cancelled_at: null,
+    });
+
+    res.json({ success: true, plan: "free", shop });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -525,7 +570,8 @@ app.use("/api/products", authenticateRequest, productsRouter);
 app.use("/api/badges", authenticateRequest, badgesRouter);
 app.use("/api/settings", authenticateRequest, settingsRouter);
 app.use("/api/setup", authenticateRequest, setupRouter);
-
+app.use("/api/analytics", authenticateRequest, analyticsRoutes);
+app.use("/api/billing", authenticateRequest, billingRouter);
 // ============================================
 // APP PAGE
 // ============================================

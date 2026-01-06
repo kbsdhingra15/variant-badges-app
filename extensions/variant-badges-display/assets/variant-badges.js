@@ -22,6 +22,57 @@
     position: "top-right",
   };
 
+  // Prevent duplicate event listeners
+  let trackingListenersAttached = false;
+
+  // ============================================
+  // ANALYTICS TRACKING
+  // ============================================
+
+  // Generate unique session ID
+  function getSessionId() {
+    try {
+      let sessionId = sessionStorage.getItem("vb_session");
+      if (!sessionId) {
+        sessionId =
+          "vb_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem("vb_session", sessionId);
+      }
+      return sessionId;
+    } catch {
+      return "vb_" + Date.now();
+    }
+  }
+
+  // Track events (fire and forget)
+  function trackEvent(eventType, variantId, badgeType, optionValue) {
+    if (!config.shopDomain || !config.appUrl) return;
+
+    const data = {
+      shop: config.shopDomain,
+      product_id: config.productId,
+      variant_id: variantId,
+      badge_type: badgeType,
+      option_value: optionValue,
+      event_type: eventType,
+      session_id: getSessionId(),
+    };
+
+    fetch(`${config.appUrl}/api/analytics/track`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+      keepalive: true,
+    }).catch(() => {});
+  }
+
+  // Track add to cart events
+  function initAddToCartTracking() {
+    // Add-to-cart tracking will be added in v1.1
+    // Currently disabled to avoid cart functionality interference
+    return;
+  }
+
   function init() {
     // Get configuration
     const container = document.querySelector(".variant-badges-container");
@@ -47,6 +98,7 @@
     }
 
     loadBadgeData();
+    initAddToCartTracking();
   }
 
   async function loadBadgeData() {
@@ -60,6 +112,23 @@
       const data = await response.json();
       badgeData = data.badges || {};
       config.selectedOption = data.selectedOption;
+
+      // Track badge views - only once per unique badge type
+      const trackedBadges = new Set();
+      Object.keys(badgeData).forEach((variantId) => {
+        const badge = badgeData[variantId];
+        const badgeType = typeof badge === "string" ? badge : badge.badge_type;
+        const optionValue =
+          typeof badge === "string" ? null : badge.option_value;
+
+        // Only track if we haven't tracked this badge type yet
+        const trackingKey = `${badgeType}-${optionValue}`;
+        if (!trackedBadges.has(trackingKey)) {
+          trackedBadges.add(trackingKey);
+          trackEvent("view", variantId, badgeType, optionValue);
+        }
+      });
+
       buildVariantMap();
       applyBadges();
       observeVariantChanges();
@@ -91,9 +160,9 @@
 
   function applyBadges() {
     if (!config.selectedOption) {
-      console.log("Variant Badges: No selected option configured");
       return;
     }
+
     // Find all radio inputs for product options
     const selectors = [
       'input[type="radio"][id*="template"]',
@@ -113,7 +182,6 @@
     }
 
     if (inputs.length === 0) {
-      console.log("Variant Badges: No radio inputs found");
       return;
     }
 
@@ -131,6 +199,7 @@
       if (optionName !== config.selectedOption) {
         return; // Skip this option group (Size, Fabric, etc.)
       }
+
       const optionValue = input.value;
       const variantIds = variantMap[optionValue] || [];
 
@@ -172,11 +241,50 @@
 
       if (!label) return;
 
-      // Check if badge already exists with correct type
-      const existingBadge = label.querySelector(".variant-badge-overlay");
+      // Determine badge container
+      let badgeContainer = label;
+      let isHorizonStyle = false;
+      // Check if this is a Horizon-style theme (absolute positioned input covering label)
+      const inputInLabel = label.querySelector('input[type="radio"]');
+      if (inputInLabel) {
+        const inputStyle = window.getComputedStyle(inputInLabel);
+        const isAbsoluteCovering =
+          inputStyle.position === "absolute" &&
+          inputStyle.width === "100%" &&
+          inputStyle.height === "100%";
 
+        if (isAbsoluteCovering && label.parentElement) {
+          // Horizon-style: Use parent element
+          badgeContainer = label.parentElement;
+          isHorizonStyle = true;
+        }
+      }
+
+      // Ensure container has position relative
+      if (window.getComputedStyle(badgeContainer).position === "static") {
+        badgeContainer.style.position = "relative";
+      }
+
+      // For label-based badges, also set z-index
+      if (badgeContainer === label) {
+        label.style.zIndex = "10";
+      }
+      // Store theme info for badge positioning
+      if (isHorizonStyle) {
+        badgeContainer.dataset.horizonStyle = "true";
+      }
+      if (!badgeContainer) return;
+
+      // Check if badge already exists with correct type
+      const existingBadge = badgeContainer.querySelector(
+        ".variant-badge-overlay"
+      );
       if (badgeToShow) {
-        const badgeStyle = BADGE_STYLES[badgeToShow.toUpperCase()];
+        const badgeType =
+          typeof badgeToShow === "string"
+            ? badgeToShow
+            : badgeToShow.badge_type;
+        const badgeStyle = BADGE_STYLES[badgeType.toUpperCase()];
         if (!badgeStyle) return; // Skip if badge type not found
 
         const expectedText = badgeStyle.emoji + " " + badgeStyle.text;
@@ -184,7 +292,7 @@
         // Only update if badge doesn't exist or is wrong type
         if (!existingBadge || existingBadge.textContent !== expectedText) {
           if (existingBadge) existingBadge.remove();
-          addBadgeToElement(label, badgeToShow.toUpperCase());
+          addBadgeToElement(badgeContainer, badgeType.toUpperCase());
         }
       } else if (existingBadge) {
         existingBadge.remove();
@@ -200,11 +308,13 @@
     badgeEl.className = `variant-badge-overlay badge-${config.position}`;
     badgeEl.textContent = badge.emoji + " " + badge.text;
     badgeEl.style.backgroundColor = badge.color;
+    badgeEl.style.zIndex = "100"; // High z-index to appear above everything
 
     if (window.getComputedStyle(element).position === "static") {
       element.style.position = "relative";
     }
-
+    // Ensure parent also has proper stacking
+    element.style.zIndex = "10";
     element.appendChild(badgeEl);
   }
 
@@ -217,19 +327,52 @@
       isInitialized = true;
     }, 1000);
 
-    // Listen for variant changes
-    document.addEventListener("change", (e) => {
-      if (e.target.matches('input[type="radio"]') && isInitialized) {
-        // Clear any pending re-apply
-        if (applyTimeout) clearTimeout(applyTimeout);
+    // Listen for variant changes - ONLY ADD ONCE
+    if (!trackingListenersAttached) {
+      document.addEventListener("change", (e) => {
+        if (e.target.matches('input[type="radio"]') && isInitialized) {
+          // Only track if this is the selected option type (e.g., Color, not Size)
+          const fieldset =
+            e.target.closest("fieldset") ||
+            e.target.closest(".product-form__input");
+          if (fieldset) {
+            const legend = fieldset.querySelector("legend");
+            const optionName = legend ? legend.textContent.trim() : "";
 
-        // Wait for DOM to fully settle before re-applying
-        applyTimeout = setTimeout(() => {
-          console.log("Variant Badges: Re-applying after variant change");
-          applyBadges();
-        }, 500); // Longer delay to let Dawn finish DOM updates
-      }
-    });
+            // Only track clicks on the badged option type
+            if (optionName === config.selectedOption) {
+              const optionValue = e.target.value;
+              const variantIds = variantMap[optionValue] || [];
+
+              // Check if any of these variants have a badge
+              for (const variantId of variantIds) {
+                if (badgeData[variantId]) {
+                  const badge = badgeData[variantId];
+                  const badgeType =
+                    typeof badge === "string" ? badge : badge.badge_type;
+                  const optVal =
+                    typeof badge === "string"
+                      ? optionValue
+                      : badge.option_value;
+                  trackEvent("click", variantId, badgeType, optVal);
+                  break; // Only track once
+                }
+              }
+            }
+          }
+
+          // Clear any pending re-apply
+          if (applyTimeout) clearTimeout(applyTimeout);
+
+          // Wait for DOM to fully settle before re-applying
+          applyTimeout = setTimeout(() => {
+            applyBadges();
+          }, 500);
+        }
+      });
+
+      trackingListenersAttached = true;
+    }
 
     // Watch for product form rebuilds (less aggressive)
     const observer = new MutationObserver((mutations) => {
@@ -249,7 +392,6 @@
       if (significantChange) {
         if (applyTimeout) clearTimeout(applyTimeout);
         applyTimeout = setTimeout(() => {
-          console.log("Variant Badges: Re-applying after DOM rebuild");
           applyBadges();
         }, 500);
       }

@@ -15,7 +15,11 @@ router.get("/badges", async (req, res) => {
 
     const badges = {};
     assignments.forEach((row) => {
-      badges[row.variant_id] = row.badge_type;
+      badges[row.variant_id] = {
+        badge_type: row.badge_type,
+        option_value: row.option_value,
+        product_id: row.product_id,
+      };
     });
 
     res.header("Access-Control-Allow-Origin", "*");
@@ -63,10 +67,14 @@ router.get("/badges/product/:productId", async (req, res) => {
     assignments
       .filter(
         (row) =>
-          row.product_id === productId && row.option_type === selectedOption // ← KEY FILTER
+          row.product_id === productId && row.option_type === selectedOption
       )
       .forEach((row) => {
-        badges[row.variant_id] = row.badge_type;
+        badges[row.variant_id] = {
+          badge_type: row.badge_type,
+          option_value: row.option_value,
+          product_id: row.product_id,
+        };
       });
 
     res.header("Access-Control-Allow-Origin", "*");
