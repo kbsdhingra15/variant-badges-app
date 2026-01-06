@@ -723,7 +723,7 @@ app.post(
       res.status(500).send("Error");
     }
   }
-);
+  );
 // Privacy Policy page
 app.get("/privacy-policy", (req, res) => {
   const fs = require("fs");
