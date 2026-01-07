@@ -583,7 +583,34 @@ app.post("/api/billing-test/expire-cancelled", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// ⚠️ TEMP TEST - Set grace period with valid expiry date
+app.post("/api/billing-test/set-grace-period", async (req, res) => {
+  try {
+    const { saveSubscription } = require("./database/db");
+    const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
+    const days = parseInt(req.query.days) || 30;
 
+    // Set billing_on to X days in the future
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + days);
+
+    await saveSubscription(shop, {
+      plan_name: "pro",
+      status: "cancelled",
+      charge_id: "35890069820", // Keep your existing charge_id
+      billing_on: expiryDate,
+      cancelled_at: new Date("2026-01-07T06:28:16.860Z"), // Keep existing cancelled_at
+    });
+
+    res.json({
+      success: true,
+      expiryDate: expiryDate.toISOString(),
+      message: `Grace period set to expire in ${days} days (${expiryDate.toLocaleDateString()})`,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ============================================
 // TOKEN GENERATION ROUTE (for routes/auth.js)
 // ============================================
