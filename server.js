@@ -584,11 +584,24 @@ app.post("/api/billing-test/expire-cancelled", async (req, res) => {
   }
 });
 // ⚠️ TEMP TEST - Set grace period with valid expiry date
+// TODO: Remove before production launch
 app.post("/api/billing-test/set-grace-period", async (req, res) => {
   try {
-    const { saveSubscription } = require("./database/db");
+    const { saveSubscription, getSubscription } = require("./database/db");
     const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
     const days = parseInt(req.query.days) || 30;
+
+    console.log(`🧪 [TEST] Setting grace period for ${shop}: ${days} days`);
+
+    // Get current subscription to preserve existing data
+    const currentSub = await getSubscription(shop);
+
+    if (!currentSub) {
+      return res.status(404).json({
+        error: "No subscription found",
+        message: "Shop must have a subscription first",
+      });
+    }
 
     // Set billing_on to X days in the future
     const expiryDate = new Date();
@@ -597,18 +610,34 @@ app.post("/api/billing-test/set-grace-period", async (req, res) => {
     await saveSubscription(shop, {
       plan_name: "pro",
       status: "cancelled",
-      charge_id: "35890069820", // Keep your existing charge_id
+      charge_id: currentSub.charge_id, // Preserve existing charge_id
       billing_on: expiryDate,
-      cancelled_at: new Date("2026-01-07T06:28:16.860Z"), // Keep existing cancelled_at
+      cancelled_at: currentSub.cancelled_at || new Date(), // Preserve or set now
     });
+
+    console.log(
+      `✅ [TEST] Grace period set to expire: ${expiryDate.toLocaleDateString()}`
+    );
 
     res.json({
       success: true,
+      shop: shop,
       expiryDate: expiryDate.toISOString(),
+      expiryDateFormatted: expiryDate.toLocaleDateString(),
+      daysFromNow: days,
       message: `Grace period set to expire in ${days} days (${expiryDate.toLocaleDateString()})`,
+      currentStatus: {
+        plan_name: "pro",
+        status: "cancelled",
+        billing_on: expiryDate.toISOString(),
+      },
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("❌ [TEST] Error setting grace period:", error);
+    res.status(500).json({
+      error: error.message,
+      details: "Failed to set grace period",
+    });
   }
 });
 // ============================================
