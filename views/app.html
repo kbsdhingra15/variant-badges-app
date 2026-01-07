@@ -1740,7 +1740,14 @@ async function saveBadge(productId, optionValue, badgeType) {
     }
 
     console.log('✅ Badge saved:', data);
-    
+        // ⭐ NEW: Refresh billing status after successful save
+    // This ensures plan badge updates if auto-downgrade happened
+    try {
+      await loadBillingStatus();
+    } catch (billingError) {
+      console.log('⚠️ Could not refresh billing status:', billingError);
+      // Non-critical error, don't block the flow
+    }
     // Reload products to reflect changes
     try {
       await loadProducts(currentPage, currentSearch);
@@ -1980,12 +1987,20 @@ function renderPlansPage() {
     freePlanBtn.textContent = 'Current Plan';
     freePlanBtn.disabled = true;
     freePlanBtn.onclick = null;
-  } else if (currentPlan.plan_name === 'pro') {
-    freePlanBtn.textContent = 'Downgrade';
-    freePlanBtn.disabled = false;
-    freePlanBtn.onclick = () => cancelSubscription();
+} else if (currentPlan.plan_name === 'pro') {
+    // Check if already cancelled
+    if (currentPlan.status === 'cancelled') {
+      // Already cancelled - show pending downgrade message
+      freePlanBtn.textContent = 'Downgrading soon';
+      freePlanBtn.disabled = true;
+      freePlanBtn.onclick = null;
+    } else {
+      // Active Pro - can downgrade
+      freePlanBtn.textContent = 'Downgrade';
+      freePlanBtn.disabled = false;
+      freePlanBtn.onclick = () => cancelSubscription();
+    }
   }
-
  // Update Pro plan button
   if (currentPlan.plan_name === 'pro') {
     // Only show expiry if CANCELLED and has valid billing_on date
