@@ -425,14 +425,13 @@ app.get("/auth/callback", async (req, res) => {
         console.error(`⚠️ Webhook ${webhook.topic} error:`, webhookError);
       }
     }
-    }
-    
+
     // ========== INITIALIZE FREE PLAN (NO TRIAL) ==========
     // Initialize Free plan subscription on first install
     try {
       const { getSubscription, saveSubscription } = require("./database/db");
       const existingSub = await getSubscription(shop);
-      
+
       if (!existingSub) {
         console.log("💳 First install - initializing Free plan for:", shop);
         await saveSubscription(shop, {
@@ -448,7 +447,7 @@ app.get("/auth/callback", async (req, res) => {
       // Don't fail OAuth if subscription init fails
     }
     // ========== END INITIALIZATION ==========
-  
+
     // Show success page
     const shopSlug = shop.replace(".myshopify.com", "");
     res.send(`
