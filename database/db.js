@@ -441,6 +441,6 @@ module.exports = {
   getBadgesForPublicAPI, // ADD THIS LINE
   getSubscription,
   saveSubscription,
-  initializeTrial,
+  //initializeTrial,
   countBadgedProducts,
 };
