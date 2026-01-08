@@ -802,13 +802,13 @@
         
         <div style="text-align: left; margin-bottom: 24px;">
           <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
-            <span style="color: #008060; font-size: 18px;">✓</span>
-            <span style="font-size: 14px; line-height: 1.6;">14-day trial with all features</span>
-          </div>
-          <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
-            <span style="color: #008060; font-size: 18px;">✓</span>
-            <span style="font-size: 14px; line-height: 1.6;"><strong>5 products</strong> after trial</span>
-          </div>
+  <span style="color: #008060; font-size: 18px;">✓</span>
+  <span style="font-size: 14px; line-height: 1.6;"><strong>5 products</strong> forever</span>
+</div>
+<div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
+  <span style="color: #008060; font-size: 18px;">✓</span>
+  <span style="font-size: 14px; line-height: 1.6;">All features included</span>
+</div>
           <div style="margin-bottom: 12px; display: flex; align-items: start; gap: 8px;">
             <span style="color: #008060; font-size: 18px;">✓</span>
             <span style="font-size: 14px; line-height: 1.6;">Unlimited variants per product</span>
@@ -877,12 +877,12 @@
   <div class="card" style="max-width: 800px; margin: 40px auto 0;">
     <h3 style="margin: 0 0 16px 0;">Frequently Asked Questions</h3>
     
-    <div style="margin-bottom: 16px;">
-      <h4 style="margin: 0 0 8px 0; font-size: 15px;">What happens after the 14-day trial?</h4>
-      <p style="margin: 0; color: #6d7175; font-size: 14px; line-height: 1.6;">
-        You'll automatically move to the Free plan, which allows badges on up to 5 products with unlimited variants. Upgrade anytime to unlock all products.
-      </p>
-    </div>
+<div style="margin-bottom: 16px;">
+  <h4 style="margin: 0 0 8px 0; font-size: 15px;">Is the Free plan really free forever?</h4>
+  <p style="margin: 0; color: #6d7175; font-size: 14px; line-height: 1.6;">
+    Yes! The Free plan allows badges on up to 5 products forever with unlimited variants per product. No credit card required, no time limits. Upgrade to Pro anytime for unlimited products.
+  </p>
+</div>
     
     <div style="margin-bottom: 16px;">
       <h4 style="margin: 0 0 8px 0; font-size: 15px;">What counts as a "product"?</h4>
@@ -1951,6 +1951,7 @@ function updatePlanUI() {
   const planBadge = document.getElementById('plan-badge');
   if (!planBadge) return;
 
+  // ========== SIMPLIFIED: Only Free and Pro (no trial) ==========
   if (currentPlan.plan_name === 'pro') {
     if (currentPlan.status === 'cancelled') {
       planBadge.textContent = 'Pro (Cancelled)';
@@ -1960,18 +1961,13 @@ function updatePlanUI() {
       planBadge.style.background = '#008060'; // Green for active
     }
     planBadge.style.display = 'inline-block';
-  } else if (currentPlan.plan_name === 'trial') {
-    const daysLeft = Math.floor(
-      (new Date(currentPlan.trial_ends_at) - new Date()) / (1000 * 60 * 60 * 24)
-    );
-    planBadge.textContent = `Trial (${daysLeft} days left)`;
-    planBadge.style.background = '#ff9800';
-    planBadge.style.display = 'inline-block';
   } else {
+    // Default to Free (no trial)
     planBadge.textContent = 'Free';
-    planBadge.style.background = '#6d7175';
+    planBadge.style.background = '#6d7175'; // Gray for free
     planBadge.style.display = 'inline-block';
   }
+  // ========== END ==========
 }
 
 // ADD THIS NEW FUNCTION HERE
@@ -1983,7 +1979,7 @@ function renderPlansPage() {
   if (!freePlanBtn || !proPlanBtn) return; // Safety check
 
   // Update Free plan button
-  if (currentPlan.plan_name === 'free' || currentPlan.plan_name === 'trial') {
+  if (currentPlan.plan_name === 'free') {
     freePlanBtn.textContent = 'Current Plan';
     freePlanBtn.disabled = true;
     freePlanBtn.onclick = null;

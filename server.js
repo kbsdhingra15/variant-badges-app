@@ -425,6 +425,30 @@ app.get("/auth/callback", async (req, res) => {
         console.error(`⚠️ Webhook ${webhook.topic} error:`, webhookError);
       }
     }
+    }
+    
+    // ========== INITIALIZE FREE PLAN (NO TRIAL) ==========
+    // Initialize Free plan subscription on first install
+    try {
+      const { getSubscription, saveSubscription } = require("./database/db");
+      const existingSub = await getSubscription(shop);
+      
+      if (!existingSub) {
+        console.log("💳 First install - initializing Free plan for:", shop);
+        await saveSubscription(shop, {
+          plan_name: "free",
+          status: "active",
+        });
+        console.log("✅ Free plan initialized");
+      } else {
+        console.log("💳 Reinstall detected - keeping existing subscription");
+      }
+    } catch (billingError) {
+      console.error("⚠️  Failed to initialize subscription:", billingError);
+      // Don't fail OAuth if subscription init fails
+    }
+    // ========== END INITIALIZATION ==========
+  
     // Show success page
     const shopSlug = shop.replace(".myshopify.com", "");
     res.send(`
@@ -688,62 +712,6 @@ app.post("/api/billing-test/complete-reset", async (req, res) => {
   } catch (error) {
     console.error("❌ [TEST] Reset error:", error);
     res.status(500).json({ error: error.message });
-  }
-});
-// ⚠️ TEMP TEST - Expire trial (simulate 14 days passing)
-// TODO: Remove before production launch
-app.post("/api/billing-test/expire-trial", async (req, res) => {
-  try {
-    const { saveSubscription, getSubscription } = require("./database/db");
-    const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
-
-    console.log(`🧪 [TEST] Expiring trial for ${shop}`);
-
-    // Get current subscription
-    const currentSub = await getSubscription(shop);
-
-    if (!currentSub) {
-      return res.status(404).json({
-        error: "No subscription found",
-        message: "Shop must have a subscription first",
-      });
-    }
-
-    if (currentSub.plan_name !== "trial") {
-      return res.status(400).json({
-        error: "Not on trial plan",
-        currentPlan: currentSub.plan_name,
-        message: "Shop must be on trial plan to expire it",
-      });
-    }
-
-    // Set trial_ends_at to yesterday (expired)
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    await saveSubscription(shop, {
-      plan_name: "trial",
-      status: "active",
-      trial_ends_at: yesterday,
-    });
-
-    console.log(`✅ [TEST] Trial expired: ${yesterday.toISOString()}`);
-    console.log(`   Next app load will auto-downgrade to Free`);
-
-    res.json({
-      success: true,
-      shop: shop,
-      message:
-        "Trial expired - will auto-downgrade to Free on next app load or badge save",
-      trialExpiredAt: yesterday.toISOString(),
-      nextStep: "Refresh the app or save a badge to trigger auto-downgrade",
-    });
-  } catch (error) {
-    console.error("❌ [TEST] Error expiring trial:", error);
-    res.status(500).json({
-      error: error.message,
-      details: "Failed to expire trial",
-    });
   }
 });
 // ============================================

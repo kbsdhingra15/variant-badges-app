@@ -403,7 +403,7 @@ async function saveSubscription(shop, data) {
   }
 }
 
-// Initialize trial for new shop
+/*// Initialize trial for new shop
 async function initializeTrial(shop) {
   const trialEndsAt = new Date();
   trialEndsAt.setDate(trialEndsAt.getDate() + 14); // 14-day trial
@@ -413,7 +413,7 @@ async function initializeTrial(shop) {
     status: "active",
     trial_ends_at: trialEndsAt,
   });
-}
+}   */
 
 // Count products with badges for a shop
 async function countBadgedProducts(shop) {

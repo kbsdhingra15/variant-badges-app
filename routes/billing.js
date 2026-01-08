@@ -185,26 +185,21 @@ router.get("/status", async (req, res) => {
     const subscription = await getSubscription(shop);
 
     if (!subscription) {
-      // Initialize trial if no subscription exists
-      const { initializeTrial } = require("../database/db");
-      const newSubscription = await initializeTrial(shop);
-      return res.json(newSubscription);
-    }
-
-    // Check if trial has expired
-    if (
-      subscription.plan_name === "trial" &&
-      subscription.trial_ends_at &&
-      new Date(subscription.trial_ends_at) < new Date()
-    ) {
-      // Move to free plan
-      const updated = await saveSubscription(shop, {
+      // ========== NO TRIAL - Initialize Free plan directly ==========
+      console.log(
+        "💳 No subscription found - initializing Free plan for:",
+        shop
+      );
+      const newSubscription = await saveSubscription(shop, {
         plan_name: "free",
         status: "active",
-        trial_ends_at: null,
       });
-      return res.json(updated);
+      return res.json(newSubscription);
+      // ========== END ==========
     }
+
+    // ========== REMOVED: Trial expiry check (no trial anymore!) ==========
+    // No need to check trial_ends_at since we don't have trials
 
     res.json(subscription);
   } catch (error) {
@@ -213,7 +208,6 @@ router.get("/status", async (req, res) => {
   }
 });
 
-// Cancel subscription (downgrade to free)
 // Cancel subscription (downgrade to free)
 router.post("/cancel", async (req, res) => {
   try {

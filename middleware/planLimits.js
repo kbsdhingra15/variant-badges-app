@@ -60,24 +60,6 @@ async function checkPlanLimits(req, res, next) {
 
     // REMOVE THE DUPLICATE PRO CHECK HERE (lines 47-56)
 
-    // Allow all actions during trial
-    if (
-      subscription &&
-      subscription.plan_name === "trial" &&
-      subscription.trial_ends_at &&
-      new Date(subscription.trial_ends_at) > new Date()
-    ) {
-      console.log("🔒 [PLAN LIMITS] Trial user - unlimited access");
-      req.planLimits = {
-        canAddBadges: true,
-        maxProducts: Infinity,
-        currentProducts: 0,
-        plan: "trial",
-        trialEndsAt: subscription.trial_ends_at,
-      };
-      return next();
-    }
-
     // Free plan - check limits
     const currentProducts = await countBadgedProducts(shop);
     const maxProducts = 5;

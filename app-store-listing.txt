@@ -1,0 +1,22 @@
+# Variant Badges - App Store Listing Content
+
+## Tagline
+Highlight hot products with eye-catching badges on variant swatches
+
+## Description
+[Paste the full description I provided earlier in the session summary]
+
+**Compatibility**
+Variant Badges works seamlessly with Dawn, Sense, Craft, Refresh, and other modern Shopify themes that use variant swatches or radio buttons.
+
+Note: This version is optimized for themes with visual variant selectors (swatches/buttons). Dropdown variant selectors (like Debut theme) are not currently supported and will be added in a future update.
+
+## FAQ
+
+**Does this work with all Shopify themes?**
+Variant Badges works with all modern Shopify themes that use variant swatches or radio button selectors, including Dawn (Shopify's current default theme), Sense, Craft, and Refresh.
+
+If your theme uses dropdown menus for variant selection (like the older Debut theme), badges will not display in this version. We recommend using Dawn or another modern theme for the best experience. Dropdown support is planned for a future update.
+
+**How do I install this app?**
+[etc...]
