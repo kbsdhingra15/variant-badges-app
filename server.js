@@ -640,6 +640,56 @@ app.post("/api/billing-test/set-grace-period", async (req, res) => {
     });
   }
 });
+// ⚠️ TEMP TEST - Complete reset for testing fresh installs
+// TODO: REMOVE BEFORE PRODUCTION - This allows unlimited free trials!
+app.post("/api/billing-test/complete-reset", async (req, res) => {
+  try {
+    const shop = req.query.shop || "quickstart-c559582d.myshopify.com";
+
+    console.log(`🗑️ [TEST] Complete reset for ${shop}`);
+    console.log(
+      "⚠️  WARNING: This deletes subscription history - TESTING ONLY!"
+    );
+
+    // Delete ALL data for this shop (simulate fresh merchant)
+    const shopResult = await pool.query(
+      "DELETE FROM shops WHERE shop = $1 RETURNING *",
+      [shop]
+    );
+    const settingsResult = await pool.query(
+      "DELETE FROM app_settings WHERE shop = $1 RETURNING *",
+      [shop]
+    );
+    const badgesResult = await pool.query(
+      "DELETE FROM badge_assignments WHERE shop = $1 RETURNING *",
+      [shop]
+    );
+    const subResult = await pool.query(
+      "DELETE FROM subscriptions WHERE shop = $1 RETURNING *",
+      [shop]
+    );
+
+    console.log("✅ [TEST] Deleted:");
+    console.log(`   - Shops: ${shopResult.rowCount}`);
+    console.log(`   - Settings: ${settingsResult.rowCount}`);
+    console.log(`   - Badges: ${badgesResult.rowCount}`);
+    console.log(`   - Subscriptions: ${subResult.rowCount}`);
+
+    res.json({
+      success: true,
+      message: "Complete reset - shop can now reinstall as new merchant",
+      deleted: {
+        shops: shopResult.rowCount,
+        settings: settingsResult.rowCount,
+        badges: badgesResult.rowCount,
+        subscriptions: subResult.rowCount,
+      },
+    });
+  } catch (error) {
+    console.error("❌ [TEST] Reset error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 // ============================================
 // TOKEN GENERATION ROUTE (for routes/auth.js)
 // ============================================
