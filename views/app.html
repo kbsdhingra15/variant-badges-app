@@ -1985,9 +1985,18 @@ function renderPlansPage() {
     freePlanBtn.onclick = null;
 } else if (currentPlan.plan_name === 'pro') {
     // Check if already cancelled
-    if (currentPlan.status === 'cancelled') {
-      // Already cancelled - show pending downgrade message
-      freePlanBtn.textContent = 'Downgrading soon';
+   if (currentPlan.status === 'cancelled') {
+      // Already cancelled - show downgrade date
+      if (currentPlan.billing_on) {
+        const downgradeDate = new Date(currentPlan.billing_on).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        });
+        freePlanBtn.textContent = `Downgrades ${downgradeDate}`;
+      } else {
+        // Fallback if no billing_on date
+        freePlanBtn.textContent = 'Downgrading Soon';
+      }
       freePlanBtn.disabled = true;
       freePlanBtn.onclick = null;
     } else {
