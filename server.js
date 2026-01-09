@@ -1068,7 +1068,39 @@ app.get("/api/admin/run-migration", async (req, res) => {
 
     console.log("🔧 Starting migration...");
 
-    // Add missing columns
+    // ========== STEP 1: Fix existing badge data ==========
+    console.log("📊 Checking existing badge types...");
+
+    const existingData = await client.query(`
+      SELECT DISTINCT badge_type FROM badge_assignments;
+    `);
+
+    console.log("Existing badge types:", existingData.rows);
+
+    // Normalize existing data to uppercase
+    await client.query(`
+      UPDATE badge_assignments 
+      SET badge_type = UPPER(badge_type)
+      WHERE badge_type != UPPER(badge_type);
+    `);
+
+    console.log("✅ Normalized badge types to uppercase");
+
+    // Delete any badges that aren't HOT, NEW, or SALE
+    const deletedResult = await client.query(`
+      DELETE FROM badge_assignments 
+      WHERE badge_type NOT IN ('HOT', 'NEW', 'SALE')
+      RETURNING badge_type;
+    `);
+
+    if (deletedResult.rowCount > 0) {
+      console.log(
+        `⚠️ Deleted ${deletedResult.rowCount} invalid badges:`,
+        deletedResult.rows
+      );
+    }
+
+    // ========== STEP 2: Add missing columns ==========
     await client.query(`
       ALTER TABLE badge_assignments 
       ADD COLUMN IF NOT EXISTS variant_id VARCHAR(255),
@@ -1078,7 +1110,7 @@ app.get("/api/admin/run-migration", async (req, res) => {
 
     console.log("✅ Added missing columns");
 
-    // Update constraint
+    // ========== STEP 3: Update constraint ==========
     await client.query(`
       ALTER TABLE badge_assignments 
       DROP CONSTRAINT IF EXISTS unique_shop_value_badge;
@@ -1091,7 +1123,7 @@ app.get("/api/admin/run-migration", async (req, res) => {
 
     console.log("✅ Updated constraint");
 
-    // Add index
+    // ========== STEP 4: Add index ==========
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_badge_product 
       ON badge_assignments(shop, product_id);
@@ -1099,31 +1131,37 @@ app.get("/api/admin/run-migration", async (req, res) => {
 
     console.log("✅ Added index");
 
-    // Update CHECK constraint
+    // ========== STEP 5: Update CHECK constraint ==========
+    // Drop old constraint
     await client.query(`
       ALTER TABLE badge_assignments 
       DROP CONSTRAINT IF EXISTS badge_assignments_badge_type_check;
     `);
 
+    console.log("✅ Dropped old CHECK constraint");
+
+    // Add new constraint (now data is clean)
     await client.query(`
       ALTER TABLE badge_assignments 
       ADD CONSTRAINT badge_assignments_badge_type_check 
       CHECK (badge_type IN ('HOT', 'NEW', 'SALE'));
     `);
 
-    console.log("✅ Updated badge types");
+    console.log("✅ Added new CHECK constraint");
 
     client.release();
 
     res.json({
       success: true,
       message: "Migration completed! Remove this endpoint now.",
+      deletedBadges: deletedResult.rowCount,
     });
   } catch (error) {
     console.error("❌ Migration error:", error);
     res.status(500).json({
       success: false,
       error: error.message,
+      detail: error.detail,
     });
   }
 });
