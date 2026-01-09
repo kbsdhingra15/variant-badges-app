@@ -748,7 +748,9 @@ app.use("/api/badges", authenticateRequest, badgesRouter);
 app.use("/api/settings", authenticateRequest, settingsRouter);
 app.use("/api/setup", authenticateRequest, setupRouter);
 app.use("/api/analytics", authenticateRequest, analyticsRoutes);
-app.use("/api/billing", authenticateRequest, billingRouter);
+// Billing routes - activate is public, rest requires auth
+app.use("/api/billing/activate", billingRouter); // ← PUBLIC (no auth)
+app.use("/api/billing", authenticateRequest, billingRouter); // ← PROTECTED (auth)
 // ============================================
 // APP PAGE
 // ============================================
