@@ -752,21 +752,18 @@ app.use("/api/analytics", authenticateRequest, analyticsRoutes);
 // ========== PUBLIC BILLING CALLBACK (no auth) ==========
 app.get("/api/billing/activate", async (req, res) => {
   try {
-    // ========== FIX: Handle charge_id array ==========
     let { shop, charge_id } = req.query;
 
-    // If charge_id is an array, take the REAL one (not the placeholder)
     if (Array.isArray(charge_id)) {
       console.log("⚠️ charge_id came as array:", charge_id);
-      // Filter out the placeholder and get the actual ID
       charge_id = charge_id.find(
         (id) => id !== "{charge_id}" && !id.includes("{")
       );
       console.log("✅ Using charge_id:", charge_id);
     }
-    // ========== END FIX ==========
 
     if (!shop || !charge_id) {
+      console.log("❌ Missing shop or charge_id");
       return res.redirect(
         `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`
       );
@@ -774,20 +771,21 @@ app.get("/api/billing/activate", async (req, res) => {
 
     console.log("💳 Activating charge:", charge_id, "for shop:", shop);
 
-    // Get session for this shop
     const { getShopSession, saveSubscription } = require("./database/db");
     const session = await getShopSession(shop);
 
     if (!session) {
-      console.error("No session found for shop:", shop);
+      console.error("❌ No session found for shop:", shop);
       return res.redirect(
         `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`
       );
     }
 
+    console.log("✅ Session found for shop:", shop);
     const accessToken = session.accessToken;
 
     // Get charge details from Shopify
+    console.log("📞 Fetching charge details from Shopify...");
     const response = await fetch(
       `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}.json`,
       {
@@ -798,10 +796,16 @@ app.get("/api/billing/activate", async (req, res) => {
       }
     );
 
+    console.log("📊 Charge fetch response status:", response.status);
     const data = await response.json();
+    console.log("📊 Charge data:", JSON.stringify(data, null, 2));
+
     const charge = data.recurring_application_charge;
+    console.log("📊 Charge status:", charge?.status);
 
     if (charge.status === "accepted") {
+      console.log("✅ Charge accepted - activating...");
+
       // Activate the charge
       const activateResponse = await fetch(
         `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}/activate.json`,
@@ -819,10 +823,13 @@ app.get("/api/billing/activate", async (req, res) => {
         }
       );
 
+      console.log("📊 Activate response status:", activateResponse.status);
       const activateData = await activateResponse.json();
+      console.log("📊 Activate data:", JSON.stringify(activateData, null, 2));
 
       if (activateData.recurring_application_charge) {
-        // Update subscription in database
+        console.log("💾 Saving Pro subscription to database...");
+
         await saveSubscription(shop, {
           plan_name: "pro",
           status: "active",
@@ -834,26 +841,28 @@ app.get("/api/billing/activate", async (req, res) => {
 
         console.log(`✅ Activated Pro plan for ${shop}`);
 
-        // Redirect back to app with success message
         return res.redirect(
           `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?upgraded=true`
         );
+      } else {
+        console.log("❌ No recurring_application_charge in activate response");
       }
     } else if (charge.status === "declined") {
       console.log(`❌ Charge declined by ${shop}`);
 
-      // Reset to free plan
       await saveSubscription(shop, {
         plan_name: "free",
         status: "active",
         charge_id: null,
       });
+    } else {
+      console.log(`⚠️ Unexpected charge status: ${charge.status}`);
     }
 
-    // Redirect back to app
+    console.log("🔄 Redirecting back to app...");
     res.redirect(`https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`);
   } catch (error) {
-    console.error("Error activating charge:", error);
+    console.error("❌ Error activating charge:", error);
     res.redirect(
       `https://${req.query.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?error=activation_failed`
     );
