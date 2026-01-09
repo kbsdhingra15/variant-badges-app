@@ -426,21 +426,38 @@ app.get("/auth/callback", async (req, res) => {
       }
     }
 
+}
+    
     // ========== INITIALIZE FREE PLAN (NO TRIAL) ==========
-    // Initialize Free plan subscription on first install
+    // Initialize Free plan subscription on install
     try {
       const { getSubscription, saveSubscription } = require("./database/db");
       const existingSub = await getSubscription(shop);
-
+      
       if (!existingSub) {
+        // First install - create Free plan
         console.log("💳 First install - initializing Free plan for:", shop);
         await saveSubscription(shop, {
           plan_name: "free",
           status: "active",
         });
         console.log("✅ Free plan initialized");
+      } else if (existingSub.status === "uninstalled" || existingSub.status === "cancelled") {
+        // ========== FIX: Reset to Free on reinstall ==========
+        console.log("🔄 Reinstall detected - resetting to Free plan");
+        console.log("   Previous state:", existingSub.plan_name, existingSub.status);
+        
+        await saveSubscription(shop, {
+          plan_name: "free",
+          status: "active",
+          charge_id: null,
+          billing_on: null,
+          cancelled_at: null,
+        });
+        console.log("✅ Reset to Free plan");
+        // ========== END FIX ==========
       } else {
-        console.log("💳 Reinstall detected - keeping existing subscription");
+        console.log("💳 Active subscription exists - keeping it");
       }
     } catch (billingError) {
       console.error("⚠️  Failed to initialize subscription:", billingError);
@@ -803,7 +820,21 @@ app.post(
       // DELETE BADGE ASSIGNMENTS TOO
       await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
       console.log("✅ Badge assignments deleted for:", shop);
+// ========== MARK SUBSCRIPTION AS UNINSTALLED ==========
+const subResult = await pool.query(
+  `UPDATE subscriptions 
+   SET status = $1, updated_at = NOW() 
+   WHERE shop = $2
+   RETURNING plan_name, status`,
+  ["uninstalled", shop]
+);
 
+if (subResult.rowCount > 0) {
+  console.log("✅ Subscription marked as uninstalled:", subResult.rows[0]);
+} else {
+  console.log("ℹ️  No subscription to update");
+}
+// ========== END ==========
       res.status(200).send("OK");
     } catch (error) {
       console.error("❌ Uninstall webhook error:", error);
