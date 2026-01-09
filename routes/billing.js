@@ -36,7 +36,7 @@ router.post("/create-charge", async (req, res) => {
         price: planConfig.price,
         return_url: `https://${process.env.HOST}/api/billing/activate?shop=${shop}`,
         trial_days: planConfig.trialDays,
-        test: process.env.NODE_ENV !== "production", // Test mode in development
+        test: true, // process.env.NODE_ENV !== "production", // Test mode in development
       },
     };
 
