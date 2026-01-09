@@ -1060,3 +1060,35 @@ app.listen(PORT, () => {
   console.log(`✨ Navigation: Clean horizontal tabs`);
   console.log("");
 });
+
+// TEMPORARY: Remove badge_type CHECK constraint
+app.get("/api/admin/fix-lowercase", async (req, res) => {
+  try {
+    const client = await pool.connect();
+
+    console.log("🔧 Removing case-sensitive constraint...");
+
+    // Drop the CHECK constraint entirely
+    await client.query(`
+      ALTER TABLE badge_assignments 
+      DROP CONSTRAINT IF EXISTS badge_assignments_badge_type_check;
+    `);
+
+    console.log("✅ Constraint removed - badge_type now accepts any value");
+    console.log("ℹ️  Validation will be handled in application code");
+
+    client.release();
+
+    res.json({
+      success: true,
+      message:
+        "CHECK constraint removed. Badge types validated in app code now. Remove this endpoint!",
+    });
+  } catch (error) {
+    console.error("❌ Error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
