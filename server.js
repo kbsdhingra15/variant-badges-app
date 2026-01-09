@@ -803,7 +803,7 @@ app.get("/api/billing/activate", async (req, res) => {
     const charge = data.recurring_application_charge;
     console.log("📊 Charge status:", charge?.status);
 
-    if (charge.status === "accepted") {
+    if (charge.status === "accepted" || charge.status === "active") {
       console.log("✅ Charge accepted - activating...");
 
       // Activate the charge
