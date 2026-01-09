@@ -749,8 +749,109 @@ app.use("/api/settings", authenticateRequest, settingsRouter);
 app.use("/api/setup", authenticateRequest, setupRouter);
 app.use("/api/analytics", authenticateRequest, analyticsRoutes);
 // Billing routes - activate is public, rest requires auth
-app.use("/api/billing/activate", billingRouter); // ← PUBLIC (no auth)
-app.use("/api/billing", authenticateRequest, billingRouter); // ← PROTECTED (auth)
+// ========== PUBLIC BILLING CALLBACK (no auth) ==========
+app.get("/api/billing/activate", async (req, res) => {
+  try {
+    const { shop, charge_id } = req.query;
+
+    if (!shop || !charge_id) {
+      return res.redirect(
+        `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`
+      );
+    }
+
+    console.log("💳 Activating charge:", charge_id, "for shop:", shop);
+
+    // Get session for this shop
+    const { getShopSession, saveSubscription } = require("./database/db");
+    const session = await getShopSession(shop);
+
+    if (!session) {
+      console.error("No session found for shop:", shop);
+      return res.redirect(
+        `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`
+      );
+    }
+
+    const accessToken = session.accessToken;
+
+    // Get charge details from Shopify
+    const response = await fetch(
+      `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}.json`,
+      {
+        method: "GET",
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      }
+    );
+
+    const data = await response.json();
+    const charge = data.recurring_application_charge;
+
+    if (charge.status === "accepted") {
+      // Activate the charge
+      const activateResponse = await fetch(
+        `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}/activate.json`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": accessToken,
+          },
+          body: JSON.stringify({
+            recurring_application_charge: {
+              id: charge_id,
+            },
+          }),
+        }
+      );
+
+      const activateData = await activateResponse.json();
+
+      if (activateData.recurring_application_charge) {
+        // Update subscription in database
+        await saveSubscription(shop, {
+          plan_name: "pro",
+          status: "active",
+          charge_id: charge_id.toString(),
+          billing_on: activateData.recurring_application_charge.billing_on,
+          trial_ends_at: null,
+          cancelled_at: null,
+        });
+
+        console.log(`✅ Activated Pro plan for ${shop}`);
+
+        // Redirect back to app with success message
+        return res.redirect(
+          `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?upgraded=true`
+        );
+      }
+    } else if (charge.status === "declined") {
+      console.log(`❌ Charge declined by ${shop}`);
+
+      // Reset to free plan
+      await saveSubscription(shop, {
+        plan_name: "free",
+        status: "active",
+        charge_id: null,
+      });
+    }
+
+    // Redirect back to app
+    res.redirect(`https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`);
+  } catch (error) {
+    console.error("Error activating charge:", error);
+    res.redirect(
+      `https://${req.query.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?error=activation_failed`
+    );
+  }
+});
+// ========== END PUBLIC CALLBACK ==========
+
+// Now register other billing routes (protected)
+app.use("/api/billing", authenticateRequest, billingRouter);
+
 // ============================================
 // APP PAGE
 // ============================================
