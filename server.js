@@ -752,7 +752,19 @@ app.use("/api/analytics", authenticateRequest, analyticsRoutes);
 // ========== PUBLIC BILLING CALLBACK (no auth) ==========
 app.get("/api/billing/activate", async (req, res) => {
   try {
-    const { shop, charge_id } = req.query;
+    // ========== FIX: Handle charge_id array ==========
+    let { shop, charge_id } = req.query;
+
+    // If charge_id is an array, take the REAL one (not the placeholder)
+    if (Array.isArray(charge_id)) {
+      console.log("⚠️ charge_id came as array:", charge_id);
+      // Filter out the placeholder and get the actual ID
+      charge_id = charge_id.find(
+        (id) => id !== "{charge_id}" && !id.includes("{")
+      );
+      console.log("✅ Using charge_id:", charge_id);
+    }
+    // ========== END FIX ==========
 
     if (!shop || !charge_id) {
       return res.redirect(
