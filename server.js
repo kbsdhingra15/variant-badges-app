@@ -746,13 +746,12 @@ app.use("/auth", authRouter);
 
 // Public API routes (no authentication required)
 app.use("/api/public", publicRouter);
-
+app.use("/api/analytics", analyticsRoutes);
 // Protected endpoints (require JWT authentication)
 app.use("/api/products", authenticateRequest, productsRouter);
 app.use("/api/badges", authenticateRequest, badgesRouter);
 app.use("/api/settings", authenticateRequest, settingsRouter);
 app.use("/api/setup", authenticateRequest, setupRouter);
-app.use("/api/analytics", authenticateRequest, analyticsRoutes);
 // Billing routes - activate is public, rest requires auth
 // ========== PUBLIC BILLING CALLBACK (no auth) ==========
 app.get("/api/billing/activate", async (req, res) => {
