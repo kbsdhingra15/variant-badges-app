@@ -69,7 +69,7 @@ async function initDB() {
     product_id VARCHAR(255) NOT NULL,
     option_value VARCHAR(100) NOT NULL,
     option_type VARCHAR(50),
-    badge_type VARCHAR(20) NOT NULL CHECK (badge_type IN ('HOT', 'NEW', 'SALE')),
+    badge_type VARCHAR(20) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_shop_variant UNIQUE(shop, variant_id)
