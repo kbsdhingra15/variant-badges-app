@@ -34,7 +34,7 @@ router.post("/create-charge", async (req, res) => {
       recurring_application_charge: {
         name: planConfig.name,
         price: planConfig.price,
-        return_url: `https://${process.env.HOST}/api/billing/activate?shop=${shop}`,
+        return_url: `https://${process.env.HOST}/api/billing/activate?shop=${shop}&charge_id={charge_id}`,
         trial_days: planConfig.trialDays,
         test: true, // process.env.NODE_ENV !== "production", // Test mode in development
       },
