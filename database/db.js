@@ -60,18 +60,21 @@ async function initDB() {
       )
     `);
 
-    // Badge Assignments table (SIMPLIFIED - option_value based)
+    // Badge Assignments table (UPDATED - includes variant_id, product_id, option_type)
     await client.query(`
-      CREATE TABLE IF NOT EXISTS badge_assignments (
-        id SERIAL PRIMARY KEY,
-        shop VARCHAR(255) NOT NULL,
-        option_value VARCHAR(100) NOT NULL,
-        badge_type VARCHAR(20) NOT NULL CHECK (badge_type IN ('HOT', 'NEW')),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        CONSTRAINT unique_shop_value_badge UNIQUE(shop, option_value, badge_type)
-      )
-    `);
+  CREATE TABLE IF NOT EXISTS badge_assignments (
+    id SERIAL PRIMARY KEY,
+    shop VARCHAR(255) NOT NULL,
+    variant_id VARCHAR(255) NOT NULL,
+    product_id VARCHAR(255) NOT NULL,
+    option_value VARCHAR(100) NOT NULL,
+    option_type VARCHAR(50),
+    badge_type VARCHAR(20) NOT NULL CHECK (badge_type IN ('HOT', 'NEW', 'SALE')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_shop_variant UNIQUE(shop, variant_id)
+  )
+`);
 
     // Subscriptions table (NEW - for billing)
     await client.query(`
@@ -96,6 +99,9 @@ async function initDB() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_badge_value ON badge_assignments(option_value)
     `);
+    await client.query(`
+  CREATE INDEX IF NOT EXISTS idx_badge_product ON badge_assignments(shop, product_id)
+`);
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_subscriptions_shop ON subscriptions(shop)
     `);
