@@ -1060,3 +1060,70 @@ app.listen(PORT, () => {
   console.log(`✨ Navigation: Clean horizontal tabs`);
   console.log("");
 });
+
+// TEMPORARY: Run migration endpoint - delete
+app.get("/api/admin/run-migration", async (req, res) => {
+  try {
+    const client = await pool.connect();
+
+    console.log("🔧 Starting migration...");
+
+    // Add missing columns
+    await client.query(`
+      ALTER TABLE badge_assignments 
+      ADD COLUMN IF NOT EXISTS variant_id VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS product_id VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS option_type VARCHAR(50);
+    `);
+
+    console.log("✅ Added missing columns");
+
+    // Update constraint
+    await client.query(`
+      ALTER TABLE badge_assignments 
+      DROP CONSTRAINT IF EXISTS unique_shop_value_badge;
+    `);
+
+    await client.query(`
+      ALTER TABLE badge_assignments 
+      ADD CONSTRAINT unique_shop_variant UNIQUE(shop, variant_id);
+    `);
+
+    console.log("✅ Updated constraint");
+
+    // Add index
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_badge_product 
+      ON badge_assignments(shop, product_id);
+    `);
+
+    console.log("✅ Added index");
+
+    // Update CHECK constraint
+    await client.query(`
+      ALTER TABLE badge_assignments 
+      DROP CONSTRAINT IF EXISTS badge_assignments_badge_type_check;
+    `);
+
+    await client.query(`
+      ALTER TABLE badge_assignments 
+      ADD CONSTRAINT badge_assignments_badge_type_check 
+      CHECK (badge_type IN ('HOT', 'NEW', 'SALE'));
+    `);
+
+    console.log("✅ Updated badge types");
+
+    client.release();
+
+    res.json({
+      success: true,
+      message: "Migration completed! Remove this endpoint now.",
+    });
+  } catch (error) {
+    console.error("❌ Migration error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
