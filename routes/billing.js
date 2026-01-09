@@ -39,7 +39,13 @@ router.post("/create-charge", async (req, res) => {
         test: true, // process.env.NODE_ENV !== "production", // Test mode in development
       },
     };
-
+    // ========== ADD THIS DEBUG LOG ==========
+    console.log("🔗 HOST:", process.env.HOST);
+    console.log(
+      "🔗 Full return URL:",
+      charge.recurring_application_charge.return_url
+    );
+    // ========== END DEBUG ==========
     const response = await fetch(
       `https://${shop}/admin/api/2024-10/recurring_application_charges.json`,
       {
