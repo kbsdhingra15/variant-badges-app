@@ -235,7 +235,9 @@ async function authenticateRequest(req, res, next) {
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      console.log("❌ No valid Authorization header");
+      console.log(
+        `❌ No valid Authorization header - ${req.method} ${req.originalUrl}`
+      ); // ← CHANGED THIS LINE
       return res.status(401).json({ error: "Authentication required" });
     }
 
@@ -246,7 +248,9 @@ async function authenticateRequest(req, res, next) {
     try {
       decoded = jwt.verify(token, process.env.SHOPIFY_API_SECRET);
     } catch (error) {
-      console.log("❌ Invalid token signature:", error.message);
+      console.log(
+        `❌ Invalid token signature: ${error.message} - ${req.method} ${req.originalUrl}`
+      ); // ← CHANGED THIS LINE
       return res.status(401).json({ error: "Invalid session token" });
     }
 
@@ -255,7 +259,9 @@ async function authenticateRequest(req, res, next) {
     // Verify shop has active session in database
     const session = await getShopSession(shop);
     if (!session || !session.accessToken) {
-      console.log("❌ No valid session for shop:", shop);
+      console.log(
+        `❌ No valid session for shop: ${shop} - ${req.method} ${req.originalUrl}`
+      ); // ← CHANGED THIS LINE
       return res.status(401).json({ error: "Shop session expired" });
     }
 
@@ -284,7 +290,6 @@ async function authenticateRequest(req, res, next) {
     res.status(500).json({ error: "Authentication failed" });
   }
 }
-
 // ============================================
 // OAUTH FLOW
 // ============================================
