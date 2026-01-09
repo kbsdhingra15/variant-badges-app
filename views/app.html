@@ -2058,17 +2058,38 @@ async function upgradeToPro() {
   }
 }
 // Cancel subscription (downgrade to Free)
-// Cancel subscription (downgrade to Free)
 async function cancelSubscription() {
   try {
-    const confirmed = await showConfirm(
-      'Cancel your Pro subscription?\n\n' +
+    // ========== FIRST: Get current product count ==========
+    const statusResponse = await authenticatedFetch('/api/billing/status');
+    const currentPlan = await statusResponse.json();
+    
+    // Count how many products currently have badges
+    const badgesResponse = await authenticatedFetch('/api/badges/all-products');
+    const badgesData = await badgesResponse.json();
+    const currentProducts = badgesData.products ? badgesData.products.length : 0;
+    
+    console.log('📊 Current products with badges:', currentProducts);
+    // ========== END COUNT ==========
+    
+    // ========== BUILD WARNING MESSAGE ==========
+    let warningMessage = 'Cancel your Pro subscription?\n\n' +
       '• You will be charged for the remainder of your current billing cycle\n' +
       '• Pro features will remain active until your next billing date\n' +
-      '• After that, you\'ll be on the Free plan (5 products limit)\n\n' +
-      'Are you sure you want to cancel?',
-      'Cancel Subscription'
-    );
+      '• After that, you\'ll be on the Free plan (5 products limit)\n';
+    
+    // Add badge warning if user has more than 5 products
+    if (currentProducts > 5) {
+      const productsToLose = currentProducts - 5;
+      warningMessage += `\n⚠️ WARNING: You currently have badges on ${currentProducts} products.\n` +
+        `When you downgrade to Free, badges will be REMOVED from ${productsToLose} products.\n` +
+        `Only your FIRST 5 products will keep their badges.\n`;
+    }
+    
+    warningMessage += '\nAre you sure you want to cancel?';
+    // ========== END WARNING ==========
+    
+    const confirmed = await showConfirm(warningMessage, 'Cancel Subscription');
 
     if (!confirmed) return;
 
@@ -2094,11 +2115,20 @@ async function cancelSubscription() {
       ? new Date(data.expiresOn).toLocaleDateString() 
       : 'the end of your billing cycle';
     
-    showAlert(
-      `Subscription cancelled successfully.\n\n` +
+    // ========== SHOW SUCCESS WITH BADGE WARNING ==========
+    let successMessage = `Subscription cancelled successfully.\n\n` +
       `You will keep Pro access until ${expiryDate}.\n` +
-      `After that, you'll be on the Free plan.`
-    );
+      `After that, you'll be on the Free plan.`;
+    
+    // Add badge cleanup warning if applicable
+    if (data.warning && data.warning.productsToLose > 0) {
+      successMessage += `\n\n⚠️ When your Pro access expires:\n` +
+        `• Badges will remain on your first 5 products\n` +
+        `• Badges will be removed from ${data.warning.productsToLose} other products`;
+    }
+    
+    showAlert(successMessage);
+    // ========== END SUCCESS MESSAGE ==========
     
   } catch (error) {
     console.error('Error cancelling subscription:', error);

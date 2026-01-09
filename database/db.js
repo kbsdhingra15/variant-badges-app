@@ -428,6 +428,67 @@ async function countBadgedProducts(shop) {
     return 0;
   }
 }
+// Clean up badges when downgrading to Free plan
+// Keeps badges on first 5 products, removes rest
+async function cleanupBadgesForFreePlan(shop) {
+  try {
+    console.log("🧹 [CLEANUP] Starting badge cleanup for:", shop);
+
+    // Get all badge assignments for this shop
+    const result = await pool.query(
+      `SELECT DISTINCT product_id FROM badge_assignments 
+       WHERE shop = $1 
+       ORDER BY product_id`,
+      [shop]
+    );
+
+    const productIds = result.rows.map((row) => row.product_id);
+    const totalProducts = productIds.length;
+
+    console.log(`📊 [CLEANUP] Found ${totalProducts} products with badges`);
+
+    if (totalProducts <= 5) {
+      console.log("✅ [CLEANUP] 5 or fewer products - no cleanup needed");
+      return {
+        cleaned: false,
+        totalProducts: totalProducts,
+        keptProducts: totalProducts,
+        removedProducts: 0,
+      };
+    }
+
+    // Keep first 5, remove rest
+    const keepProducts = productIds.slice(0, 5);
+    const removeProducts = productIds.slice(5);
+
+    console.log(`✅ [CLEANUP] Keeping badges on products:`, keepProducts);
+    console.log(`🗑️ [CLEANUP] Removing badges from products:`, removeProducts);
+
+    // Delete badges for products beyond the first 5
+    const deleteResult = await pool.query(
+      `DELETE FROM badge_assignments 
+       WHERE shop = $1 AND product_id = ANY($2::text[])
+       RETURNING product_id`,
+      [shop, removeProducts]
+    );
+
+    console.log(
+      `✅ [CLEANUP] Removed ${deleteResult.rowCount} badge assignments`
+    );
+
+    return {
+      cleaned: true,
+      totalProducts: totalProducts,
+      keptProducts: keepProducts.length,
+      removedProducts: removeProducts.length,
+      keptProductIds: keepProducts,
+      removedProductIds: removeProducts,
+    };
+  } catch (error) {
+    console.error("❌ [CLEANUP] Error cleaning badges:", error);
+    throw error;
+  }
+}
 module.exports = {
   pool,
   initDB,
@@ -443,4 +504,5 @@ module.exports = {
   saveSubscription,
   //initializeTrial,
   countBadgedProducts,
+  cleanupBadgesForFreePlan,
 };

@@ -2,7 +2,7 @@ const {
   getSubscription,
   countBadgedProducts,
   saveSubscription,
-} = require("../database/db"); // ADD saveSubscription
+} = require("../database/db");
 
 // Middleware to check plan limits
 async function checkPlanLimits(req, res, next) {
@@ -17,8 +17,25 @@ async function checkPlanLimits(req, res, next) {
       subscription?.status
     );
 
-    // Check if Pro but cancelled - still allow if before billing_on date
+    // ========== HANDLE PENDING UPGRADE ==========
+    // If user clicked "Upgrade to Pro" but hasn't approved yet
+    if (subscription && subscription.status === "pending") {
+      console.log("⏳ [PLAN LIMITS] Upgrade pending - enforcing Free limits");
+      const currentProducts = await countBadgedProducts(shop);
+      req.planLimits = {
+        canAddBadges: currentProducts < 5,
+        maxProducts: 5,
+        currentProducts: currentProducts,
+        plan: "free",
+        pendingUpgrade: true,
+      };
+      return next();
+    }
+    // ========== END PENDING HANDLING ==========
+
+    // ========== HANDLE PRO PLAN ==========
     if (subscription && subscription.plan_name === "pro") {
+      // Check if Pro is cancelled (grace period)
       if (subscription.status === "cancelled" && subscription.billing_on) {
         // Check if still in grace period
         if (new Date(subscription.billing_on) > new Date()) {
@@ -33,20 +50,35 @@ async function checkPlanLimits(req, res, next) {
           };
           return next();
         } else {
-          // Grace period expired - downgrade to free
+          // Grace period expired - downgrade to Free
           console.log(
-            "🔒 [PLAN LIMITS] Cancelled Pro - grace period expired, downgrading"
+            "🔒 [PLAN LIMITS] Cancelled Pro - grace period expired, downgrading to Free"
           );
+
+          // ========== CLEAN UP BADGES (keep first 5 products) ==========
+          const { cleanupBadgesForFreePlan } = require("../database/db");
+          const cleanupResult = await cleanupBadgesForFreePlan(shop);
+
+          if (cleanupResult.cleaned) {
+            console.log(`🧹 [PLAN LIMITS] Cleaned up badges:`);
+            console.log(`   - Kept: ${cleanupResult.keptProducts} products`);
+            console.log(
+              `   - Removed: ${cleanupResult.removedProducts} products`
+            );
+          }
+          // ========== END CLEANUP ==========
+
           await saveSubscription(shop, {
             plan_name: "free",
             status: "active",
             charge_id: null,
             billing_on: null,
+            cancelled_at: null,
           });
-          // Continue to free plan logic below
+          // Fall through to Free plan logic below
         }
       } else if (subscription.status === "active") {
-        // Active Pro
+        // Active Pro - unlimited access
         console.log("🔒 [PLAN LIMITS] Active Pro - unlimited access");
         req.planLimits = {
           canAddBadges: true,
@@ -57,10 +89,9 @@ async function checkPlanLimits(req, res, next) {
         return next();
       }
     }
+    // ========== END PRO HANDLING ==========
 
-    // REMOVE THE DUPLICATE PRO CHECK HERE (lines 47-56)
-
-    // Free plan - check limits
+    // ========== FREE PLAN - CHECK LIMITS ==========
     const currentProducts = await countBadgedProducts(shop);
     const maxProducts = 5;
 
@@ -76,6 +107,7 @@ async function checkPlanLimits(req, res, next) {
     };
 
     next();
+    // ========== END FREE PLAN ==========
   } catch (error) {
     console.error("🔒 [PLAN LIMITS] Error checking plan limits:", error);
     // On error, allow action (fail open)

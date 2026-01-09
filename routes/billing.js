@@ -63,7 +63,7 @@ router.post("/create-charge", async (req, res) => {
 
     // Save pending charge to database
     await saveSubscription(shop, {
-      plan_name: plan,
+      plan_name: "free",
       status: "pending",
       charge_id: chargeData.id.toString(),
     });
@@ -214,7 +214,45 @@ router.post("/cancel", async (req, res) => {
     const shop = req.shop;
     const { accessToken } = req.shopifySession;
     const subscription = await getSubscription(shop);
+    // ========== ADD THIS BLOCK HERE ==========
+    // Handle cancelling a pending upgrade
+    if (subscription && subscription.status === "pending") {
+      console.log("🔄 Cancelling pending upgrade for:", shop);
 
+      // Delete the pending charge from Shopify if it exists
+      if (subscription.charge_id) {
+        try {
+          await fetch(
+            `https://${shop}/admin/api/2024-10/recurring_application_charges/${subscription.charge_id}.json`,
+            {
+              method: "DELETE",
+              headers: {
+                "X-Shopify-Access-Token": accessToken,
+              },
+            }
+          );
+        } catch (err) {
+          console.log("⚠️ Could not delete pending charge (may not exist)");
+        }
+      }
+
+      // Reset to Free plan
+      await saveSubscription(shop, {
+        plan_name: "free",
+        status: "active",
+        charge_id: null,
+        billing_on: null,
+        cancelled_at: null,
+      });
+
+      return res.json({
+        success: true,
+        message: "Pending upgrade cancelled - returned to Free plan",
+        plan: "free",
+        status: "active",
+      });
+    }
+    // ========== END NEW CODE ==========
     let expiresOn = null;
 
     if (
@@ -261,11 +299,27 @@ router.post("/cancel", async (req, res) => {
       cancelled_at: new Date(),
     });
 
+    // ========== CHECK HOW MANY PRODUCTS WILL BE AFFECTED ==========
+    const { countBadgedProducts } = require("../database/db");
+    const currentProducts = await countBadgedProducts(shop);
+    const willLoseAccess = currentProducts > 5 ? currentProducts - 5 : 0;
+
+    console.log(`📊 User has ${currentProducts} products with badges`);
+    console.log(
+      `⚠️ Will lose access to ${willLoseAccess} products after grace period`
+    );
+    // ========== END CHECK ==========
+
     res.json({
       success: true,
       plan: "pro", // Still Pro until expiry
       status: "cancelled",
       expiresOn: expiresOn,
+      warning: {
+        currentProducts: currentProducts,
+        freeLimit: 5,
+        productsToLose: willLoseAccess,
+      },
     });
   } catch (error) {
     console.error("Error cancelling subscription:", error);
