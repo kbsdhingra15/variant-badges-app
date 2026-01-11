@@ -324,34 +324,6 @@ async function getBadgesForPublicAPI(shop) {
   }
 }
 
-// Badge Assignment Functions
-// ===========================
-
-async function getBadgeAssignments(shop) {
-  const query = `
-    SELECT * FROM badge_assignments 
-    WHERE shop = $1
-    ORDER BY created_at DESC
-  `;
-  const result = await pool.query(query, [shop]);
-  return result.rows;
-}
-
-async function deleteBadgeAssignment(shop, variantId) {
-  const query = `DELETE FROM badge_assignments WHERE shop = $1 AND variant_id = $2`;
-  await pool.query(query, [shop, variantId]);
-}
-
-async function getBadgesForPublicAPI(shop) {
-  const query = `
-    SELECT variant_id, badge_type, option_value 
-    FROM badge_assignments 
-    WHERE shop = $1 AND badge_type IS NOT NULL
-  `;
-  const result = await pool.query(query, [shop]);
-  return result.rows;
-}
-
 // Get subscription for shop
 async function getSubscription(shop) {
   try {
