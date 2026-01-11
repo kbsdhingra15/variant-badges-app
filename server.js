@@ -22,20 +22,44 @@ const app = express();
 // Body parser
 app.use(express.json());
 // Serve static files from public directory
+app.use(cookieParser());
 app.use(express.static("public"));
-// ← ADD CORS MIDDLEWARE HERE (before routes)
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+// ========== CORS CONFIGURATION (embedded app) ==========
+const allowedOrigins = [
+  "https://admin.shopify.com",
+  "https://quickstart-c559582d.myshopify.com", // Your store
+  "https://variant-badges-app-production.up.railway.app",
+];
 
-  // Handle preflight
-  if (req.method === "OPTIONS") {
-    return res.status(200).end();
-  }
+// Add dynamic origins from env if present
+if (process.env.SHOP_URL) allowedOrigins.push(process.env.SHOP_URL);
 
-  next();
-});
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+
+      // Allow all *.myshopify.com domains (merchant stores)
+      if (origin.endsWith(".myshopify.com")) {
+        return callback(null, true);
+      }
+
+      // Allow specific origins
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      // Block everything else
+      callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
+);
+
+// ========== END CORS ==========
 const PORT = process.env.PORT || 3000;
 
 initDB().catch((error) => {
@@ -52,40 +76,6 @@ const shopify = shopifyApi({
   isEmbeddedApp: true,
   isCustomStoreApp: false,
 });
-
-app.use(
-  cors({
-    origin: [
-      "https://admin.shopify.com",
-      "https://quickstart-c559582d.myshopify.com",
-      "https://variant-badges-app-production.up.railway.app",
-      process.env.SHOP_URL,
-      process.env.HOST,
-    ].filter(Boolean),
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-app.use(express.json());
-
-// CORS headers for embedded app
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin) {
-    res.header("Access-Control-Allow-Origin", origin);
-    res.header("Access-Control-Allow-Credentials", "true");
-  }
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-  next();
-});
-
-app.use(cookieParser());
 
 app.get("/health", (req, res) => {
   res.json({
