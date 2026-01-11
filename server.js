@@ -58,8 +58,30 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   })
 );
-
 // ========== END CORS ==========
+// ========== SECURITY HEADERS ==========
+app.use((req, res, next) => {
+  // Prevent clickjacking - only allow embedding in Shopify Admin
+  res.setHeader("X-Frame-Options", "ALLOW-FROM https://admin.shopify.com");
+
+  // Content Security Policy - allow embedding only from Shopify
+  res.setHeader(
+    "Content-Security-Policy",
+    "frame-ancestors https://admin.shopify.com https://*.myshopify.com"
+  );
+
+  // Prevent MIME type sniffing
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  // Enable XSS protection
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+
+  // Prevent browsers from sending referrer info to other sites
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+
+  next();
+});
+// ========== END SECURITY HEADERS ==========
 const PORT = process.env.PORT || 3000;
 
 initDB().catch((error) => {
