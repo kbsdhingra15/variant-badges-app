@@ -1263,6 +1263,11 @@ function closeModal(result) {
         } else if (tabName === "settings" && !window.settingsLoaded) {
           loadSettings();
         }
+          // ========== REFRESH PLAN STATUS (updates header badge) ==========
+  loadBillingStatus().catch(err => {
+    console.error('Error refreshing billing status:', err);
+  });
+  // ========== END REFRESH ==========
       }
 
       // ============================================
