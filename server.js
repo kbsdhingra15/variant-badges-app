@@ -1066,6 +1066,30 @@ app.get("/privacy-policy", (req, res) => {
   const html = fs.readFileSync(htmlPath, "utf8");
   res.type("html").send(html);
 });
+// TEMP DELETE: Check actual badges in database
+app.get("/api/admin/check-badges", async (req, res) => {
+  try {
+    const shop = "quickstart-c559582d.myshopify.com";
+
+    const result = await pool.query(
+      `
+      SELECT product_id, COUNT(*) as badge_count
+      FROM badge_assignments
+      WHERE shop = $1
+      GROUP BY product_id
+      ORDER BY product_id;
+    `,
+      [shop]
+    );
+
+    res.json({
+      total_products: result.rows.length,
+      products: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 app.listen(PORT, () => {
   console.log("");
   console.log("🚀 Variant Badges App Server Started");
