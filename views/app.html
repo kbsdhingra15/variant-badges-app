@@ -952,25 +952,29 @@
       </p>
     </div>
   </div>
-
-  <div class="card">
-    <h3>Need Assistance?</h3>
-    <div class="contact-grid">
-      <!-- Email Support -->
-      <div class="contact-card">
-        <div class="contact-icon">📧</div>
-        <h4>Email Support</h4>
-        <p>Send us a detailed message</p>
-        <a 
-  href="mailto:shopifyapps15@gmail.com?subject=Variant%20Badges%20Support" 
-  class="btn btn-primary" 
-  style="display: inline-block; text-decoration: none; padding: 12px 24px; cursor: pointer;"
->
-  Email Us
-</a>
-        <p style="margin-top: 8px; font-size: 13px; color: #6d7175;">shopifyapps15@gmail.com</p>
+<div class="card">
+  <h3>Need Assistance?</h3>
+  <div class="contact-grid">
+    <!-- Email Support -->
+    <div class="contact-card">
+      <div class="contact-icon">📧</div>
+      <h4>Email Support</h4>
+      <p>Send us a detailed message</p>
+      <div style="background: #f6f6f7; padding: 12px; border-radius: 4px; margin: 12px 0;">
+        <code style="font-size: 14px; color: #008060; font-weight: 600;">
+          shopifyapps15@gmail.com
+        </code>
       </div>
-
+      <button
+        class="btn btn-primary"
+        onclick="copyEmailToClipboard()"
+      >
+        📋 Copy Email Address
+      </button>
+      <p style="margin-top: 8px; font-size: 13px; color: #6d7175;">
+        Click to copy email to clipboard
+      </p>
+    </div>
       <!-- Documentation -->
       <div class="contact-card">
         <div class="contact-icon">📚</div>
@@ -1121,6 +1125,17 @@
 </div>
 
     <script>
+      // Copy email to clipboard
+function copyEmailToClipboard() {
+  const email = 'shopifyapps15@gmail.com';
+  
+  navigator.clipboard.writeText(email).then(() => {
+    showAlert('✅ Email copied! Paste it into your email client.', 'success');
+  }).catch(() => {
+    // Fallback if clipboard API fails
+    showAlert('📧 Email: shopifyapps15@gmail.com (please copy manually)', 'info');
+  });
+}
       // Custom modal functions
 function showAlert(message, title = "Notice") {
   const modal = document.getElementById('custom-modal');
