@@ -24,7 +24,7 @@ router.get("/badges", async (req, res) => {
 
     res.header("Access-Control-Allow-Origin", "*");
     res.header("Access-Control-Allow-Methods", "GET");
-    res.header("Cache-Control", "public, max-age=10");
+    res.header("Cache-Control", "public, max-age=300");
 
     console.log(
       `📦 Public badges served for ${shop}: ${
@@ -56,7 +56,7 @@ router.get("/badges/product/:productId", async (req, res) => {
 
     if (!selectedOption) {
       res.header("Access-Control-Allow-Origin", "*");
-      res.header("Cache-Control", "public, max-age=10");
+      res.header("Cache-Control", "public, max-age=300");
       return res.json({ badges: {}, selectedOption: null });
     }
 
@@ -78,7 +78,7 @@ router.get("/badges/product/:productId", async (req, res) => {
       });
 
     res.header("Access-Control-Allow-Origin", "*");
-    res.header("Cache-Control", "public, max-age=10");
+    res.header("Cache-Control", "public, max-age=300");
 
     console.log(
       `📦 Badges for product ${productId}, option "${selectedOption}": ${
