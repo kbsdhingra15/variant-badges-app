@@ -29,6 +29,27 @@ router.post("/create-charge", async (req, res) => {
 
     const planConfig = PLANS[plan];
 
+    // ========== AUTO-DETECT TEST MODE ==========
+    // Check if this is a development/partner store
+    const shopInfoResponse = await fetch(
+      `https://${shop}/admin/api/2024-10/shop.json`,
+      {
+        headers: {
+          "X-Shopify-Access-Token": accessToken,
+        },
+      }
+    );
+    const shopInfo = await shopInfoResponse.json();
+    const isDevelopmentStore =
+      shopInfo.shop.plan_name === "partner_test" ||
+      shopInfo.shop.plan_name === "affiliate" ||
+      shopInfo.shop.plan_name === "staff_business";
+
+    console.log(`💳 Creating charge for ${shop}`);
+    console.log(`   Plan: ${shopInfo.shop.plan_name}`);
+    console.log(`   Test mode: ${isDevelopmentStore}`);
+    // ========== END AUTO-DETECT ==========
+
     // Create recurring application charge
     const charge = {
       recurring_application_charge: {
@@ -36,16 +57,9 @@ router.post("/create-charge", async (req, res) => {
         price: planConfig.price,
         return_url: `https://${process.env.HOST}/api/billing/activate?shop=${shop}&charge_id={charge_id}`,
         trial_days: planConfig.trialDays,
-        test: true, // process.env.NODE_ENV !== "production", // Test mode in development
+        test: isDevelopmentStore, // ✅ Auto-detect based on store type!
       },
     };
-    // ========== ADD THIS DEBUG LOG ==========
-    console.log("🔗 HOST:", process.env.HOST);
-    console.log(
-      "🔗 Full return URL:",
-      charge.recurring_application_charge.return_url
-    );
-    // ========== END DEBUG ==========
     const response = await fetch(
       `https://${shop}/admin/api/2024-10/recurring_application_charges.json`,
       {
