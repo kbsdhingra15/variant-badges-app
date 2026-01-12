@@ -648,14 +648,13 @@
   <span id="plan-badge" style="display: none; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-weight: 600; color: white;"></span>
 </div>
 
-    <!-- Tab Navigation -->
-    <div class="tabs">
-      <div class="tab active" onclick="switchTab('manage')">Manage Badges</div>
-      <div class="tab" onclick="switchTab('settings')">Settings</div>
-      <div class="tab" onclick="switchTab('plans')">Plans</div>
-      <div class="tab" onclick="switchTab('help')">Help</div>
-    </div>
-
+<!-- Tab Navigation -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('manage'); loadBillingStatus();">Manage Badges</div>
+  <div class="tab" onclick="switchTab('settings'); loadBillingStatus();">Settings</div>
+  <div class="tab" onclick="switchTab('plans'); loadBillingStatus();">Plans</div>
+  <div class="tab" onclick="switchTab('help'); loadBillingStatus();">Help</div>
+</div>
     <div class="app-container">
   <!-- Onboarding Banner -->
   <div id="setup-banner" style="display: none">
