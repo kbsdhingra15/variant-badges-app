@@ -1125,6 +1125,21 @@
 </div>
 
     <script>
+      // Add at the TOP of your <script> section
+console.log('🟢 PAGE LOAD - Timestamp:', new Date().toISOString());
+
+// Track what causes refreshes
+window.addEventListener('beforeunload', function(e) {
+  console.log('🔴 PAGE ABOUT TO REFRESH/RELOAD');
+  console.trace('Stack trace of what triggered refresh:');
+});
+
+// Track navigation
+let navigationCount = 0;
+window.addEventListener('popstate', function(e) {
+  navigationCount++;
+  console.log('🔵 NAVIGATION EVENT #' + navigationCount, e);
+}); // TEMP CODE
       // Copy email to clipboard
 function copyEmailToClipboard() {
   const email = 'shopifyapps15@gmail.com';
