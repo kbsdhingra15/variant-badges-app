@@ -486,7 +486,7 @@ app.get("/auth/callback", async (req, res) => {
     }
     // ========== END INITIALIZATION ==========
 
-    // Show success page
+    /* OLD CODE TO SHOW SUCCESS PAGE REDIRECT ON INSTALL TEMP // Show success page
     const shopSlug = shop.replace(".myshopify.com", "");
     res.send(`
   <!DOCTYPE html>
@@ -533,7 +533,12 @@ app.get("/auth/callback", async (req, res) => {
       </div>
     </body>
   </html>
-`);
+`); OLD CODE TO RESTORE FOR SUCCES PAGE */
+
+    // ✅ Redirect to embedded app (not separate page) NEW CODE TEST
+    console.log("🔄 Redirecting to embedded app...");
+    const appUrl = `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`;
+    res.redirect(appUrl); // NEW CODE ENDS HERE
   } catch (error) {
     console.error("❌ OAuth callback error:", error);
     res.status(500).send("OAuth failed: " + error.message);
