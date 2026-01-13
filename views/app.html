@@ -1170,7 +1170,7 @@ function showWelcomeModal() {
   if (modal) {
     modal.classList.add('active');
     // Mark as seen
-    localStorage.setItem('vb_welcome_shown_' + SHOP, 'true');
+    //localStorage.setItem('vb_welcome_shown_' + SHOP, 'true');
   }
 }
 
@@ -1178,6 +1178,7 @@ function closeWelcomeModal() {
   const modal = document.getElementById('welcome-modal');
   if (modal) {
     modal.classList.remove('active');
+        localStorage.setItem('vb_welcome_shown_' + SHOP, 'true'); // ✅ ADD THIS LINE
   }
 }
 
