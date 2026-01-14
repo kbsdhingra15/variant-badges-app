@@ -44,7 +44,10 @@ app.use(
       if (origin.endsWith(".myshopify.com")) {
         return callback(null, true);
       }
-
+      // Allow all *.shopifypreview.com domains (preview mode)
+      if (origin.endsWith(".shopifypreview.com")) {
+        return callback(null, true);
+      }
       // Allow specific origins
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
