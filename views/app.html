@@ -2205,9 +2205,9 @@ async function cancelSubscription() {
 </div>
 <!-- Welcome Modal (First-time Setup Guide) -->
 <div id="welcome-modal" class="modal-overlay">
-  <div class="modal-content" style="max-width: 700px; position: relative;">
+  <div class="modal-content" style="max-width: 700px; position: relative; padding: 20px;">
     
-    <!-- Close Button - Fixed Position -->
+    <!-- Close Button -->
     <button 
       onclick="closeWelcomeModal()" 
       style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 24px; cursor: pointer; color: #999; line-height: 1; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; z-index: 10;"
@@ -2217,104 +2217,121 @@ async function cancelSubscription() {
       ✕
     </button>
     
-    <div class="modal-header" style="text-align: center; padding-bottom: 12px;">
-      👋 Welcome to Variant Badges!
+    <!-- Header - Reduced padding -->
+    <div style="text-align: center; margin-bottom: 12px;">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 600; color: #202223;">👋 Welcome to Variant Badges!</h2>
     </div>
     
-    <div class="modal-body" style="text-align: left;">
-      
-      <!-- QUICK SUMMARY - Reduced spacing -->
-      <div style="margin: 0 0 12px 0; padding: 12px 16px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid #4caf50;">
-        <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600; color: #1b5e20;">Get your badges live in 3 easy steps:</p>
-        <ol style="margin: 0; padding-left: 20px; color: #2e7d32; font-size: 14px; line-height: 1.6;">
-          <li><strong>Add app block</strong> to your theme (Theme Editor)</li>
-          <li><strong>Choose option type</strong> for badges (Settings tab)</li>
-          <li><strong>Assign badges</strong> to products (Manage Badges tab)</li>
-        </ol>
-      </div>
-      
-      <!-- DETAILED STEPS - Reduced spacing -->
-      <p style="margin: 0 0 12px 0; font-size: 14px; color: #6d7175;">Here are the details:</p>
-      
-      <!-- Step 1: Theme Editor - Fixed spacing -->
-      <div style="margin-bottom: 12px; padding: 12px 16px; background: #f9fafb; border-radius: 8px;">
-        <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
-          🎨 Step 1: Add App Block to Your Theme
-        </h4>
-        <ol style="color: #6d7175; margin: 0 0 10px 0; padding-left: 20px; font-size: 13px; line-height: 1.5;">
-          <li>Click "Open Theme Editor" below</li>
-          <li>Click "Add section" under Template in the left sidebar</li>
-          <li>Find and click "Variant Badges" under Apps</li>
-          <li>This will create a new section as "Apps" and add "Variant Badges" block under it</li>
-          <li>Click "Save" - Done! ✅</li>
-        </ol>
-        <!-- Fixed button alignment -->
-        <button class="btn btn-primary" onclick="openThemeEditorFromModal()" style="margin: 0 0 10px 0; padding: 10px 20px; display: inline-flex; align-items: center; justify-content: center; line-height: 1; font-size: 14px;">
-          📝 Open Theme Editor
-        </button>
-        <img 
-          src="/images/help/help-02-add-section.png" 
-          alt="Theme Editor Screenshot" 
-          onclick="expandImage(this.src, 'Theme Editor - Add App Block')"
-          style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block; margin: 0; cursor: pointer; transition: transform 0.2s;"
-          onmouseover="this.style.transform='scale(1.02)'"
-          onmouseout="this.style.transform='scale(1)'"
-        >
-        <p style="margin: 6px 0 0 0; font-size: 12px; color: #999; text-align: center;">Click image to enlarge</p>
-      </div>
-      
-      <!-- Step 2: Settings - Fixed spacing -->
-      <div style="margin-bottom: 12px; padding: 12px 16px; background: #f9fafb; border-radius: 8px;">
-        <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
-          📋 Step 2: Choose Your Option Type
-        </h4>
-        <p style="color: #6d7175; margin: 0 0 10px 0; font-size: 13px; line-height: 1.5;">
-          Go to <strong>Settings</strong> tab and select which product option (Color, Size, etc.) should display badges.
-        </p>
-        <img 
-          src="/images/appstore/02-settings.png" 
-          alt="Settings Screenshot" 
-          onclick="expandImage(this.src, 'Settings - Choose Option Type')"
-          style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block; margin: 0; cursor: pointer; transition: transform 0.2s;"
-          onmouseover="this.style.transform='scale(1.02)'"
-          onmouseout="this.style.transform='scale(1)'"
-        >
-        <p style="margin: 6px 0 0 0; font-size: 12px; color: #999; text-align: center;">Click image to enlarge</p>
-      </div>
-      
-      <!-- Step 3: Manage Badges - Fixed spacing -->
-      <div style="margin-bottom: 12px; padding: 12px 16px; background: #f9fafb; border-radius: 8px;">
-        <h4 style="margin: 0 0 8px 0; color: #202223; font-size: 14px; font-weight: 600;">
-          🏷️ Step 3: Assign Badges to Products
-        </h4>
-        <p style="color: #6d7175; margin: 0 0 10px 0; font-size: 13px; line-height: 1.5;">
-          Go to <strong>Manage Badges</strong> tab and assign HOT or NEW badges to specific product variants.
-        </p>
-        <img 
-          src="/images/appstore/01-manage-badges.png" 
-          alt="Manage Badges Screenshot" 
-          onclick="expandImage(this.src, 'Manage Badges - Assign Badges')"
-          style="width: 100%; border-radius: 6px; border: 1px solid #e1e3e5; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: block; margin: 0; cursor: pointer; transition: transform 0.2s;"
-          onmouseover="this.style.transform='scale(1.02)'"
-          onmouseout="this.style.transform='scale(1)'"
-        >
-        <p style="margin: 6px 0 0 0; font-size: 12px; color: #999; text-align: center;">Click image to enlarge</p>
-      </div>
-      
-      <!-- Help section - Fixed vertical centering -->
-      <div style="background: #fff4e5; padding: 10px 12px; border-radius: 6px; border-left: 4px solid #ff9800; margin: 0; display: flex; align-items: center;">
-        <p style="margin: 0; font-size: 13px; line-height: 1.4;">
-          💡 <strong>Need help?</strong> Check the <a href="#" onclick="switchTab('help'); closeWelcomeModal(); return false;" style="color: #008060; text-decoration: underline;">Help tab</a> for detailed guides and support.
-        </p>
-      </div>
-      
+    <!-- QUICK SUMMARY - Super compact -->
+    <div style="margin: 0 0 10px 0; padding: 10px 14px; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #4caf50;">
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600; color: #1b5e20;">Get your badges live in 3 easy steps:</p>
+      <ol style="margin: 0; padding-left: 18px; color: #2e7d32; font-size: 13px; line-height: 1.4;">
+        <li><strong>Add app block</strong> to your theme (Theme Editor)</li>
+        <li><strong>Choose option type</strong> for badges (Settings tab)</li>
+        <li><strong>Assign badges</strong> to products (Manage Badges tab)</li>
+      </ol>
     </div>
     
-    <div class="modal-actions" style="margin-top: 16px;">
-      <button class="modal-btn modal-btn-primary" onclick="closeWelcomeModal()">
-        ✅ Get Started
+    <!-- Divider text -->
+    <p style="margin: 0 0 10px 0; font-size: 13px; color: #6d7175; font-weight: 500;">Here are the details:</p>
+    
+    <!-- Step 1 - Super compact -->
+    <div style="margin-bottom: 10px; padding: 10px 14px; background: #f9fafb; border-radius: 6px;">
+      <h4 style="margin: 0 0 6px 0; color: #202223; font-size: 13px; font-weight: 600;">
+        🎨 Step 1: Add App Block to Your Theme
+      </h4>
+      <ol style="color: #6d7175; margin: 0 0 8px 0; padding-left: 18px; font-size: 12px; line-height: 1.4;">
+        <li>Click "Open Theme Editor" below</li>
+        <li>Click "Add section" under Template in the left sidebar</li>
+        <li>Find and click "Variant Badges" under Apps</li>
+        <li>This will create a new section as "Apps" and add "Variant Badges" block under it</li>
+        <li>Click "Save" - Done! ✅</li>
+      </ol>
+      <!-- Fixed button - centered text -->
+      <button 
+        class="btn btn-primary" 
+        onclick="openThemeEditorFromModal()" 
+        style="margin: 0 0 8px 0; padding: 8px 16px; background: #008060; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 6px; height: 36px;"
+      >
+        <span>📝</span>
+        <span style="line-height: 1;">Open Theme Editor</span>
+      </button>
+      <img 
+        src="/images/help/help-02-add-section.png" 
+        alt="Theme Editor Screenshot" 
+        onclick="expandImage(this.src, 'Theme Editor - Add App Block')"
+        style="width: 100%; border-radius: 4px; border: 1px solid #e1e3e5; display: block; margin: 0; cursor: pointer; transition: transform 0.2s;"
+        onmouseover="this.style.transform='scale(1.02)'"
+        onmouseout="this.style.transform='scale(1)'"
+      >
+      <p style="margin: 4px 0 0 0; font-size: 11px; color: #999; text-align: center;">Click to enlarge</p>
+    </div>
+    
+    <!-- Step 2 - Super compact -->
+    <div style="margin-bottom: 10px; padding: 10px 14px; background: #f9fafb; border-radius: 6px;">
+      <h4 style="margin: 0 0 6px 0; color: #202223; font-size: 13px; font-weight: 600;">
+        📋 Step 2: Choose Your Option Type
+      </h4>
+      <p style="color: #6d7175; margin: 0 0 8px 0; font-size: 12px; line-height: 1.4;">
+        Go to <strong>Settings</strong> tab and select which product option (Color, Size, etc.) should display badges.
+      </p>
+      <img 
+        src="/images/appstore/02-settings.png" 
+        alt="Settings Screenshot" 
+        onclick="expandImage(this.src, 'Settings - Choose Option Type')"
+        style="width: 100%; border-radius: 4px; border: 1px solid #e1e3e5; display: block; margin: 0; cursor: pointer; transition: transform 0.2s;"
+        onmouseover="this.style.transform='scale(1.02)'"
+        onmouseout="this.style.transform='scale(1)'"
+      >
+      <p style="margin: 4px 0 0 0; font-size: 11px; color: #999; text-align: center;">Click to enlarge</p>
+    </div>
+    
+    <!-- Step 3 - Super compact -->
+    <div style="margin-bottom: 10px; padding: 10px 14px; background: #f9fafb; border-radius: 6px;">
+      <h4 style="margin: 0 0 6px 0; color: #202223; font-size: 13px; font-weight: 600;">
+        🏷️ Step 3: Assign Badges to Products
+      </h4>
+      <p style="color: #6d7175; margin: 0 0 8px 0; font-size: 12px; line-height: 1.4;">
+        Go to <strong>Manage Badges</strong> tab and assign HOT or NEW badges to specific product variants.
+      </p>
+      <img 
+        src="/images/appstore/01-manage-badges.png" 
+        alt="Manage Badges Screenshot" 
+        onclick="expandImage(this.src, 'Manage Badges - Assign Badges')"
+        style="width: 100%; border-radius: 4px; border: 1px solid #e1e3e5; display: block; margin: 0; cursor: pointer; transition: transform 0.2s;"
+        onmouseover="this.style.transform='scale(1.02)'"
+        onmouseout="this.style.transform='scale(1)'"
+      >
+      <p style="margin: 4px 0 0 0; font-size: 11px; color: #999; text-align: center;">Click to enlarge</p>
+    </div>
+    
+    <!-- Help - Perfectly centered -->
+    <div style="background: #fff4e5; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #ff9800; margin: 0; display: flex; align-items: center; min-height: 36px;">
+      <p style="margin: 0; font-size: 12px; line-height: 1.4;">
+        💡 <strong>Need help?</strong> Check the <a href="#" onclick="switchTab('help'); closeWelcomeModal(); return false;" style="color: #008060; text-decoration: underline;">Help tab</a> for detailed guides.
+      </p>
+    </div>
+    
+    <!-- Get Started button -->
+    <div style="margin-top: 14px; text-align: center;">
+      <button 
+        onclick="closeWelcomeModal()"
+        style="padding: 10px 24px; background: #008060; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px;"
+      >
+        <span>✅</span>
+        <span style="line-height: 1;">Get Started</span>
       </button>
     </div>
+    
+  </div>
+</div>
+
+<!-- Image Expansion Overlay (keep same) -->
+<div id="image-overlay" onclick="closeExpandedImage()" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center; cursor: pointer;">
+  <div style="position: relative; max-width: 90%; max-height: 90%; display: flex; flex-direction: column; align-items: center;">
+    <button onclick="closeExpandedImage(); event.stopPropagation();" style="position: absolute; top: -40px; right: 0; background: white; border: none; font-size: 30px; cursor: pointer; color: #333; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">✕</button>
+    <p id="image-caption" style="color: white; margin: 0 0 12px 0; font-size: 16px; font-weight: 500;"></p>
+    <img id="expanded-image" src="" alt="" style="max-width: 100%; max-height: 80vh; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" onclick="event.stopPropagation()">
   </div>
 </div>
 
