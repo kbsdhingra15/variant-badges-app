@@ -5,6 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Variant Badges</title>
     <style>
+      /* Loading Spinner */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.8);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.loading-overlay.active {
+  display: flex;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e1e3e5;
+  border-top-color: #008060;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  margin-left: 12px;
+  font-size: 14px;
+  color: #202223;
+  font-weight: 500;
+}
       /* Custom Modal Styles */
 .modal-overlay {
   position: fixed;
@@ -639,6 +676,13 @@
     </style>
   </head>
   <body>
+    <!-- Loading Spinner -->
+<div id="loading-overlay" class="loading-overlay">
+  <div style="display: flex; align-items: center;">
+    <div class="spinner"></div>
+    <div class="loading-text">Loading...</div>
+  </div>
+</div>
 <!-- App Header -->
 <div class="app-header" style="display: flex; align-items: center; justify-content: space-between;">
   <div style="display: flex; align-items: center; gap: 12px;">
@@ -1129,6 +1173,18 @@
 </div>
 
     <script>
+      // Loading spinner functions
+function showLoading(message = 'Loading...') {
+  const overlay = document.getElementById('loading-overlay');
+  const text = overlay.querySelector('.loading-text');
+  if (text) text.textContent = message;
+  overlay.classList.add('active');
+}
+
+function hideLoading() {
+  const overlay = document.getElementById('loading-overlay');
+  overlay.classList.remove('active');
+}
       // Expand image on click
 function expandImage(src, caption) {
   const overlay = document.getElementById('image-overlay');
@@ -1459,6 +1515,7 @@ async function loadProducts(page = 1, search = '') {
 
   try {
     isLoadingProducts = true;
+    showLoading('Loading products...'); // ← ADD SPINNER
     console.log(`📦 Loading products - Page ${page}, Search: "${search}"`);
 
     // First, check if option type is selected
@@ -1474,8 +1531,7 @@ async function loadProducts(page = 1, search = '') {
       document.getElementById("no-option-warning").style.display = "block";
       document.getElementById("products-list-container").style.display = "none";
       window.productsLoaded = true;
-      isLoadingProducts = false;
-      return;
+      return; // Exit early, hideLoading() in finally block
     }
 
     // Hide warning, show products list
@@ -1484,7 +1540,7 @@ async function loadProducts(page = 1, search = '') {
     document.getElementById("option-type-label").textContent = 
       `Assigning badges to: ${selectedOption} variants`;
 
-    // Show loading state
+    // Show loading state (keep this for inline feedback)
     document.getElementById("products-list").innerHTML =
       '<div class="loading">Loading products...</div>';
 
@@ -1521,9 +1577,9 @@ async function loadProducts(page = 1, search = '') {
       '<div class="error">Failed to load products. Please try again.</div>';
   } finally {
     isLoadingProducts = false;
+    hideLoading(); // ← HIDE SPINNER
   }
 }
-
 // Transform pagination data to match existing renderAllProducts() format
 function transformProductsData(rawData) {
   const { products, badges, selectedOption } = rawData;
@@ -1758,6 +1814,7 @@ function clearSearch() {
       }
 async function saveBadge(productId, optionValue, badgeType) {
   try {
+    showLoading('Saving badge...'); // ← ADD SPINNER
     console.log('💾 Saving badge:', productId, optionValue, badgeType);
 
     const response = await authenticatedFetch('/api/badges', {
@@ -1770,6 +1827,8 @@ async function saveBadge(productId, optionValue, badgeType) {
 
     // Handle plan limit reached
     if (response.status === 403 && data.needsUpgrade) {
+      hideLoading(); // ← HIDE SPINNER BEFORE SHOWING DIALOG
+      
       const upgrade = await showConfirm(
         `${data.message}\n\nWould you like to upgrade now?`,
         'Upgrade Required'
@@ -1794,14 +1853,14 @@ async function saveBadge(productId, optionValue, badgeType) {
     }
 
     console.log('✅ Badge saved:', data);
-        // ⭐ NEW: Refresh billing status after successful save
-    // This ensures plan badge updates if auto-downgrade happened
+    
+    // ⭐ Refresh billing status after successful save
     try {
       await loadBillingStatus();
     } catch (billingError) {
       console.log('⚠️ Could not refresh billing status:', billingError);
-      // Non-critical error, don't block the flow
     }
+    
     // Reload products to reflect changes
     try {
       await loadProducts(currentPage, currentSearch);
@@ -1814,6 +1873,8 @@ async function saveBadge(productId, optionValue, badgeType) {
     if (error.message && !error.message.includes('load')) {
       showAlert('Network error. Please check your connection and try again.');
     }
+  } finally {
+    hideLoading(); // ← HIDE SPINNER (always runs)
   }
 }
       // Load products on start
@@ -1986,13 +2047,9 @@ let currentPlan = null;
 // Load billing status
 async function loadBillingStatus() {
   try {
+    // Don't show spinner for billing - it's fast and happens in background
     const response = await authenticatedFetch('/api/billing/status');
-    if (response.ok) {
-      currentPlan = await response.json();
-      console.log('💳 Current plan:', currentPlan);
-      updatePlanUI();
-      renderPlansPage();
-    }
+    // ... rest
   } catch (error) {
     console.error('Error loading billing status:', error);
   }
