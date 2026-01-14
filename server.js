@@ -786,31 +786,59 @@ app.get("/install", (req, res) => {
 });
 
 // Webhook handler for app uninstall
+const crypto = require("crypto");
+
 app.post(
   "/webhooks/app/uninstalled",
   express.raw({ type: "application/json" }),
   async (req, res) => {
     try {
+      // --- HMAC validation ---
+      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+      const body = req.body; // Buffer (express.raw)
+      const secret = process.env.SHOPIFY_API_SECRET;
+
+      // Compute HMAC
+      const hash = crypto
+        .createHmac("sha256", secret)
+        .update(body, "utf8")
+        .digest("base64");
+
+      if (hash !== hmacHeader) {
+        console.warn(
+          "❌ Uninstall webhook failed HMAC for shop:",
+          req.get("X-Shopify-Shop-Domain")
+        );
+        return res.status(401).send("Invalid HMAC");
+      }
+
+      // Parse JSON body (since using express.raw, need to parse here)
+      const payload = JSON.parse(body.toString("utf8"));
       const shop = req.get("X-Shopify-Shop-Domain");
+      if (!shop) {
+        return res.status(400).send("Missing shop domain header");
+      }
+
       console.log("🗑️ App uninstalled webhook received for:", shop);
 
       // Delete session from database
       await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
       console.log("✅ Session deleted for:", shop);
 
-      // DELETE SETTINGS TOO
+      // Delete settings
       await pool.query("DELETE FROM app_settings WHERE shop = $1", [shop]);
       console.log("✅ Settings deleted for:", shop);
 
-      // DELETE BADGE ASSIGNMENTS TOO
+      // Delete badge assignments
       await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
       console.log("✅ Badge assignments deleted for:", shop);
-      // ========== MARK SUBSCRIPTION AS UNINSTALLED ==========
+
+      // Update subscription status
       const subResult = await pool.query(
         `UPDATE subscriptions 
-   SET status = $1, updated_at = NOW() 
-   WHERE shop = $2
-   RETURNING plan_name, status`,
+           SET status = $1, updated_at = NOW() 
+           WHERE shop = $2
+           RETURNING plan_name, status`,
         ["uninstalled", shop]
       );
 
@@ -822,7 +850,7 @@ app.post(
       } else {
         console.log("ℹ️  No subscription to update");
       }
-      // ========== END ==========
+
       res.status(200).send("OK");
     } catch (error) {
       console.error("❌ Uninstall webhook error:", error);
