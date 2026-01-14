@@ -8,10 +8,10 @@
       /* Loading Spinner */
 .loading-overlay {
   position: fixed;
-  top: 0;
+  top: 64px;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 64px);
   background: rgba(255, 255, 255, 0.8);
   display: none;
   justify-content: center;
@@ -693,7 +693,7 @@
     >
     <h1>Variant Badges</h1>
   </div>
-  <span id="plan-badge" style="display: none; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-weight: 600; color: white;"></span>
+<span id="plan-badge" style="display: none; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-weight: 600; color: white; position: relative; z-index: 10000;"></span>
 </div>
 
 <!-- Tab Navigation -->
@@ -2047,9 +2047,13 @@ let currentPlan = null;
 // Load billing status
 async function loadBillingStatus() {
   try {
-    // Don't show spinner for billing - it's fast and happens in background
     const response = await authenticatedFetch('/api/billing/status');
-    // ... rest
+    if (response.ok) {
+      currentPlan = await response.json();
+      console.log('💳 Current plan:', currentPlan);
+      updatePlanUI(); // ← THIS WAS MISSING!
+      renderPlansPage();
+    }
   } catch (error) {
     console.error('Error loading billing status:', error);
   }
