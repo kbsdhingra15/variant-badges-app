@@ -1,3 +1,4 @@
+const compression = require("compression");
 const { pool } = require("./database/db");
 require("dotenv").config();
 const express = require("express");
@@ -62,6 +63,7 @@ app.use(
   })
 );
 // ========== END CORS ==========
+app.use(compression());
 // ========== SECURITY HEADERS ==========
 app.use((req, res, next) => {
   // Prevent clickjacking - only allow embedding in Shopify Admin
