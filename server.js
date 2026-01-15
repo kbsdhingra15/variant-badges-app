@@ -305,43 +305,6 @@ const shopify = shopifyApi({
   isEmbeddedApp: true,
   isCustomStoreApp: false,
 });
-
-// TEMPORARY: Force grace period expiry
-app.get("/admin/expire-grace-period", async (req, res) => {
-  const password = req.query.password;
-  const shop = req.query.shop;
-
-  if (password !== "testexpire123") {
-    return res.status(401).send("Unauthorized");
-  }
-
-  if (!shop) {
-    return res.status(400).send("Missing shop parameter");
-  }
-
-  try {
-    // Set billing_on to yesterday (grace period expired)
-    const result = await pool.query(
-      `UPDATE subscriptions 
-       SET billing_on = NOW() - INTERVAL '1 day', 
-           status = 'cancelled',
-           updated_at = NOW()
-       WHERE shop = $1 AND plan_name = 'pro'
-       RETURNING *`,
-      [shop]
-    );
-
-    res.json({
-      success: true,
-      message: "Grace period expired - should auto-downgrade to Free",
-      subscription: result.rows[0],
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-//TEMP ENDS DELETE
-
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
