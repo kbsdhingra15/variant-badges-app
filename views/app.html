@@ -673,6 +673,40 @@
           overflow: visible !important;
         }
       }
+      /* Prevent layout shift - reserve space for content */
+
+/* 1. Reserve minimum height for product list */
+#products-list {
+  min-height: 400px;
+  transition: none; /* Disable transitions during load */
+}
+
+/* 2. Reserve space for images */
+.product-image,
+img {
+  aspect-ratio: 1 / 1; /* Prevents shift when image loads */
+}
+
+/* 3. Ensure plan badge doesn't cause shift */
+#plan-badge {
+  min-width: 60px; /* Reserve minimum space */
+  visibility: hidden; /* Hidden but space reserved */
+}
+
+#plan-badge[style*="inline-block"] {
+  visibility: visible; /* Show when loaded */
+}
+
+/* 4. Prevent tab content from shifting */
+.tab-content {
+  min-height: 500px;
+}
+
+/* 5. Prevent dropdown shifts */
+select,
+.badge-dropdown {
+  height: 36px; /* Fixed height */
+}
     </style>
   </head>
   <body>
