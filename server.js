@@ -22,6 +22,207 @@ const analyticsRoutes = require("./routes/analytics");
 const billingRouter = require("./routes/billing");
 const app = express();
 // Body parser
+// Webhook handler for app uninstall
+
+app.post(
+  "/webhooks/app/uninstalled",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      // --- HMAC validation ---
+      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+      const body = req.body; // Buffer (express.raw)
+      const secret = process.env.SHOPIFY_API_SECRET;
+
+      // Compute HMAC
+      const hash = crypto
+        .createHmac("sha256", secret)
+        .update(body, "utf8")
+        .digest("base64");
+
+      if (hash !== hmacHeader) {
+        console.warn(
+          "❌ Uninstall webhook failed HMAC for shop:",
+          req.get("X-Shopify-Shop-Domain")
+        );
+        return res.status(401).send("Invalid HMAC");
+      }
+
+      // Parse JSON body (since using express.raw, need to parse here)
+      const payload = JSON.parse(body.toString("utf8"));
+      const shop = req.get("X-Shopify-Shop-Domain");
+      if (!shop) {
+        return res.status(400).send("Missing shop domain header");
+      }
+
+      console.log("🗑️ App uninstalled webhook received for:", shop);
+
+      // Delete session from database
+      await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
+      console.log("✅ Session deleted for:", shop);
+
+      // Delete settings
+      await pool.query("DELETE FROM app_settings WHERE shop = $1", [shop]);
+      console.log("✅ Settings deleted for:", shop);
+
+      // Delete badge assignments
+      await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
+      console.log("✅ Badge assignments deleted for:", shop);
+
+      // Update subscription status
+      const subResult = await pool.query(
+        `UPDATE subscriptions 
+           SET status = $1, updated_at = NOW() 
+           WHERE shop = $2
+           RETURNING plan_name, status`,
+        ["uninstalled", shop]
+      );
+
+      if (subResult.rowCount > 0) {
+        console.log(
+          "✅ Subscription marked as uninstalled:",
+          subResult.rows[0]
+        );
+      } else {
+        console.log("ℹ️  No subscription to update");
+      }
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("❌ Uninstall webhook error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
+// GDPR Webhook: Customer data request
+app.post(
+  "/webhooks/customers/data_request",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      // --- HMAC validation ---
+      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+      const body = req.body; // Buffer
+      const secret = process.env.SHOPIFY_API_SECRET;
+
+      const hash = crypto
+        .createHmac("sha256", secret)
+        .update(body, "utf8")
+        .digest("base64");
+
+      if (hash !== hmacHeader) {
+        console.warn(
+          "❌ Customer data request webhook failed HMAC for:",
+          req.get("X-Shopify-Shop-Domain")
+        );
+        return res.status(401).send("Invalid HMAC");
+      }
+
+      const shop = req.get("X-Shopify-Shop-Domain");
+      const payload = JSON.parse(body.toString("utf8"));
+
+      console.log("📋 GDPR: Customer data request for:", shop);
+      console.log("   Customer ID:", payload.customer?.id);
+
+      // We don't store any customer personal data
+      res.status(200).json({
+        message: "No customer data stored",
+        data: {},
+      });
+    } catch (error) {
+      console.error("❌ Customer data request error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
+
+// GDPR Webhook: Customer redact (delete customer data)
+app.post(
+  "/webhooks/customers/redact",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      // --- HMAC validation ---
+      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+      const body = req.body; // Buffer
+      const secret = process.env.SHOPIFY_API_SECRET;
+
+      const hash = crypto
+        .createHmac("sha256", secret)
+        .update(body, "utf8")
+        .digest("base64");
+
+      if (hash !== hmacHeader) {
+        console.warn(
+          "❌ Customer redact webhook failed HMAC for:",
+          req.get("X-Shopify-Shop-Domain")
+        );
+        return res.status(401).send("Invalid HMAC");
+      }
+
+      const shop = req.get("X-Shopify-Shop-Domain");
+      const payload = JSON.parse(body.toString("utf8"));
+
+      console.log("🗑️ GDPR: Customer redact for:", shop);
+      console.log("   Customer ID:", payload.customer?.id);
+
+      // We don't store customer data, nothing to delete
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("❌ Customer redact error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
+
+// GDPR Webhook: Shop redact (delete all shop data)
+app.post(
+  "/webhooks/shop/redact",
+  express.raw({ type: "application/json" }),
+  async (req, res) => {
+    try {
+      // --- HMAC validation ---
+      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
+      const body = req.body; // Buffer
+      const secret = process.env.SHOPIFY_API_SECRET;
+
+      const hash = crypto
+        .createHmac("sha256", secret)
+        .update(body, "utf8")
+        .digest("base64");
+
+      if (hash !== hmacHeader) {
+        console.warn(
+          "❌ Shop redact webhook failed HMAC for:",
+          req.get("X-Shopify-Shop-Domain")
+        );
+        return res.status(401).send("Invalid HMAC");
+      }
+
+      const shop = req.get("X-Shopify-Shop-Domain");
+
+      console.log("🗑️ GDPR: Shop redact for:", shop);
+
+      // Delete all shop data (same as uninstall)
+      await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
+      await pool.query("DELETE FROM app_settings WHERE shop = $1", [shop]);
+      await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
+
+      // Also mark subscription as deleted
+      await pool.query(
+        "UPDATE subscriptions SET status = $1, updated_at = NOW() WHERE shop = $2",
+        ["uninstalled", shop]
+      );
+
+      console.log("✅ All shop data deleted for:", shop);
+
+      res.status(200).send("OK");
+    } catch (error) {
+      console.error("❌ Shop redact error:", error);
+      res.status(500).send("Error");
+    }
+  }
+);
 app.use(express.json());
 // Serve static files from public directory
 app.use(cookieParser());
@@ -785,208 +986,6 @@ app.get("/install", (req, res) => {
     </html>
   `);
 });
-
-// Webhook handler for app uninstall
-
-app.post(
-  "/webhooks/app/uninstalled",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      // --- HMAC validation ---
-      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-      const body = req.body; // Buffer (express.raw)
-      const secret = process.env.SHOPIFY_API_SECRET;
-
-      // Compute HMAC
-      const hash = crypto
-        .createHmac("sha256", secret)
-        .update(body, "utf8")
-        .digest("base64");
-
-      if (hash !== hmacHeader) {
-        console.warn(
-          "❌ Uninstall webhook failed HMAC for shop:",
-          req.get("X-Shopify-Shop-Domain")
-        );
-        return res.status(401).send("Invalid HMAC");
-      }
-
-      // Parse JSON body (since using express.raw, need to parse here)
-      const payload = JSON.parse(body.toString("utf8"));
-      const shop = req.get("X-Shopify-Shop-Domain");
-      if (!shop) {
-        return res.status(400).send("Missing shop domain header");
-      }
-
-      console.log("🗑️ App uninstalled webhook received for:", shop);
-
-      // Delete session from database
-      await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
-      console.log("✅ Session deleted for:", shop);
-
-      // Delete settings
-      await pool.query("DELETE FROM app_settings WHERE shop = $1", [shop]);
-      console.log("✅ Settings deleted for:", shop);
-
-      // Delete badge assignments
-      await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
-      console.log("✅ Badge assignments deleted for:", shop);
-
-      // Update subscription status
-      const subResult = await pool.query(
-        `UPDATE subscriptions 
-           SET status = $1, updated_at = NOW() 
-           WHERE shop = $2
-           RETURNING plan_name, status`,
-        ["uninstalled", shop]
-      );
-
-      if (subResult.rowCount > 0) {
-        console.log(
-          "✅ Subscription marked as uninstalled:",
-          subResult.rows[0]
-        );
-      } else {
-        console.log("ℹ️  No subscription to update");
-      }
-
-      res.status(200).send("OK");
-    } catch (error) {
-      console.error("❌ Uninstall webhook error:", error);
-      res.status(500).send("Error");
-    }
-  }
-);
-// GDPR Webhook: Customer data request
-app.post(
-  "/webhooks/customers/data_request",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      // --- HMAC validation ---
-      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-      const body = req.body; // Buffer
-      const secret = process.env.SHOPIFY_API_SECRET;
-
-      const hash = crypto
-        .createHmac("sha256", secret)
-        .update(body, "utf8")
-        .digest("base64");
-
-      if (hash !== hmacHeader) {
-        console.warn(
-          "❌ Customer data request webhook failed HMAC for:",
-          req.get("X-Shopify-Shop-Domain")
-        );
-        return res.status(401).send("Invalid HMAC");
-      }
-
-      const shop = req.get("X-Shopify-Shop-Domain");
-      const payload = JSON.parse(body.toString("utf8"));
-
-      console.log("📋 GDPR: Customer data request for:", shop);
-      console.log("   Customer ID:", payload.customer?.id);
-
-      // We don't store any customer personal data
-      res.status(200).json({
-        message: "No customer data stored",
-        data: {},
-      });
-    } catch (error) {
-      console.error("❌ Customer data request error:", error);
-      res.status(500).send("Error");
-    }
-  }
-);
-
-// GDPR Webhook: Customer redact (delete customer data)
-app.post(
-  "/webhooks/customers/redact",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      // --- HMAC validation ---
-      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-      const body = req.body; // Buffer
-      const secret = process.env.SHOPIFY_API_SECRET;
-
-      const hash = crypto
-        .createHmac("sha256", secret)
-        .update(body, "utf8")
-        .digest("base64");
-
-      if (hash !== hmacHeader) {
-        console.warn(
-          "❌ Customer redact webhook failed HMAC for:",
-          req.get("X-Shopify-Shop-Domain")
-        );
-        return res.status(401).send("Invalid HMAC");
-      }
-
-      const shop = req.get("X-Shopify-Shop-Domain");
-      const payload = JSON.parse(body.toString("utf8"));
-
-      console.log("🗑️ GDPR: Customer redact for:", shop);
-      console.log("   Customer ID:", payload.customer?.id);
-
-      // We don't store customer data, nothing to delete
-      res.status(200).send("OK");
-    } catch (error) {
-      console.error("❌ Customer redact error:", error);
-      res.status(500).send("Error");
-    }
-  }
-);
-
-// GDPR Webhook: Shop redact (delete all shop data)
-app.post(
-  "/webhooks/shop/redact",
-  express.raw({ type: "application/json" }),
-  async (req, res) => {
-    try {
-      // --- HMAC validation ---
-      const hmacHeader = req.get("X-Shopify-Hmac-Sha256");
-      const body = req.body; // Buffer
-      const secret = process.env.SHOPIFY_API_SECRET;
-
-      const hash = crypto
-        .createHmac("sha256", secret)
-        .update(body, "utf8")
-        .digest("base64");
-
-      if (hash !== hmacHeader) {
-        console.warn(
-          "❌ Shop redact webhook failed HMAC for:",
-          req.get("X-Shopify-Shop-Domain")
-        );
-        return res.status(401).send("Invalid HMAC");
-      }
-
-      const shop = req.get("X-Shopify-Shop-Domain");
-
-      console.log("🗑️ GDPR: Shop redact for:", shop);
-
-      // Delete all shop data (same as uninstall)
-      await pool.query("DELETE FROM shops WHERE shop = $1", [shop]);
-      await pool.query("DELETE FROM app_settings WHERE shop = $1", [shop]);
-      await pool.query("DELETE FROM badge_assignments WHERE shop = $1", [shop]);
-
-      // Also mark subscription as deleted
-      await pool.query(
-        "UPDATE subscriptions SET status = $1, updated_at = NOW() WHERE shop = $2",
-        ["uninstalled", shop]
-      );
-
-      console.log("✅ All shop data deleted for:", shop);
-
-      res.status(200).send("OK");
-    } catch (error) {
-      console.error("❌ Shop redact error:", error);
-      res.status(500).send("Error");
-    }
-  }
-);
 // Privacy Policy page
 app.get("/privacy-policy", (req, res) => {
   const fs = require("fs");
