@@ -13,19 +13,19 @@ dev_store_url = "quickstart-c559582d.myshopify.com"
 api_version = "2024-10"
 
   [[webhooks.subscriptions]]
-  topics = [ "app/uninstalled" ]
+  topics = [ "app_uninstalled" ]
   uri = "/webhooks/app/uninstalled"
 
   [[webhooks.subscriptions]]
-  topics = [ "customers/data_request" ]
+  topics = [ "customers_data_request" ]
   uri = "/webhooks/customers/data_request"
 
   [[webhooks.subscriptions]]
-  topics = [ "customers/redact" ]
+  topics = [ "customers_redact" ]
   uri = "/webhooks/customers/redact"
 
   [[webhooks.subscriptions]]
-  topics = [ "shop/redact" ]
+  topics = [ "shop_redact" ]
   uri = "/webhooks/shop/redact"
 
 [access_scopes]
