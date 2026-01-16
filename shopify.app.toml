@@ -9,25 +9,6 @@ embedded = true
 automatically_update_urls_on_dev = true
 dev_store_url = "quickstart-c559582d.myshopify.com"
 
-[webhooks]
-api_version = "2024-10"
-
-  [[webhooks.subscriptions]]
-  topics = [ "APP_UNINSTALLED" ]
-  uri = "/webhooks/app/uninstalled"
-
-  [[webhooks.subscriptions]]
-  topics = [ "CUSTOMERS_DATA_REQUEST" ]
-  uri = "/webhooks/customers/data_request"
-
-  [[webhooks.subscriptions]]
-  topics = [ "CUSTOMERS_REDACT" ]
-  uri = "/webhooks/customers/redact"
-
-  [[webhooks.subscriptions]]
-  topics = [ "SHOP_REDACT" ]
-  uri = "/webhooks/shop/redact"
-
 [access_scopes]
 scopes = "read_products,read_themes,write_products"
 
