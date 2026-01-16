@@ -9,6 +9,9 @@ embedded = true
 automatically_update_urls_on_dev = true
 dev_store_url = "quickstart-c559582d.myshopify.com"
 
+[webhooks]
+api_version = "2024-10"
+
 [access_scopes]
 scopes = "read_products,read_themes,write_products"
 
