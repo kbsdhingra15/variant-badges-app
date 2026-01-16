@@ -305,6 +305,7 @@ const shopify = shopifyApi({
   isEmbeddedApp: true,
   isCustomStoreApp: false,
 });
+
 app.get("/health", (req, res) => {
   res.json({
     status: "ok",
@@ -605,6 +606,7 @@ app.get("/auth/callback", async (req, res) => {
     console.log("✅ Session verified in database");
 
     // AUTO-REGISTER ALL WEBHOOKS (including GDPR)
+    console.log("🔄 Starting webhook registration..."); // TEMP DELETE
     const webhooks = [
       { topic: "app/uninstalled", path: "/webhooks/app/uninstalled" },
       {
@@ -614,9 +616,17 @@ app.get("/auth/callback", async (req, res) => {
       { topic: "customers/redact", path: "/webhooks/customers/redact" },
       { topic: "shop/redact", path: "/webhooks/shop/redact" },
     ];
-
+    console.log(`📋 Will register ${webhooks.length} webhooks`); // TEMP DELETE
     for (const webhook of webhooks) {
       try {
+        console.log(`🔄 Registering: ${webhook.topic}`); //TEMP DELETE
+        const webhookUrl = `${
+          //NEW
+          process.env.HOST || //NEW
+          "https://variant-badges-app-production.up.railway.app" //NEW
+        }${webhook.path}`; //NEW
+
+        console.log(`   URL: ${webhookUrl}`); //TEMP DELETE
         const webhookResponse = await fetch(
           `https://${shop}/admin/api/2024-10/webhooks.json`,
           {
@@ -637,17 +647,19 @@ app.get("/auth/callback", async (req, res) => {
             }),
           }
         );
-
+        console.log(`   Response status: ${webhookResponse.status}`); //TEMP DELETE
         if (webhookResponse.ok) {
+          const result = await webhookResponse.json(); //NEW
           console.log(`✅ Registered webhook: ${webhook.topic}`);
         } else {
           const error = await webhookResponse.json();
-          console.log(`⚠️ Webhook ${webhook.topic} failed:`, error.errors);
+          console.log(`⚠️ Webhook ${webhook.topic} failed:`, error.errors); //NEW
         }
       } catch (webhookError) {
-        console.error(`⚠️ Webhook ${webhook.topic} error:`, webhookError);
+        console.error(`⚠️ Webhook ${webhook.topic} error:`, webhookError); //NEW
       }
     }
+    console.log("✅ Webhook registration complete"); //TEMP DELETE
     // ========== INITIALIZE FREE PLAN (NO TRIAL) ==========
     // Initialize Free plan subscription on install
     try {
