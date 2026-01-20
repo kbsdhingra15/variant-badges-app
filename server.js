@@ -702,34 +702,18 @@ app.get("/auth/callback", async (req, res) => {
 
     console.log("✅ Session verified in database");
 
-    // AUTO-REGISTER ALL WEBHOOKS (including GDPR)
+    // AUTO-REGISTER WEBHOOKS
     console.log("🔄 Starting webhook registration...");
-
-    // Regular webhook via GraphQL
-    const regularWebhook = {
-      topic: "APP_UNINSTALLED",
-      path: "/webhooks/app/uninstalled",
-    };
-
-    // GDPR mandatory webhooks via REST
-    const gdprWebhooks = [
-      {
-        topic: "customers/data_request",
-        path: "/webhooks/customers/data_request",
-      },
-      { topic: "customers/redact", path: "/webhooks/customers/redact" },
-      { topic: "shop/redact", path: "/webhooks/shop/redact" },
-    ];
 
     // Register APP_UNINSTALLED via GraphQL
     try {
-      const webhookUrl = `https://variant-badges-app-production.up.railway.app${regularWebhook.path}`;
-      console.log(`🔄 Registering: ${regularWebhook.topic} (GraphQL)`);
+      const webhookUrl = `https://variant-badges-app-production.up.railway.app/webhooks/app/uninstalled`;
+      console.log(`🔄 Registering: APP_UNINSTALLED (GraphQL)`);
 
       const mutation = `
     mutation {
       webhookSubscriptionCreate(
-        topic: ${regularWebhook.topic}
+        topic: APP_UNINSTALLED
         webhookSubscription: {
           callbackUrl: "${webhookUrl}"
           format: JSON
@@ -759,63 +743,17 @@ app.get("/auth/callback", async (req, res) => {
 
       const result = await graphqlResponse.json();
       if (result.data?.webhookSubscriptionCreate?.webhookSubscription) {
-        console.log(`✅ Registered webhook: ${regularWebhook.topic}`);
+        console.log(`✅ Registered webhook: APP_UNINSTALLED`);
+      } else {
+        console.log(`⚠️ APP_UNINSTALLED registration failed:`, result);
       }
     } catch (error) {
       console.error(`❌ Error registering APP_UNINSTALLED:`, error.message);
     }
 
-    // Register GDPR webhooks via REST API
-    console.log(`📋 Registering ${gdprWebhooks.length} GDPR webhooks via REST`);
+    console.log("✅ Webhook registration complete");
+    console.log("ℹ️  GDPR webhooks are configured via shopify.app.toml");
 
-    for (const webhook of gdprWebhooks) {
-      try {
-        const webhookUrl = `https://variant-badges-app-production.up.railway.app${webhook.path}`;
-
-        console.log(`\n🔄 Registering: ${webhook.topic}`);
-        console.log(`   URL: ${webhookUrl}`);
-
-        const webhookResponse = await fetch(
-          `https://${shop}/admin/api/2024-01/webhooks.json`,
-          {
-            method: "POST",
-            headers: {
-              "X-Shopify-Access-Token": accessToken,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              webhook: {
-                topic: webhook.topic,
-                address: webhookUrl,
-                format: "json",
-              },
-            }),
-          }
-        );
-
-        console.log(`   Response status: ${webhookResponse.status}`);
-
-        const responseData = await webhookResponse.json();
-        console.log(`   Response body:`, JSON.stringify(responseData, null, 2));
-
-        if (webhookResponse.ok && responseData.webhook) {
-          console.log(
-            `✅ Registered webhook: ${webhook.topic} (ID: ${responseData.webhook.id})`
-          );
-        } else {
-          console.log(`⚠️ Webhook ${webhook.topic} FAILED`);
-          console.log(`   Error details:`, responseData);
-        }
-      } catch (error) {
-        console.error(
-          `❌ EXCEPTION registering ${webhook.topic}:`,
-          error.message
-        );
-        console.error(`   Stack trace:`, error.stack);
-      }
-    }
-
-    console.log("\n✅ Webhook registration complete");
     // ========== INITIALIZE FREE PLAN (NO TRIAL) ==========
     // Initialize Free plan subscription on install
     try {

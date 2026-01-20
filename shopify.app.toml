@@ -10,7 +10,15 @@ automatically_update_urls_on_dev = true
 dev_store_url = "quickstart-c559582d.myshopify.com"
 
 [webhooks]
-api_version = "2024-10"
+api_version = "2024-01"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/webhooks/app/uninstalled"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/webhooks"
 
 [access_scopes]
 scopes = "read_products,read_themes,write_products,read_customers,write_customers"
