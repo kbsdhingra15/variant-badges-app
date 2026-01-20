@@ -697,7 +697,7 @@ app.get("/auth/callback", async (req, res) => {
       try {
         const webhookUrl = `https://variant-badges-app-production.up.railway.app${webhook.path}`;
 
-        console.log(`🔄 Registering: ${webhook.topic}`);
+        console.log(`\n🔄 Registering: ${webhook.topic}`);
         console.log(`   URL: ${webhookUrl}`);
 
         const webhookResponse = await fetch(
@@ -718,22 +718,29 @@ app.get("/auth/callback", async (req, res) => {
           }
         );
 
-        const responseData = await webhookResponse.json();
         console.log(`   Response status: ${webhookResponse.status}`);
+
+        const responseData = await webhookResponse.json();
+        console.log(`   Response body:`, JSON.stringify(responseData, null, 2));
 
         if (webhookResponse.ok && responseData.webhook) {
           console.log(
             `✅ Registered webhook: ${webhook.topic} (ID: ${responseData.webhook.id})`
           );
         } else {
-          console.log(`⚠️ Webhook ${webhook.topic} response:`, responseData);
+          console.log(`⚠️ Webhook ${webhook.topic} FAILED`);
+          console.log(`   Error details:`, responseData);
         }
       } catch (error) {
-        console.error(`❌ Error registering ${webhook.topic}:`, error.message);
+        console.error(
+          `❌ EXCEPTION registering ${webhook.topic}:`,
+          error.message
+        );
+        console.error(`   Stack trace:`, error.stack);
       }
     }
 
-    console.log("✅ Webhook registration complete"); //TEMP DELETE
+    console.log("\n✅ Webhook registration complete");
     // ========== INITIALIZE FREE PLAN (NO TRIAL) ==========
     // Initialize Free plan subscription on install
     try {
