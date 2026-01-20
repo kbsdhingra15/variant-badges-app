@@ -639,11 +639,11 @@ app.get("/auth/callback", async (req, res) => {
     // GDPR mandatory webhooks via REST
     const gdprWebhooks = [
       {
-        topic: "CUSTOMERS_DATA_REQUEST",
+        topic: "customers/data_request",
         path: "/webhooks/customers/data_request",
       },
-      { topic: "CUSTOMERS_REDACT", path: "/webhooks/customers/redact" },
-      { topic: "SHOP_REDACT", path: "/webhooks/shop/redact" },
+      { topic: "customers/redact", path: "/webhooks/customers/redact" },
+      { topic: "shop/redact", path: "/webhooks/shop/redact" },
     ];
 
     // Register APP_UNINSTALLED via GraphQL
