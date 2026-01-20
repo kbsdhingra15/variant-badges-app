@@ -630,26 +630,13 @@ app.get("/auth/callback", async (req, res) => {
     // AUTO-REGISTER ALL WEBHOOKS (including GDPR)
     console.log("🔄 Starting webhook registration..."); // TEMP DELETE
     const webhooksToRegister = [
+      { topic: "APP_UNINSTALLED", path: "/webhooks/app/uninstalled" },
       {
-        topic: "APP_UNINSTALLED",
-        path: "/webhooks/app/uninstalled",
-        method: "graphql",
-      },
-      {
-        topic: "CUSTOMERS_DATA_REQUEST",
+        topic: "GDPR_CUSTOMERS_DATA_REQUEST",
         path: "/webhooks/customers/data_request",
-        method: "graphql",
-      },
-      {
-        topic: "CUSTOMERS_REDACT",
-        path: "/webhooks/customers/redact",
-        method: "graphql",
-      },
-      {
-        topic: "SHOP_REDACT",
-        path: "/webhooks/shop/redact",
-        method: "graphql",
-      },
+      }, // ✅ CORRECT
+      { topic: "GDPR_CUSTOMERS_REDACT", path: "/webhooks/customers/redact" }, // ✅ CORRECT
+      { topic: "GDPR_SHOP_REDACT", path: "/webhooks/shop/redact" }, // ✅ CORRECT
     ];
     console.log(
       `📋 Will register ${webhooksToRegister.length} webhooks via GraphQL`
