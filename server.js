@@ -629,58 +629,100 @@ app.get("/auth/callback", async (req, res) => {
 
     // AUTO-REGISTER ALL WEBHOOKS (including GDPR)
     console.log("🔄 Starting webhook registration..."); // TEMP DELETE
-    const webhooks = [
-      { topic: "app/uninstalled", path: "/webhooks/app/uninstalled" },
+    const webhooksToRegister = [
       {
-        topic: "customers/data_request",
-        path: "/webhooks/customers/data_request",
+        topic: "APP_UNINSTALLED",
+        path: "/webhooks/app/uninstalled",
+        method: "graphql",
       },
-      { topic: "customers/redact", path: "/webhooks/customers/redact" },
-      { topic: "shop/redact", path: "/webhooks/shop/redact" },
+      {
+        topic: "CUSTOMERS_DATA_REQUEST",
+        path: "/webhooks/customers/data_request",
+        method: "graphql",
+      },
+      {
+        topic: "CUSTOMERS_REDACT",
+        path: "/webhooks/customers/redact",
+        method: "graphql",
+      },
+      {
+        topic: "SHOP_REDACT",
+        path: "/webhooks/shop/redact",
+        method: "graphql",
+      },
     ];
-    console.log(`📋 Will register ${webhooks.length} webhooks`); // TEMP DELETE
-    for (const webhook of webhooks) {
+    console.log(
+      `📋 Will register ${webhooksToRegister.length} webhooks via GraphQL`
+    ); // TEMP DELETE
+    for (const webhook of webhooksToRegister) {
       try {
-        console.log(`🔄 Registering: ${webhook.topic}`); //TEMP DELETE
-        const webhookUrl = `${
-          //NEW
-          process.env.HOST || //NEW
-          "https://variant-badges-app-production.up.railway.app" //NEW
-        }${webhook.path}`; //NEW
+        const webhookUrl = `https://variant-badges-app-production.up.railway.app${webhook.path}`;
 
-        console.log(`   URL: ${webhookUrl}`); //TEMP DELETE
-        const webhookResponse = await fetch(
-          `https://${shop}/admin/api/2024-10/webhooks.json`,
+        console.log(`🔄 Registering: ${webhook.topic}`);
+        console.log(`   URL: ${webhookUrl}`);
+
+        // Use GraphQL mutation for webhook registration
+        const mutation = `
+      mutation {
+        webhookSubscriptionCreate(
+          topic: ${webhook.topic}
+          webhookSubscription: {
+            callbackUrl: "${webhookUrl}"
+            format: JSON
+          }
+        ) {
+          webhookSubscription {
+            id
+            topic
+            endpoint {
+              __typename
+              ... on WebhookHttpEndpoint {
+                callbackUrl
+              }
+            }
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+        const graphqlResponse = await fetch(
+          `https://${shop}/admin/api/2024-10/graphql.json`,
           {
             method: "POST",
             headers: {
               "X-Shopify-Access-Token": accessToken,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              webhook: {
-                topic: webhook.topic,
-                address: `${
-                  process.env.HOST ||
-                  "https://variant-badges-app-production.up.railway.app"
-                }${webhook.path}`,
-                format: "json",
-              },
-            }),
+            body: JSON.stringify({ query: mutation }),
           }
         );
-        console.log(`   Response status: ${webhookResponse.status}`); //TEMP DELETE
-        if (webhookResponse.ok) {
-          const result = await webhookResponse.json(); //NEW
-          console.log(`✅ Registered webhook: ${webhook.topic}`);
+
+        const result = await graphqlResponse.json();
+
+        if (result.data?.webhookSubscriptionCreate?.webhookSubscription) {
+          const webhookId =
+            result.data.webhookSubscriptionCreate.webhookSubscription.id;
+          console.log(`✅ Registered webhook: ${webhook.topic} (${webhookId})`);
+        } else if (
+          result.data?.webhookSubscriptionCreate?.userErrors?.length > 0
+        ) {
+          const errors = result.data.webhookSubscriptionCreate.userErrors;
+          console.log(`⚠️ Webhook ${webhook.topic} failed:`, errors);
         } else {
-          const error = await webhookResponse.json();
-          console.log(`⚠️ Webhook ${webhook.topic} failed:`, error.errors); //NEW
+          console.log(
+            `⚠️ Webhook ${webhook.topic} - unexpected response:`,
+            result
+          );
         }
-      } catch (webhookError) {
-        console.error(`⚠️ Webhook ${webhook.topic} error:`, webhookError); //NEW
+      } catch (error) {
+        console.error(`❌ Error registering ${webhook.topic}:`, error.message);
       }
     }
+
     console.log("✅ Webhook registration complete"); //TEMP DELETE
     // ========== INITIALIZE FREE PLAN (NO TRIAL) ==========
     // Initialize Free plan subscription on install
