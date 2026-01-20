@@ -628,82 +628,105 @@ app.get("/auth/callback", async (req, res) => {
     console.log("✅ Session verified in database");
 
     // AUTO-REGISTER ALL WEBHOOKS (including GDPR)
-    console.log("🔄 Starting webhook registration..."); // TEMP DELETE
-    const webhooksToRegister = [
-      { topic: "APP_UNINSTALLED", path: "/webhooks/app/uninstalled" },
+    console.log("🔄 Starting webhook registration...");
+
+    // Regular webhook via GraphQL
+    const regularWebhook = {
+      topic: "APP_UNINSTALLED",
+      path: "/webhooks/app/uninstalled",
+    };
+
+    // GDPR mandatory webhooks via REST
+    const gdprWebhooks = [
       {
-        topic: "GDPR_CUSTOMERS_DATA_REQUEST",
+        topic: "customers/data_request",
         path: "/webhooks/customers/data_request",
-      }, // ✅ CORRECT
-      { topic: "GDPR_CUSTOMERS_REDACT", path: "/webhooks/customers/redact" }, // ✅ CORRECT
-      { topic: "GDPR_SHOP_REDACT", path: "/webhooks/shop/redact" }, // ✅ CORRECT
+      },
+      { topic: "customers/redact", path: "/webhooks/customers/redact" },
+      { topic: "shop/redact", path: "/webhooks/shop/redact" },
     ];
-    console.log(
-      `📋 Will register ${webhooksToRegister.length} webhooks via GraphQL`
-    ); // TEMP DELETE
-    for (const webhook of webhooksToRegister) {
+
+    // Register APP_UNINSTALLED via GraphQL
+    try {
+      const webhookUrl = `https://variant-badges-app-production.up.railway.app${regularWebhook.path}`;
+      console.log(`🔄 Registering: ${regularWebhook.topic} (GraphQL)`);
+
+      const mutation = `
+    mutation {
+      webhookSubscriptionCreate(
+        topic: ${regularWebhook.topic}
+        webhookSubscription: {
+          callbackUrl: "${webhookUrl}"
+          format: JSON
+        }
+      ) {
+        webhookSubscription {
+          id
+        }
+        userErrors {
+          message
+        }
+      }
+    }
+  `;
+
+      const graphqlResponse = await fetch(
+        `https://${shop}/admin/api/2024-10/graphql.json`,
+        {
+          method: "POST",
+          headers: {
+            "X-Shopify-Access-Token": accessToken,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ query: mutation }),
+        }
+      );
+
+      const result = await graphqlResponse.json();
+      if (result.data?.webhookSubscriptionCreate?.webhookSubscription) {
+        console.log(`✅ Registered webhook: ${regularWebhook.topic}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error registering APP_UNINSTALLED:`, error.message);
+    }
+
+    // Register GDPR webhooks via REST API
+    console.log(`📋 Registering ${gdprWebhooks.length} GDPR webhooks via REST`);
+
+    for (const webhook of gdprWebhooks) {
       try {
         const webhookUrl = `https://variant-badges-app-production.up.railway.app${webhook.path}`;
 
         console.log(`🔄 Registering: ${webhook.topic}`);
         console.log(`   URL: ${webhookUrl}`);
 
-        // Use GraphQL mutation for webhook registration
-        const mutation = `
-      mutation {
-        webhookSubscriptionCreate(
-          topic: ${webhook.topic}
-          webhookSubscription: {
-            callbackUrl: "${webhookUrl}"
-            format: JSON
-          }
-        ) {
-          webhookSubscription {
-            id
-            topic
-            endpoint {
-              __typename
-              ... on WebhookHttpEndpoint {
-                callbackUrl
-              }
-            }
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `;
-
-        const graphqlResponse = await fetch(
-          `https://${shop}/admin/api/2024-10/graphql.json`,
+        const webhookResponse = await fetch(
+          `https://${shop}/admin/api/2024-10/webhooks.json`,
           {
             method: "POST",
             headers: {
               "X-Shopify-Access-Token": accessToken,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ query: mutation }),
+            body: JSON.stringify({
+              webhook: {
+                topic: webhook.topic,
+                address: webhookUrl,
+                format: "json",
+              },
+            }),
           }
         );
 
-        const result = await graphqlResponse.json();
+        const responseData = await webhookResponse.json();
+        console.log(`   Response status: ${webhookResponse.status}`);
 
-        if (result.data?.webhookSubscriptionCreate?.webhookSubscription) {
-          const webhookId =
-            result.data.webhookSubscriptionCreate.webhookSubscription.id;
-          console.log(`✅ Registered webhook: ${webhook.topic} (${webhookId})`);
-        } else if (
-          result.data?.webhookSubscriptionCreate?.userErrors?.length > 0
-        ) {
-          const errors = result.data.webhookSubscriptionCreate.userErrors;
-          console.log(`⚠️ Webhook ${webhook.topic} failed:`, errors);
-        } else {
+        if (webhookResponse.ok && responseData.webhook) {
           console.log(
-            `⚠️ Webhook ${webhook.topic} - unexpected response:`,
-            result
+            `✅ Registered webhook: ${webhook.topic} (ID: ${responseData.webhook.id})`
           );
+        } else {
+          console.log(`⚠️ Webhook ${webhook.topic} response:`, responseData);
         }
       } catch (error) {
         console.error(`❌ Error registering ${webhook.topic}:`, error.message);
