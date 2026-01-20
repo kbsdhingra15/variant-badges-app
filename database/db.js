@@ -164,7 +164,7 @@ async function getShopSession(shop) {
 }
 
 async function deleteShopSession(shop) {
-  const query = "DELETE FROM shop_sessions WHERE shop = $1";
+  const query = "DELETE FROM shops WHERE shop = $1";
   try {
     const result = await pool.query(query, [shop]);
     console.log(
