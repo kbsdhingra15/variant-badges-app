@@ -13,7 +13,7 @@ dev_store_url = "quickstart-c559582d.myshopify.com"
 api_version = "2024-10"
 
 [access_scopes]
-scopes = "read_products,read_themes,write_products"
+scopes = "read_products,read_themes,write_products,read_customers,write_customers"
 
 [auth]
 redirect_urls = [
