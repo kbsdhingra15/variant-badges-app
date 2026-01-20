@@ -746,7 +746,7 @@ app.get("/auth/callback", async (req, res) => {
   `;
 
       const graphqlResponse = await fetch(
-        `https://${shop}/admin/api/2024-10/graphql.json`,
+        `https://${shop}/admin/api/2024-01/graphql.json`,
         {
           method: "POST",
           headers: {
@@ -776,7 +776,7 @@ app.get("/auth/callback", async (req, res) => {
         console.log(`   URL: ${webhookUrl}`);
 
         const webhookResponse = await fetch(
-          `https://${shop}/admin/api/2024-10/webhooks.json`,
+          `https://${shop}/admin/api/2024-01/webhooks.json`,
           {
             method: "POST",
             headers: {
