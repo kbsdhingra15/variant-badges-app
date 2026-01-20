@@ -423,6 +423,28 @@ app.get("/debug/clear-session", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+// TEMPORARY: Manually delete session to force fresh OAuth
+app.get("/admin/delete-session", async (req, res) => {
+  const shop = "quickstart-c559582d.myshopify.com";
+
+  try {
+    console.log("🗑️ Manually deleting session for:", shop);
+    await db.deleteShopSession(shop);
+    console.log("✅ Session deleted successfully");
+
+    res.json({
+      success: true,
+      message: "Session deleted. Now visit the auth URL to reinstall.",
+      authUrl: `https://variant-badges-app-production.up.railway.app/auth?shop=${shop}`,
+    });
+  } catch (error) {
+    console.error("❌ Error deleting session:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+});
 
 // ============================================
 // JWT TOKEN GENERATION & VALIDATION
