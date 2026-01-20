@@ -446,6 +446,81 @@ app.get("/admin/delete-session", async (req, res) => {
   }
 });
 
+// Check if customer scopes are actually working
+app.get("/admin/verify-scopes", async (req, res) => {
+  const shop = "quickstart-c559582d.myshopify.com";
+
+  try {
+    const session = await db.getShopSession(shop);
+    if (!session) {
+      return res.status(400).json({ error: "No session" });
+    }
+
+    // Try to access customers API to verify scope
+    const testResponse = await fetch(
+      `https://${shop}/admin/api/2024-10/customers.json?limit=1`,
+      {
+        method: "GET",
+        headers: {
+          "X-Shopify-Access-Token": session.accessToken,
+        },
+      }
+    );
+
+    const canAccessCustomers = testResponse.ok;
+    const statusCode = testResponse.status;
+    let responseBody = null;
+
+    try {
+      responseBody = await testResponse.json();
+    } catch (e) {
+      responseBody = await testResponse.text();
+    }
+
+    res.json({
+      shop,
+      canAccessCustomers,
+      statusCode,
+      responseBody,
+      message: canAccessCustomers
+        ? "✅ Has customer scopes - can access customer data"
+        : "❌ No customer access - scopes not properly applied",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// List all registered webhooks
+app.get("/admin/list-webhooks", async (req, res) => {
+  const shop = "quickstart-c559582d.myshopify.com";
+
+  try {
+    const session = await db.getShopSession(shop);
+    if (!session) {
+      return res.status(400).json({ error: "No session" });
+    }
+
+    const response = await fetch(
+      `https://${shop}/admin/api/2024-10/webhooks.json`,
+      {
+        method: "GET",
+        headers: {
+          "X-Shopify-Access-Token": session.accessToken,
+        },
+      }
+    );
+
+    const data = await response.json();
+    res.json({
+      count: data.webhooks?.length || 0,
+      webhooks: data.webhooks || [],
+      allTopics: data.webhooks?.map((w) => w.topic) || [],
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 // ============================================
 // JWT TOKEN GENERATION & VALIDATION
 // ============================================
