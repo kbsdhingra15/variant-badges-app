@@ -163,6 +163,20 @@ async function getShopSession(shop) {
   }
 }
 
+async function deleteShopSession(shop) {
+  const query = "DELETE FROM shop_sessions WHERE shop = $1";
+  try {
+    const result = await pool.query(query, [shop]);
+    console.log(
+      `✅ Deleted session for ${shop}, rows affected: ${result.rowCount}`
+    );
+    return result.rowCount > 0;
+  } catch (error) {
+    console.error("Error deleting shop session:", error);
+    throw error;
+  }
+}
+
 // Settings management
 async function getAppSettings(shop) {
   const client = await pool.connect();
@@ -500,6 +514,7 @@ module.exports = {
   initDB,
   saveShopSession,
   getShopSession,
+  deleteShopSession,
   getAppSettings,
   saveAppSettings,
   getBadgeAssignments,
