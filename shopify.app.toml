@@ -3,7 +3,7 @@
 client_id = "1636cf7a93099710fbaf876c2f2a4a4d"
 name = "Variant Badges"
 application_url = "https://variant-badges-app-production.up.railway.app"
-embedded = true
+embedded = false
 
 [build]
 automatically_update_urls_on_dev = true
