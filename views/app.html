@@ -718,19 +718,23 @@ select,
     <div class="loading-text">Loading...</div>
   </div>
 </div>
+
 <!-- App Header -->
-<div class="app-header" style="display: flex; align-items: center; justify-content: space-between;">
-  <div style="display: flex; align-items: center; gap: 12px;">
+<div class="app-header" style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px;">
+  <div style="display: flex; align-items: center; gap: 16px;">
     <img 
       src="/images/app-icon.png" 
       alt="Variant Badges Icon" 
       style="width: 32px; height: 32px; border-radius: 6px; object-fit: cover;"
     >
-    <h1>Variant Badges</h1>
+    <h1 style="margin: 0;">Variant Badges</h1>
+    
+    <!-- Plan badge moved here, next to app name -->
+    <span id="plan-badge" style="display: none; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-weight: 600; color: white;"></span>
   </div>
-    <div style="display: flex; align-items: center; gap: 16px;">
-<span id="plan-badge" style="display: none; padding: 6px 16px; border-radius: 16px; font-size: 13px; font-weight: 600; color: white; position: relative; z-index: 10000;"></span>
-   <!-- Back to Shopify Button -->
+  
+  <div style="display: flex; align-items: center;">
+    <!-- Back to Shopify Button -->
     <a href="https://{{SHOP}}/admin" 
        target="_top"
        style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: #008060; color: white; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500; transition: background 0.2s ease;"
@@ -2155,16 +2159,16 @@ function updatePlanUI() {
   // ========== SIMPLIFIED: Only Free and Pro (no trial) ==========
   if (currentPlan.plan_name === 'pro') {
     if (currentPlan.status === 'cancelled') {
-      planBadge.textContent = 'Pro (Cancelled)';
+      planBadge.textContent = 'Plan: Pro (Cancelled)';
       planBadge.style.background = '#ff9800'; // Orange for cancelled
     } else {
-      planBadge.textContent = 'Pro';
+      planBadge.textContent = 'Plan: Pro';
       planBadge.style.background = '#008060'; // Green for active
     }
     planBadge.style.display = 'inline-block';
   } else {
     // Default to Free (no trial)
-    planBadge.textContent = 'Free';
+    planBadge.textContent = 'Plan: Free';
     planBadge.style.background = '#6d7175'; // Gray for free
     planBadge.style.display = 'inline-block';
   }
