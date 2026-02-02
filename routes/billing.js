@@ -37,8 +37,21 @@ router.post("/create-charge", async (req, res) => {
         headers: {
           "X-Shopify-Access-Token": accessToken,
         },
-      }
+      },
     );
+
+    // ✅ CHECK 1: Shop info response
+    if (!shopInfoResponse.ok) {
+      console.error(
+        "Shop info fetch failed:",
+        shopInfoResponse.status,
+        shopInfoResponse.statusText,
+      );
+      return res
+        .status(500)
+        .json({ error: "Failed to fetch shop information" });
+    }
+
     const shopInfo = await shopInfoResponse.json();
     const isDevelopmentStore =
       shopInfo.shop.plan_name === "partner_test" ||
@@ -69,14 +82,27 @@ router.post("/create-charge", async (req, res) => {
           "X-Shopify-Access-Token": accessToken,
         },
         body: JSON.stringify(charge),
-      }
+      },
     );
+    // ✅ CHECK 2: Billing charge response (CRITICAL - this is where your error is!)
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Billing API error:", response.status, response.statusText);
+      console.error("Error body:", errorText);
+      return res.status(500).json({
+        error: "Failed to create charge",
+        details: `Shopify returned ${response.status}: ${errorText.substring(0, 200)}`,
+      });
+    }
 
     const data = await response.json();
 
     if (data.errors) {
       console.error("Shopify billing error:", data.errors);
-      return res.status(500).json({ error: "Failed to create charge" });
+      return res.status(500).json({
+        error: "Failed to create charge",
+        details: JSON.stringify(data.errors),
+      });
     }
 
     const chargeData = data.recurring_application_charge;
@@ -97,7 +123,9 @@ router.post("/create-charge", async (req, res) => {
     });
   } catch (error) {
     console.error("Error creating charge:", error);
-    res.status(500).json({ error: "Failed to create charge" });
+    res
+      .status(500)
+      .json({ error: "Failed to create charge", details: error.message });
   }
 });
 
@@ -108,7 +136,7 @@ router.get("/activate", async (req, res) => {
 
     if (!shop || !charge_id) {
       return res.redirect(
-        `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`
+        `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`,
       );
     }
 
@@ -119,7 +147,7 @@ router.get("/activate", async (req, res) => {
     if (!session) {
       console.error("No session found for shop:", shop);
       return res.redirect(
-        `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`
+        `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`,
       );
     }
 
@@ -133,7 +161,7 @@ router.get("/activate", async (req, res) => {
         headers: {
           "X-Shopify-Access-Token": accessToken,
         },
-      }
+      },
     );
 
     const data = await response.json();
@@ -154,7 +182,7 @@ router.get("/activate", async (req, res) => {
               id: charge_id,
             },
           }),
-        }
+        },
       );
 
       const activateData = await activateResponse.json();
@@ -174,7 +202,7 @@ router.get("/activate", async (req, res) => {
 
         // Redirect back to app with success message
         return res.redirect(
-          `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?upgraded=true`
+          `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?upgraded=true`,
         );
       }
     } else if (charge.status === "declined") {
@@ -193,7 +221,7 @@ router.get("/activate", async (req, res) => {
   } catch (error) {
     console.error("Error activating charge:", error);
     res.redirect(
-      `https://${req.query.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?error=activation_failed`
+      `https://${req.query.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?error=activation_failed`,
     );
   }
 });
@@ -208,7 +236,7 @@ router.get("/status", async (req, res) => {
       // ========== NO TRIAL - Initialize Free plan directly ==========
       console.log(
         "💳 No subscription found - initializing Free plan for:",
-        shop
+        shop,
       );
       const newSubscription = await saveSubscription(shop, {
         plan_name: "free",
@@ -249,7 +277,7 @@ router.post("/cancel", async (req, res) => {
               headers: {
                 "X-Shopify-Access-Token": accessToken,
               },
-            }
+            },
           );
         } catch (err) {
           console.log("⚠️ Could not delete pending charge (may not exist)");
@@ -288,7 +316,7 @@ router.post("/cancel", async (req, res) => {
           headers: {
             "X-Shopify-Access-Token": accessToken,
           },
-        }
+        },
       );
 
       const chargeData = await chargeResponse.json();
@@ -302,11 +330,11 @@ router.post("/cancel", async (req, res) => {
           headers: {
             "X-Shopify-Access-Token": accessToken,
           },
-        }
+        },
       );
 
       console.log(
-        `🔻 Cancelled Pro subscription for ${shop}, expires: ${expiresOn}`
+        `🔻 Cancelled Pro subscription for ${shop}, expires: ${expiresOn}`,
       );
     }
 
@@ -326,7 +354,7 @@ router.post("/cancel", async (req, res) => {
 
     console.log(`📊 User has ${currentProducts} products with badges`);
     console.log(
-      `⚠️ Will lose access to ${willLoseAccess} products after grace period`
+      `⚠️ Will lose access to ${willLoseAccess} products after grace period`,
     );
     // ========== END CHECK ==========
 
