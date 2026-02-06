@@ -73,6 +73,13 @@ router.post("/create-charge", async (req, res) => {
         test: isDevelopmentStore, // ✅ Auto-detect based on store type!
       },
     };
+    // ========== DEBUG: Log the request we're sending ==========
+    console.log("📤 Billing charge request:");
+    console.log("   URL:", `https://${shop}/admin/api/2024-10/recurring_application_charges.json`);
+    console.log("   Payload:", JSON.stringify(charge, null, 2));
+    console.log("   Access Token Preview:", accessToken.substring(0, 20) + "...");
+    // ========== END DEBUG ==========
+
     const response = await fetch(
       `https://${shop}/admin/api/2024-10/recurring_application_charges.json`,
       {
@@ -84,14 +91,33 @@ router.post("/create-charge", async (req, res) => {
         body: JSON.stringify(charge),
       },
     );
+    
     // ✅ CHECK 2: Billing charge response (CRITICAL - this is where your error is!)
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Billing API error:", response.status, response.statusText);
-      console.error("Error body:", errorText);
+      
+      // ========== ENHANCED ERROR LOGGING ==========
+      console.error("❌ Billing API error:", response.status, response.statusText);
+      console.error("   Response Headers:", Object.fromEntries(response.headers.entries()));
+      console.error("   Error body:", errorText || "(empty)");
+      console.error("   Shop type:", isDevelopmentStore ? "Development/Partner Store" : "Production Store");
+      console.error("   Charge config sent:", JSON.stringify(charge, null, 2));
+      
+      // Try to parse error as JSON if possible
+      let parsedError = null;
+      try {
+        parsedError = JSON.parse(errorText);
+        console.error("   Parsed error:", parsedError);
+      } catch (e) {
+        console.error("   Error is not JSON");
+      }
+      // ========== END ENHANCED LOGGING ==========
+      
       return res.status(500).json({
         error: "Failed to create charge",
         details: `Shopify returned ${response.status}: ${errorText.substring(0, 200)}`,
+        shopType: isDevelopmentStore ? "development" : "production",
+        headers: Object.fromEntries(response.headers.entries()),
       });
     }
 
