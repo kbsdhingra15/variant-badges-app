@@ -32,7 +32,7 @@ router.post("/create-charge", async (req, res) => {
     // ========== AUTO-DETECT TEST MODE ==========
     // Check if this is a development/partner store
     const shopInfoResponse = await fetch(
-      `https://${shop}/admin/api/2024-10/shop.json`,
+      `https://${shop}/admin/api/2025-04/shop.json`,
       {
         headers: {
           "X-Shopify-Access-Token": accessToken,
@@ -75,13 +75,13 @@ router.post("/create-charge", async (req, res) => {
     };
     // ========== DEBUG: Log the request we're sending ==========
     console.log("📤 Billing charge request:");
-    console.log("   URL:", `https://${shop}/admin/api/2024-10/recurring_application_charges.json`);
+    console.log("   URL:", `https://${shop}/admin/api/2025-04/recurring_application_charges.json`);
     console.log("   Payload:", JSON.stringify(charge, null, 2));
     console.log("   Access Token Preview:", accessToken.substring(0, 20) + "...");
     // ========== END DEBUG ==========
 
     const response = await fetch(
-      `https://${shop}/admin/api/2024-10/recurring_application_charges.json`,
+      `https://${shop}/admin/api/2025-04/recurring_application_charges.json`,
       {
         method: "POST",
         headers: {
@@ -181,7 +181,7 @@ router.get("/activate", async (req, res) => {
 
     // Get charge details from Shopify
     const response = await fetch(
-      `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}.json`,
+      `https://${shop}/admin/api/2025-04/recurring_application_charges/${charge_id}.json`,
       {
         method: "GET",
         headers: {
@@ -196,7 +196,7 @@ router.get("/activate", async (req, res) => {
     if (charge.status === "accepted") {
       // Activate the charge
       const activateResponse = await fetch(
-        `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}/activate.json`,
+        `https://${shop}/admin/api/2025-04/recurring_application_charges/${charge_id}/activate.json`,
         {
           method: "POST",
           headers: {
@@ -297,7 +297,7 @@ router.post("/cancel", async (req, res) => {
       if (subscription.charge_id) {
         try {
           await fetch(
-            `https://${shop}/admin/api/2024-10/recurring_application_charges/${subscription.charge_id}.json`,
+            `https://${shop}/admin/api/2025-04/recurring_application_charges/${subscription.charge_id}.json`,
             {
               method: "DELETE",
               headers: {
@@ -336,7 +336,7 @@ router.post("/cancel", async (req, res) => {
     ) {
       // Get charge details from Shopify to know when it expires
       const chargeResponse = await fetch(
-        `https://${shop}/admin/api/2024-10/recurring_application_charges/${subscription.charge_id}.json`,
+        `https://${shop}/admin/api/2025-04/recurring_application_charges/${subscription.charge_id}.json`,
         {
           method: "GET",
           headers: {
@@ -350,7 +350,7 @@ router.post("/cancel", async (req, res) => {
 
       // Cancel the recurring charge in Shopify
       await fetch(
-        `https://${shop}/admin/api/2024-10/recurring_application_charges/${subscription.charge_id}.json`,
+        `https://${shop}/admin/api/2025-04/recurring_application_charges/${subscription.charge_id}.json`,
         {
           method: "DELETE",
           headers: {

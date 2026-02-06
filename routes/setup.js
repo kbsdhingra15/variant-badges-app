@@ -17,7 +17,7 @@ router.get("/status", async (req, res) => {
 
     // Get active theme
     const themesResponse = await fetch(
-      `https://${shop}/admin/api/2024-10/themes.json`,
+      `https://${shop}/admin/api/2025-04/themes.json`,
       {
         headers: {
           "X-Shopify-Access-Token": session.accessToken,
@@ -45,7 +45,7 @@ router.get("/status", async (req, res) => {
 
     // Check product template for our app block
     const assetResponse = await fetch(
-      `https://${shop}/admin/api/2024-10/themes/${activeTheme.id}/assets.json?asset[key]=templates/product.json`,
+      `https://${shop}/admin/api/2025-04/themes/${activeTheme.id}/assets.json?asset[key]=templates/product.json`,
       {
         headers: {
           "X-Shopify-Access-Token": session.accessToken,
@@ -109,7 +109,7 @@ router.get("/editor-link", async (req, res) => {
 
     // Get active theme
     const themesResponse = await fetch(
-      `https://${shop}/admin/api/2024-10/themes.json`,
+      `https://${shop}/admin/api/2025-04/themes.json`,
       {
         headers: {
           "X-Shopify-Access-Token": session.accessToken,

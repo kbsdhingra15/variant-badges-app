@@ -72,7 +72,7 @@ router.get("/list", async (req, res) => {
       }
     `;
 
-    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
 
     const response = await fetch(graphqlUrl, {
       method: "POST",
@@ -138,7 +138,7 @@ router.get("/", async (req, res) => {
     console.log("📦 Fetching products via GraphQL for shop:", shop);
 
     // Make GraphQL request to Shopify
-    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
 
     const response = await fetch(graphqlUrl, {
       method: "POST",
@@ -270,7 +270,7 @@ router.get("/options", async (req, res) => {
     `;
 
     const response = await fetch(
-      `https://${shop}/admin/api/2024-10/graphql.json`,
+      `https://${shop}/admin/api/2025-04/graphql.json`,
       {
         method: "POST",
         headers: {
@@ -347,7 +347,7 @@ router.get("/:id", async (req, res) => {
       }
     `;
 
-    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
 
     const response = await fetch(graphqlUrl, {
       method: "POST",

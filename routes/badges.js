@@ -82,7 +82,7 @@ router.get("/paginated", async (req, res) => {
       query: search ? `title:*${search}*` : null,
     };
 
-    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
     const response = await fetch(graphqlUrl, {
       method: "POST",
       headers: {
@@ -272,7 +272,7 @@ router.get("/all-products", async (req, res) => {
     console.log("   Selected option:", selectedOption);
 
     // Fetch all products from Shopify
-    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
     const query = `
       {
         products(first: 50) {
@@ -477,7 +477,7 @@ async function getProductBadgesGrouped(req, res) {
     console.log("   Selected option:", selectedOption);
 
     // Fetch product with variants from Shopify
-    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
     const query = `
       query getProduct($id: ID!) {
         product(id: $id) {
@@ -661,7 +661,7 @@ router.post("/", checkPlanLimits, async (req, res) => {
 
     // Fetch product variants from Shopify to find all matching variants
     const { accessToken } = req.shopifySession;
-    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
 
     const query = `
       query getProduct($id: ID!) {

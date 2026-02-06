@@ -301,7 +301,7 @@ const shopify = shopifyApi({
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
   scopes: process.env.SCOPES.split(","),
   hostName: process.env.HOST.replace(/https?:\/\//, ""),
-  apiVersion: "2024-10",
+  apiVersion: "2025-04",
   isEmbeddedApp: true,
   isCustomStoreApp: false,
 });
@@ -458,7 +458,7 @@ app.get("/admin/verify-scopes", async (req, res) => {
 
     // Try to access customers API to verify scope
     const testResponse = await fetch(
-      `https://${shop}/admin/api/2024-10/customers.json?limit=1`,
+      `https://${shop}/admin/api/2025-04/customers.json?limit=1`,
       {
         method: "GET",
         headers: {
@@ -502,7 +502,7 @@ app.get("/admin/list-webhooks", async (req, res) => {
     }
 
     const response = await fetch(
-      `https://${shop}/admin/api/2024-10/webhooks.json`,
+      `https://${shop}/admin/api/2025-04/webhooks.json`,
       {
         method: "GET",
         headers: {
@@ -664,7 +664,7 @@ app.get("/auth/callback", async (req, res) => {
 
     // CRITICAL: Verify token works before saving
     const testResponse = await fetch(
-      `https://${shop}/admin/api/2024-10/shop.json`,
+      `https://${shop}/admin/api/2025-04/shop.json`,
       {
         headers: {
           "X-Shopify-Access-Token": accessToken,
@@ -951,7 +951,7 @@ app.get("/api/billing/activate", async (req, res) => {
     // Get charge details from Shopify
     console.log("📞 Fetching charge details from Shopify...");
     const response = await fetch(
-      `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}.json`,
+      `https://${shop}/admin/api/2025-04/recurring_application_charges/${charge_id}.json`,
       {
         method: "GET",
         headers: {
@@ -972,7 +972,7 @@ app.get("/api/billing/activate", async (req, res) => {
 
       // Activate the charge
       const activateResponse = await fetch(
-        `https://${shop}/admin/api/2024-10/recurring_application_charges/${charge_id}/activate.json`,
+        `https://${shop}/admin/api/2025-04/recurring_application_charges/${charge_id}/activate.json`,
         {
           method: "POST",
           headers: {
