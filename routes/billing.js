@@ -63,89 +63,124 @@ router.post("/create-charge", async (req, res) => {
     console.log(`   Test mode: ${isDevelopmentStore}`);
     // ========== END AUTO-DETECT ==========
 
-    // Create recurring application charge
-    const charge = {
-      recurring_application_charge: {
-        name: planConfig.name,
-        price: planConfig.price,
-        return_url: `${process.env.HOST}/api/billing/activate?shop=${shop}&charge_id={charge_id}`,
-        trial_days: planConfig.trialDays,
-        test: isDevelopmentStore, // ✅ Auto-detect based on store type!
-      },
+    // ========== GRAPHQL BILLING (STANDALONE APP COMPATIBLE) ==========
+    console.log("💳 [GraphQL] Creating billing charge for:", shop);
+    console.log("   Plan:", planConfig.name, "@", planConfig.price);
+    console.log("   Test mode:", isDevelopmentStore);
+
+    // GraphQL mutation for creating recurring charge
+    const mutation = `
+      mutation CreateAppSubscription($name: String!, $returnUrl: URL!, $test: Boolean, $trialDays: Int, $lineItems: [AppSubscriptionLineItemInput!]!) {
+        appSubscriptionCreate(
+          name: $name
+          returnUrl: $returnUrl
+          test: $test
+          trialDays: $trialDays
+          lineItems: $lineItems
+        ) {
+          appSubscription {
+            id
+            name
+            test
+            status
+          }
+          confirmationUrl
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      name: planConfig.name,
+      returnUrl: `${process.env.HOST}/api/billing/activate?shop=${shop}`,
+      test: isDevelopmentStore,
+      trialDays: planConfig.trialDays,
+      lineItems: [
+        {
+          plan: {
+            appRecurringPricingDetails: {
+              price: { amount: planConfig.price, currencyCode: "USD" },
+              interval: "EVERY_30_DAYS",
+            },
+          },
+        },
+      ],
     };
-    // ========== DEBUG: Log the request we're sending ==========
-    console.log("📤 Billing charge request:");
-    console.log("   URL:", `https://${shop}/admin/api/2025-04/recurring_application_charges.json`);
-    console.log("   Payload:", JSON.stringify(charge, null, 2));
-    console.log("   Access Token Preview:", accessToken.substring(0, 20) + "...");
-    // ========== END DEBUG ==========
+
+    console.log("📤 [GraphQL] Sending mutation with variables:", JSON.stringify(variables, null, 2));
 
     const response = await fetch(
-      `https://${shop}/admin/api/2025-04/recurring_application_charges.json`,
+      `https://${shop}/admin/api/2025-04/graphql.json`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Shopify-Access-Token": accessToken,
         },
-        body: JSON.stringify(charge),
-      },
+        body: JSON.stringify({ query: mutation, variables }),
+      }
     );
-    
-    // ✅ CHECK 2: Billing charge response (CRITICAL - this is where your error is!)
+
     if (!response.ok) {
       const errorText = await response.text();
-      
-      // ========== ENHANCED ERROR LOGGING ==========
-      console.error("❌ Billing API error:", response.status, response.statusText);
-      console.error("   Response Headers:", Object.fromEntries(response.headers.entries()));
+      console.error("❌ [GraphQL] Billing API error:", response.status, response.statusText);
       console.error("   Error body:", errorText || "(empty)");
-      console.error("   Shop type:", isDevelopmentStore ? "Development/Partner Store" : "Production Store");
-      console.error("   Charge config sent:", JSON.stringify(charge, null, 2));
-      
-      // Try to parse error as JSON if possible
-      let parsedError = null;
-      try {
-        parsedError = JSON.parse(errorText);
-        console.error("   Parsed error:", parsedError);
-      } catch (e) {
-        console.error("   Error is not JSON");
-      }
-      // ========== END ENHANCED LOGGING ==========
-      
       return res.status(500).json({
-        error: "Failed to create charge",
+        error: "Failed to create charge via GraphQL",
         details: `Shopify returned ${response.status}: ${errorText.substring(0, 200)}`,
-        shopType: isDevelopmentStore ? "development" : "production",
-        headers: Object.fromEntries(response.headers.entries()),
       });
     }
 
     const data = await response.json();
+    console.log("📥 [GraphQL] Response:", JSON.stringify(data, null, 2));
 
     if (data.errors) {
-      console.error("Shopify billing error:", data.errors);
+      console.error("❌ [GraphQL] GraphQL errors:", data.errors);
       return res.status(500).json({
-        error: "Failed to create charge",
+        error: "GraphQL errors",
         details: JSON.stringify(data.errors),
       });
     }
 
-    const chargeData = data.recurring_application_charge;
+    if (data.data?.appSubscriptionCreate?.userErrors?.length > 0) {
+      console.error("❌ [GraphQL] User errors:", data.data.appSubscriptionCreate.userErrors);
+      return res.status(500).json({
+        error: "Failed to create subscription",
+        details: JSON.stringify(data.data.appSubscriptionCreate.userErrors),
+      });
+    }
+
+    const subscription = data.data?.appSubscriptionCreate?.appSubscription;
+    const confirmationUrl = data.data?.appSubscriptionCreate?.confirmationUrl;
+
+    if (!subscription || !confirmationUrl) {
+      console.error("❌ [GraphQL] Missing subscription or confirmation URL");
+      return res.status(500).json({
+        error: "Invalid response from Shopify",
+        details: "No subscription or confirmation URL returned",
+      });
+    }
+    // ========== END GRAPHQL BILLING ==========
+
+    // Extract subscription ID from GraphQL response (format: gid://shopify/AppSubscription/12345)
+    const subscriptionId = subscription.id.split('/').pop();
 
     // Save pending charge to database
     await saveSubscription(shop, {
-      plan_name: "free",
+      plan_name: "free", //Still keep as free until activated
       status: "pending",
-      charge_id: chargeData.id.toString(),
+      charge_id: subscriptionId,
     });
 
-    console.log(`💳 Created billing charge for ${shop}: ${chargeData.id}`);
+    console.log(`💳 [GraphQL] Created billing subscription for ${shop}: ${subscriptionId}`);
 
     // Return confirmation URL for merchant to approve
     res.json({
-      confirmationUrl: chargeData.confirmation_url,
-      chargeId: chargeData.id,
+      confirmationUrl: confirmationUrl,
+      chargeId: subscriptionId,
     });
   } catch (error) {
     console.error("Error creating charge:", error);
