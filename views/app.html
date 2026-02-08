@@ -962,9 +962,12 @@ select,
           </div>
         </div>
         
-     <button id="pro-plan-button" class="btn btn-primary" style="width: 100%;" onclick="upgradeToPro()">
-  Upgrade to Pro
-</button>
+      <div id="pro-expiry-notice" style="display: none; margin-bottom: 12px; padding: 8px; background: #fff4e5; border-radius: 4px; border-left: 3px solid #ff9800; font-size: 13px; color: #5c3b00; text-align: left;">
+        <!-- Filled by JS -->
+      </div>
+      <button id="pro-plan-button" class="btn btn-primary" style="width: 100%;" onclick="upgradeToPro()">
+   Upgrade to Pro
+ </button>
       </div>
     </div>
 
@@ -2181,16 +2184,23 @@ function renderPlansPage() {
 
   const freePlanBtn = document.querySelector('#free-plan-button');
   const proPlanBtn = document.querySelector('#pro-plan-button');
+  const proExpiryNotice = document.querySelector('#pro-expiry-notice');
   if (!freePlanBtn || !proPlanBtn) return; // Safety check
+
+  // Reset UI states
+  if (proExpiryNotice) {
+    proExpiryNotice.style.display = 'none';
+    proExpiryNotice.innerHTML = '';
+  }
 
   // Update Free plan button
   if (currentPlan.plan_name === 'free') {
     freePlanBtn.textContent = 'Current Plan';
     freePlanBtn.disabled = true;
     freePlanBtn.onclick = null;
-} else if (currentPlan.plan_name === 'pro') {
+  } else if (currentPlan.plan_name === 'pro') {
     // Check if already cancelled
-   if (currentPlan.status === 'cancelled') {
+    if (currentPlan.status === 'cancelled') {
       // Already cancelled - show downgrade date
       if (currentPlan.billing_on) {
         const downgradeDate = new Date(currentPlan.billing_on).toLocaleDateString('en-US', {
@@ -2211,17 +2221,24 @@ function renderPlansPage() {
       freePlanBtn.onclick = () => cancelSubscription();
     }
   }
- // Update Pro plan button
+
+  // Update Pro plan button
   if (currentPlan.plan_name === 'pro') {
-    // Only show expiry if CANCELLED and has valid billing_on date
-    if (currentPlan.status === 'cancelled' && currentPlan.billing_on) {
-      const expiryDate = new Date(currentPlan.billing_on).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric'
-      });
-      proPlanBtn.textContent = `Expires ${expiryDate}`;
-      proPlanBtn.disabled = true;
-      proPlanBtn.onclick = null;
+    if (currentPlan.status === 'cancelled') {
+      // Pro is cancelled but still active (Grace Period)
+      if (currentPlan.billing_on && proExpiryNotice) {
+        const expiryDate = new Date(currentPlan.billing_on).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric'
+        });
+        proExpiryNotice.style.display = 'block';
+        proExpiryNotice.innerHTML = `⚠️ Access expires <strong>${expiryDate}</strong>. Reactivate now to stay on Pro.`;
+      }
+      
+      // Re-enable button for reactivation
+      proPlanBtn.textContent = 'Upgrade to Pro';
+      proPlanBtn.disabled = false;
+      proPlanBtn.onclick = () => upgradeToPro();
     } else {
       // Active Pro - no expiry
       proPlanBtn.textContent = 'Current Plan';
@@ -2229,6 +2246,7 @@ function renderPlansPage() {
       proPlanBtn.onclick = null;
     }
   } else {
+    // Free plan - show regular upgrade button
     proPlanBtn.textContent = 'Upgrade to Pro';
     proPlanBtn.disabled = false;
     proPlanBtn.onclick = () => upgradeToPro();
