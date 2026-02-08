@@ -772,22 +772,30 @@ app.get("/auth/callback", async (req, res) => {
         existingSub.status === "uninstalled" ||
         existingSub.status === "cancelled"
       ) {
-        // ========== FIX: Reset to Free on reinstall ==========
-        console.log("🔄 Reinstall detected - resetting to Free plan");
-        console.log(
-          "   Previous state:",
-          existingSub.plan_name,
-          existingSub.status
-        );
+        // ========== FIX: Check for grace period on reinstall ==========
+        const now = new Date();
+        const billingOn = existingSub.billing_on ? new Date(existingSub.billing_on) : null;
+        
+        if (existingSub.plan_name === "pro" && existingSub.status === "cancelled" && billingOn && billingOn > now) {
+          console.log("🔄 Reinstall detected - PRO (Cancelled) still in grace period. Preserving state.");
+          // Don't reset to free, keep current sub (Pro/Cancelled)
+        } else {
+          console.log("🔄 Reinstall detected - resetting to Free plan");
+          console.log(
+            "   Previous state:",
+            existingSub.plan_name,
+            existingSub.status
+          );
 
-        await saveSubscription(shop, {
-          plan_name: "free",
-          status: "active",
-          charge_id: null,
-          billing_on: null,
-          cancelled_at: null,
-        });
-        console.log("✅ Reset to Free plan");
+          await saveSubscription(shop, {
+            plan_name: "free",
+            status: "active",
+            charge_id: null,
+            billing_on: null,
+            cancelled_at: null,
+          });
+          console.log("✅ Reset to Free plan");
+        }
         // ========== END FIX ==========
       } else {
         console.log("💳 Active subscription exists - keeping it");

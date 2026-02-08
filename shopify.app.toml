@@ -21,7 +21,7 @@ compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"
 uri = "/webhooks"
 
 [access_scopes]
-scopes = "read_products,read_themes,write_products,read_customers,write_customers"
+scopes = "read_products,read_themes,write_products,read_customers,write_customers,write_orders"
 
 [auth]
 redirect_urls = [

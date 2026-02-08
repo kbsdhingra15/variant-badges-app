@@ -307,8 +307,24 @@ router.get("/status", async (req, res) => {
       // ========== END ==========
     }
 
-    // ========== REMOVED: Trial expiry check (no trial anymore!) ==========
-    // No need to check trial_ends_at since we don't have trials
+    // ========== FIX: Check for expired grace period ==========
+    if (subscription.plan_name === "pro" && subscription.status === "cancelled" && subscription.billing_on) {
+      const now = new Date();
+      const billingOn = new Date(subscription.billing_on);
+      
+      if (now > billingOn) {
+        console.log("💳 [STATUS] Pro (Cancelled) expired - downgrading to Free:", shop);
+        
+        subscription = await saveSubscription(shop, {
+          plan_name: "free",
+          status: "active",
+          charge_id: null,
+          billing_on: null,
+          cancelled_at: null,
+        });
+      }
+    }
+    // ========== END FIX ==========
 
     res.json(subscription);
   } catch (error) {

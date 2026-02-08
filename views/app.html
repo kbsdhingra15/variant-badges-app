@@ -2215,7 +2215,10 @@ function renderPlansPage() {
   if (currentPlan.plan_name === 'pro') {
     // Only show expiry if CANCELLED and has valid billing_on date
     if (currentPlan.status === 'cancelled' && currentPlan.billing_on) {
-      const expiryDate = new Date(currentPlan.billing_on).toLocaleDateString();
+      const expiryDate = new Date(currentPlan.billing_on).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric'
+      });
       proPlanBtn.textContent = `Expires ${expiryDate}`;
       proPlanBtn.disabled = true;
       proPlanBtn.onclick = null;
