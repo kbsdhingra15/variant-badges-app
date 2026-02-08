@@ -214,67 +214,74 @@ router.get("/activate", async (req, res) => {
 
     const accessToken = session.accessToken;
 
-    // Get charge details from Shopify
+    // ========== GRAPHQL ACTIVATION CHECK ==========
+    console.log(`💳 [GraphQL] Verifying activation for ${shop}, ID: ${charge_id}`);
+
+    const query = `
+      query GetSubscription($id: ID!) {
+        node(id: $id) {
+          ... on AppSubscription {
+            id
+            name
+            status
+            currentPeriodEnd
+          }
+        }
+      }
+    `;
+
+    const variables = {
+      id: `gid://shopify/AppSubscription/${charge_id}`
+    };
+
     const response = await fetch(
-      `https://${shop}/admin/api/2025-04/recurring_application_charges/${charge_id}.json`,
+      `https://${shop}/admin/api/2025-04/graphql.json`,
       {
-        method: "GET",
+        method: "POST",
         headers: {
+          "Content-Type": "application/json",
           "X-Shopify-Access-Token": accessToken,
         },
-      },
+        body: JSON.stringify({ query, variables }),
+      }
     );
 
+    if (!response.ok) {
+      console.error("❌ [GraphQL] Activation check failed:", response.status);
+      return res.redirect(`https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?error=check_failed`);
+    }
+
     const data = await response.json();
-    const charge = data.recurring_application_charge;
+    const subscription = data.data?.node;
 
-    if (charge.status === "accepted") {
-      // Activate the charge
-      const activateResponse = await fetch(
-        `https://${shop}/admin/api/2025-04/recurring_application_charges/${charge_id}/activate.json`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Shopify-Access-Token": accessToken,
-          },
-          body: JSON.stringify({
-            recurring_application_charge: {
-              id: charge_id,
-            },
-          }),
-        },
-      );
-
-      const activateData = await activateResponse.json();
-
-      if (activateData.recurring_application_charge) {
-        // Update subscription in database
-        await saveSubscription(shop, {
-          plan_name: "pro",
-          status: "active",
-          charge_id: charge_id.toString(),
-          billing_on: activateData.recurring_application_charge.billing_on,
-          trial_ends_at: null,
-          cancelled_at: null,
-        });
-
-        console.log(`✅ Activated Pro plan for ${shop}`);
-
-        // Redirect back to app with success message
-        return res.redirect(
-          `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?upgraded=true`,
-        );
-      }
-    } else if (charge.status === "declined") {
-      console.log(`❌ Charge declined by ${shop}`);
-
-      // Reset to free plan
+    if (subscription && subscription.status === "ACTIVE") {
+      // Update subscription in database
       await saveSubscription(shop, {
-        plan_name: "free",
+        plan_name: "pro",
         status: "active",
-        charge_id: null,
+        charge_id: charge_id.toString(),
+        billing_on: subscription.currentPeriodEnd, // currentPeriodEnd is the mapping for billing_on in GraphQL
+        trial_ends_at: null,
+        cancelled_at: null,
       });
+
+      console.log(`✅ Activated Pro plan for ${shop}`);
+
+      // Redirect back to app with success message
+      return res.redirect(
+        `https://${shop}/admin/apps/${process.env.SHOPIFY_API_KEY}?upgraded=true`,
+      );
+    } else {
+      console.log(`❌ Subscription not active. Status: ${subscription?.status || 'NOT_FOUND'}`);
+      
+      // If declined or expired, reset to free
+      if (subscription?.status === "DECLINED" || subscription?.status === "EXPIRED") {
+        await saveSubscription(shop, {
+          plan_name: "free",
+          status: "active",
+          charge_id: null,
+        });
+      }
     }
 
     // Redirect back to app

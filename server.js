@@ -772,13 +772,20 @@ app.get("/auth/callback", async (req, res) => {
         existingSub.status === "uninstalled" ||
         existingSub.status === "cancelled"
       ) {
-        // ========== FIX: Check for grace period on reinstall ==========
+        // ========== FIX: Check for grace period on reinstall (Active or Cancelled Pro) ==========
         const now = new Date();
         const billingOn = existingSub.billing_on ? new Date(existingSub.billing_on) : null;
-        
-        if (existingSub.plan_name === "pro" && existingSub.status === "cancelled" && billingOn && billingOn > now) {
-          console.log("🔄 Reinstall detected - PRO (Cancelled) still in grace period. Preserving state.");
-          // Don't reset to free, keep current sub (Pro/Cancelled)
+        const isPro = existingSub.plan_name === "pro";
+        const isRecentlyActive = existingSub.status === "active" || existingSub.status === "cancelled" || existingSub.status === "uninstalled";
+
+        if (isPro && isRecentlyActive && billingOn && billingOn > now) {
+          console.log("🔄 Reinstall detected - PRO still in grace period. Preserving state as 'cancelled' (not renewing).");
+          // Mark as cancelled so it doesn't renew, but keeps Pro access until billingOn
+          await saveSubscription(shop, {
+            ...existingSub,
+            status: "cancelled",
+            updated_at: new Date()
+          });
         } else {
           console.log("🔄 Reinstall detected - resetting to Free plan");
           console.log(
