@@ -778,6 +778,12 @@ app.get("/auth/callback", async (req, res) => {
         const isPro = existingSub.plan_name === "pro";
         const isRecentlyActive = existingSub.status === "active" || existingSub.status === "cancelled" || existingSub.status === "uninstalled";
 
+        console.log(`🔍 [REINSTALL DEBUG] Shop: ${shop}`);
+        console.log(`   Plan: ${existingSub.plan_name}, Status: ${existingSub.status}`);
+        console.log(`   Billing On: ${existingSub.billing_on} (${billingOn})`);
+        console.log(`   Is Pro: ${isPro}, Recently Active: ${isRecentlyActive}`);
+        console.log(`   Grace Period Valid: ${billingOn && billingOn > now}`);
+
         if (isPro && isRecentlyActive && billingOn && billingOn > now) {
           console.log("🔄 Reinstall detected - PRO still in grace period. Preserving state as 'cancelled' (not renewing).");
           // Mark as cancelled so it doesn't renew, but keeps Pro access until billingOn
