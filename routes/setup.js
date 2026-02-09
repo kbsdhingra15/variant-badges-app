@@ -43,40 +43,42 @@ router.get("/status", async (req, res) => {
       return res.json({ enabled: false, theme: null });
     }
 
-    // Check product template for our app block
-    const assetResponse = await fetch(
-      `https://${shop}/admin/api/2025-04/themes/${activeTheme.id}/assets.json?asset[key]=templates/product.json`,
-      {
-        headers: {
-          "X-Shopify-Access-Token": session.accessToken,
-        },
+    // Check multiple locations for our app block
+    const assetKeys = [
+      "templates/product.json",
+      "sections/header-group.json",
+      "sections/footer-group.json",
+    ];
+
+    let isEnabled = false;
+
+    // We use a simple loop to check assets until we find a match
+    for (const key of assetKeys) {
+      try {
+        const assetResponse = await fetch(
+          `https://${shop}/admin/api/2025-01/themes/${activeTheme.id}/assets.json?asset[key]=${key}`,
+          {
+            headers: {
+              "X-Shopify-Access-Token": session.accessToken,
+            },
+          }
+        );
+
+        if (assetResponse.ok) {
+          const assetData = await assetResponse.json();
+          if (assetData.asset && assetData.asset.value) {
+            const content = assetData.asset.value;
+            if (content.includes("variant-badges-display") || content.includes("variant_badges")) {
+              console.log(`✅ Found app block in: ${key}`);
+              isEnabled = true;
+              break; // Found it!
+            }
+          }
+        }
+      } catch (err) {
+        console.log(`⚠️ Skip check for ${key}:`, err.message);
       }
-    );
-
-    if (!assetResponse.ok) {
-      console.error("Asset API error:", assetResponse.status);
-      return res.json({
-        enabled: false,
-        theme: activeTheme.name,
-        themeId: activeTheme.id,
-      });
     }
-
-    const assetData = await assetResponse.json();
-
-    if (!assetData.asset) {
-      return res.json({
-        enabled: false,
-        theme: activeTheme.name,
-        themeId: activeTheme.id,
-      });
-    }
-
-    // Check if our block exists in the template
-    const templateContent = assetData.asset.value;
-    const isEnabled =
-      templateContent.includes("variant-badges-display") ||
-      templateContent.includes("variant_badges");
 
     console.log(
       `✅ Setup check for ${shop}: ${isEnabled ? "ENABLED" : "NOT ENABLED"}`
