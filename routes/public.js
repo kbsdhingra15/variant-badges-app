@@ -11,6 +11,16 @@ router.get("/badges", async (req, res) => {
       return res.status(400).json({ error: "Missing shop parameter" });
     }
 
+    // Check if badges are enabled globally
+    const { getAppSettings } = require("../database/db");
+    const settings = await getAppSettings(shop);
+    
+    if (settings.badgeDisplayEnabled === false) {
+      console.log(`🚫 Badges DISABLED globally for ${shop}`);
+      res.header("Access-Control-Allow-Origin", "*");
+      return res.json({ badges: {} });
+    }
+
     const assignments = await getBadgeAssignments(shop);
 
     const badges = {};
@@ -49,10 +59,17 @@ router.get("/badges/product/:productId", async (req, res) => {
       return res.status(400).json({ error: "Missing parameters" });
     }
 
-    // Get selected option type
+    // Get app settings
     const { getAppSettings } = require("../database/db");
     const settings = await getAppSettings(shop);
     const selectedOption = settings.selectedOption;
+
+    // Check if badges are enabled globally
+    if (settings.badgeDisplayEnabled === false) {
+      console.log(`🚫 Badges DISABLED globally for ${shop} (Product: ${productId})`);
+      res.header("Access-Control-Allow-Origin", "*");
+      return res.json({ badges: {}, selectedOption });
+    }
 
     if (!selectedOption) {
       res.header("Access-Control-Allow-Origin", "*");
