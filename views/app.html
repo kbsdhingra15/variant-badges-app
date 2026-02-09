@@ -798,22 +798,22 @@ select,
     <p style="margin: 0;">⚠️ Please select an option type in the <a href="#" onclick="switchTab('settings'); return false;" style="color: #008060; font-weight: 600;">Settings tab</a> before assigning badges.</p>
   </div>
 
+  <!-- Pro Tip: Admin Link (Dismissable) -->
+  <div id="admin-link-tip" class="card" style="display: none; margin-bottom: 20px; background: #e7f5ff; border: 1px solid #a5d8ff; align-items: flex-start; gap: 12px; padding: 12px 16px;">
+    <span style="font-size: 20px;">💡</span>
+    <div style="flex: 1;">
+      <h4 style="margin: 0 0 4px 0; font-size: 14px; color: #1864ab;">Pro Tip: Direct Access from Shopify</h4>
+      <p style="margin: 0; font-size: 13px; color: #1971c2; line-height: 1.4;">
+        You can open this page directly from your Shopify Admin! Look for <strong>"Variant Badges"</strong> under the <strong>"More actions"</strong> menu on any Product page.
+      </p>
+    </div>
+    <button onclick="dismissAdminLinkTip()" style="background: none; border: none; cursor: pointer; color: #1864ab; font-size: 20px; padding: 0; line-height: 1;">×</button>
+  </div>
+
   <!-- Products list container -->
   <div id="products-list-container" style="display: none;">
     <div class="card">
       <p id="option-type-label" style="margin-bottom: 16px; color: #6d7175; font-weight: 500;"></p>
-      
-      <!-- Pro Tip: Admin Link (Dismissable) -->
-      <div id="admin-link-tip" class="card" style="display: none; margin-bottom: 20px; background: #e7f5ff; border: 1px solid #a5d8ff; align-items: flex-start; gap: 12px; padding: 12px 16px;">
-        <span style="font-size: 20px;">💡</span>
-        <div style="flex: 1;">
-          <h4 style="margin: 0 0 4px 0; font-size: 14px; color: #1864ab;">Pro Tip: Direct Access from Shopify</h4>
-          <p style="margin: 0; font-size: 13px; color: #1971c2; line-height: 1.4;">
-            You can open this page directly from your Shopify Admin! Look for <strong>"Variant Badges"</strong> under the <strong>"More actions"</strong> menu on any Product page.
-          </p>
-        </div>
-        <button onclick="dismissAdminLinkTip()" style="background: none; border: none; cursor: pointer; color: #1864ab; font-size: 20px; padding: 0; line-height: 1;">×</button>
-      </div>
 
       <!-- Search Box -->
       <div style="margin-bottom: 20px;">
