@@ -301,8 +301,8 @@ const shopify = shopifyApi({
   apiSecretKey: process.env.SHOPIFY_API_SECRET,
   scopes: process.env.SCOPES.split(","),
   hostName: process.env.HOST.replace(/https?:\/\//, ""),
-  apiVersion: "2025-04",
-  isEmbeddedApp: true,
+  apiVersion: "2025-01", // Using 2025-01 as stable for general API
+  isEmbeddedApp: false,
   isCustomStoreApp: false,
 });
 
@@ -931,23 +931,36 @@ app.use("/api/analytics", analyticsRoutes);
 app.get("/api/admin/product-link", async (req, res) => {
   try {
     const { shop, id } = req.query;
+    
+    console.log("-----------------------------------------");
+    console.log("🔗 ADMIN LINK REDIRECT ATTEMPT");
+    console.log("   Query Params:", JSON.stringify(req.query));
+    console.log("   Shop:", shop);
+    console.log("   ID:", id);
+    console.log("-----------------------------------------");
+
     if (!shop || !id) {
-      return res.redirect("/");
+      console.log("❌ Missing shop or ID, redirecting to help...");
+      // Instead of /, redirect to /app with a warning or just /app
+      return res.redirect("/app?error=missing_params");
     }
 
-    console.log(`🔗 Admin Link clicked - Shop: ${shop}, Product GID: ${id}`);
+    console.log(`🔗 Admin Link - Fetching title for: ${id}`);
 
     // Get access token for this shop
     const { getShopSession } = require("./database/db");
     const session = await getShopSession(shop);
 
     if (!session || !session.accessToken) {
-      console.log("❌ No session found for Admin Link redirect");
+      console.log("❌ No session found, redirecting to auth");
       return res.redirect(`/auth?shop=${shop}`);
     }
 
+    // Convert numeric ID to GID if needed
+    const gid = id.startsWith("gid://") ? id : `gid://shopify/Product/${id}`;
+
     // Fetch product title via GraphQL
-    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
+    const graphqlUrl = `https://${shop}/admin/api/2024-10/graphql.json`; // Use stable 2024-10
     const query = `
       query getProduct($id: ID!) {
         product(id: $id) {
@@ -962,23 +975,24 @@ app.get("/api/admin/product-link", async (req, res) => {
         "Content-Type": "application/json",
         "X-Shopify-Access-Token": session.accessToken,
       },
-      body: JSON.stringify({ query, variables: { id } }),
+      body: JSON.stringify({ query, variables: { id: gid } }),
     });
 
     const result = await response.json();
     const title = result.data?.product?.title;
 
     if (title) {
-      console.log(`✅ Redirecting to app with search for: "${title}"`);
+      console.log(`✅ Found title: "${title}". Redirecting to app...`);
       return res.redirect(
         `/app?shop=${shop}&search=${encodeURIComponent(title)}&tab=badges`
       );
     }
 
+    console.log("⚠️ Product title not found, redirecting to badges tab");
     res.redirect(`/app?shop=${shop}&tab=badges`);
   } catch (error) {
     console.error("❌ Admin Link error:", error);
-    res.redirect("/");
+    res.redirect("/app");
   }
 });
 
