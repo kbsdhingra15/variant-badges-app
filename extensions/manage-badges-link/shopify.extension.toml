@@ -3,15 +3,19 @@ type = "admin_link"
 name = "Manage Badges"
 handle = "manage-badges-details"
 
+uid = "1d54f4a6-b3c6-6177-2586-88066ed2599356b1b06d"
+
 [[extensions.targeting]]
 target = "admin.product-details.action.link"
-url = "/api/admin/product-link"
+url = "https://variant-badges-app-production.up.railway.app/api/admin/product-link"
 
 [[extensions]]
 type = "admin_link"
 name = "Manage Badges"
 handle = "manage-badges-index"
 
+uid = "1d0f2563-824c-421e-87a1-50f16f5854506b18a1f5"
+
 [[extensions.targeting]]
 target = "admin.product-index.action.link"
-url = "/api/admin/product-link"
+url = "https://variant-badges-app-production.up.railway.app/api/admin/product-link"
