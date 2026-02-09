@@ -928,6 +928,60 @@ app.use("/auth", authRouter);
 // Public API routes (no authentication required)
 app.use("/api/public", publicRouter);
 app.use("/api/analytics", analyticsRoutes);
+app.get("/api/admin/product-link", async (req, res) => {
+  try {
+    const { shop, id } = req.query;
+    if (!shop || !id) {
+      return res.redirect("/");
+    }
+
+    console.log(`🔗 Admin Link clicked - Shop: ${shop}, Product GID: ${id}`);
+
+    // Get access token for this shop
+    const { getShopSession } = require("./database/db");
+    const session = await getShopSession(shop);
+
+    if (!session || !session.accessToken) {
+      console.log("❌ No session found for Admin Link redirect");
+      return res.redirect(`/auth?shop=${shop}`);
+    }
+
+    // Fetch product title via GraphQL
+    const graphqlUrl = `https://${shop}/admin/api/2025-04/graphql.json`;
+    const query = `
+      query getProduct($id: ID!) {
+        product(id: $id) {
+          title
+        }
+      }
+    `;
+
+    const response = await fetch(graphqlUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": session.accessToken,
+      },
+      body: JSON.stringify({ query, variables: { id } }),
+    });
+
+    const result = await response.json();
+    const title = result.data?.product?.title;
+
+    if (title) {
+      console.log(`✅ Redirecting to app with search for: "${title}"`);
+      return res.redirect(
+        `/app?shop=${shop}&search=${encodeURIComponent(title)}&tab=badges`
+      );
+    }
+
+    res.redirect(`/app?shop=${shop}&tab=badges`);
+  } catch (error) {
+    console.error("❌ Admin Link error:", error);
+    res.redirect("/");
+  }
+});
+
 // Protected endpoints (require JWT authentication)
 app.use("/api/products", authenticateRequest, productsRouter);
 app.use("/api/badges", authenticateRequest, badgesRouter);

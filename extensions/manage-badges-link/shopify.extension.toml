@@ -1,0 +1,14 @@
+api_version = "2024-10"
+
+[[extensions]]
+type = "admin_link"
+name = "Manage Variant Badges"
+handle = "manage-badges-link"
+
+[[extensions.targeting]]
+target = "admin.product-details.action.menu"
+url = "/api/admin/product-link"
+
+[[extensions.targeting]]
+target = "admin.product-index.action.menu"
+url = "/api/admin/product-link"

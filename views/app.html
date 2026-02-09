@@ -1375,24 +1375,75 @@ if (document.readyState === 'loading') {
     checkFirstTimeUser();
     loadBillingStatus();
     
-    // Check for upgrade success in URL
+    // Check for deep-linking (Admin Links) or success messages
     const urlParams = new URLSearchParams(window.location.search);
+    
     if (urlParams.get('upgraded') === 'true') {
       showAlert('🎉 Successfully upgraded to Pro! You now have unlimited products.');
-      // Clean URL
-      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
+    // Deep-linking logic
+    const tabParam = urlParams.get('tab');
+    const searchParam = urlParams.get('search');
+    
+    if (tabParam) {
+      // Map 'badges' to our internal 'manage' tab name
+      const targetTab = tabParam === 'badges' ? 'manage' : tabParam;
+      
+      // We need a slight delay to ensure tabs are initialized or simply call switchTab
+      // Actually switchTab just toggles classes, it's safe to call here
+      const tabElement = document.querySelector(`.tab[onclick*="switchTab('${targetTab}')"]`);
+      if (tabElement) {
+        // Mock the event object for switchTab
+        const mockEvent = { target: tabElement };
+        switchTab(targetTab, mockEvent);
+      }
+    }
+    
+    if (searchParam) {
+      const searchInput = document.getElementById('product-search');
+      if (searchInput) {
+        searchInput.value = searchParam;
+        loadProducts(1, searchParam);
+      }
+    }
+
+    // Clean URL to keep it pretty
+    if (urlParams.has('upgraded') || urlParams.has('tab') || urlParams.has('search')) {
+      window.history.replaceState({}, document.title, window.location.pathname + (SHOP ? `?shop=${SHOP}` : ''));
     }
   });
 } else {
   checkFirstTimeUser();
   loadBillingStatus();
   
-  // Check for upgrade success in URL
+  // Consolidate deep-linking here too for non-loading state
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('upgraded') === 'true') {
     showAlert('🎉 Successfully upgraded to Pro! You now have unlimited products.');
-    // Clean URL
-    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+  
+  const tabParam = urlParams.get('tab');
+  const searchParam = urlParams.get('search');
+  
+  if (tabParam) {
+    const targetTab = tabParam === 'badges' ? 'manage' : tabParam;
+    const tabElement = document.querySelector(`.tab[onclick*="switchTab('${targetTab}')"]`);
+    if (tabElement) {
+      switchTab(targetTab, { target: tabElement });
+    }
+  }
+  
+  if (searchParam) {
+    const searchInput = document.getElementById('product-search');
+    if (searchInput) {
+      searchInput.value = searchParam;
+      loadProducts(1, searchParam);
+    }
+  }
+
+  if (urlParams.has('upgraded') || urlParams.has('tab') || urlParams.has('search')) {
+    window.history.replaceState({}, document.title, window.location.pathname + (SHOP ? `?shop=${SHOP}` : ''));
   }
 }
 function showConfirm(message, title = "Confirm") {
