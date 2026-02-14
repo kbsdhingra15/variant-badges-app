@@ -1,6 +1,6 @@
 [[extensions]]
 type = "admin_link"
-name = "Variant Badges"
+name = "Variant Badges by SaffronApps"
 handle = "variant-badges-details"
 
 uid = "1d54f4a6-b3c6-6177-2586-88066ed2599356b1b06d"
@@ -11,7 +11,7 @@ url = "https://variant-badges-app-production.up.railway.app/api/admin/product-li
 
 [[extensions]]
 type = "admin_link"
-name = "Variant Badges"
+name = "Variant Badges by SaffronApps"
 handle = "variant-badges-index"
 
 uid = "1d0f2563-824c-421e-87a1-50f16f5854506b18a1f5"
