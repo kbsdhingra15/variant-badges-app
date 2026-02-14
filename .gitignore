@@ -1,2 +1,9 @@
-﻿.env
-node_modules/
+﻿node_modules/
+.env
+.bg-commands/
+server.js.backup
+app_backup.txt
+server_backup.txt
+project-structure.txt
+*.log
+.DS_Store
